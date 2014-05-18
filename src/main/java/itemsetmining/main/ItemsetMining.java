@@ -5,17 +5,17 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import ca.pfv.spmf.algorithms.frequentpatterns.itemsettree.MemoryEfficientItemsetTree;
-import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemset;
-
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 
 public class ItemsetMining {
 
+	private static final int EM_ITERATIONS = 1000;
+	private static final int MAX_STRUCTURE_ITERATIONS = 1000;
+
 	// private final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
 
+	// TODO don't read all transactions into memory
 	public static void main(final String[] args) {
 
 	}
@@ -29,7 +29,6 @@ public class ItemsetMining {
 			final Transaction transaction) {
 
 		// TODO priority queue implementation?
-		// TODO fix stupid array-based Itemset class
 		double totalCost = 0;
 		final Set<Integer> coveredItems = Sets.newHashSet();
 		final List<Integer> transactionItems = transaction.getItems();
@@ -41,8 +40,8 @@ public class ItemsetMining {
 
 			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 
-				final Set<Integer> notCoveredItems = Sets.newHashSet(Ints
-						.asList(entry.getKey().getItems()));
+				final Set<Integer> notCoveredItems = Sets.newHashSet(entry
+						.getKey().getItems());
 				notCoveredItems.removeAll(coveredItems);
 
 				final double cost = -Math.log(entry.getValue());
@@ -58,11 +57,37 @@ public class ItemsetMining {
 			assert bestSet != null;
 
 			covering.add(bestSet);
-			coveredItems.addAll(Ints.asList(bestSet.getItems()));
+			coveredItems.addAll(bestSet.getItems());
 
 		}
 
 		return totalCost;
+	}
+
+	/** Learn itemsets model using structural EM */
+	public HashMap<Itemset, Double> structuralEM(
+			List<Transaction> transactions, int lenUniverse, ItemsetTree tree,
+			int iterations) {
+
+		// Intialize with equiprobable singleton sets
+		HashMap<Itemset, Double> itemsets = Maps.newHashMap();
+		for (int i = 0; i < lenUniverse; i++) {
+			itemsets.put(new Itemset(i), 0.5);
+		}
+
+		// Structural EM
+		for (int i = 0; i < iterations; i++) {
+
+			// Optimize parameters
+			double averageCost = expectationMaximizationStep(itemsets,
+					transactions);
+
+			// Learn structure
+			learnStructureStep(averageCost, itemsets, transactions, tree);
+
+		}
+
+		return itemsets;
 	}
 
 	/**
@@ -74,18 +99,18 @@ public class ItemsetMining {
 	 */
 	public double expectationMaximizationStep(
 			HashMap<Itemset, Double> itemsets,
-			final List<Transaction> transactions, final int iterations) {
+			final List<Transaction> transactions) {
 
-		// TODO parallelize inference step
 		double averageCost = 0;
 		final double n = transactions.size();
-		for (int i = 0; i < iterations; i++) {
+		for (int i = 0; i < EM_ITERATIONS; i++) {
 
 			// E step and M step combined
 			final HashMap<Itemset, Double> newItemsets = Maps.newHashMap();
 			for (final Transaction transaction : transactions) {
 
 				final Set<Itemset> covering = Sets.newHashSet();
+				// TODO parallelize inference step
 				final double cost = inferGreedy(covering, itemsets, transaction);
 				for (final Itemset set : covering) {
 
@@ -98,7 +123,7 @@ public class ItemsetMining {
 				}
 
 				// Save cost on last iteration
-				if (i == iterations - 1) {
+				if (i == EM_ITERATIONS - 1) {
 					averageCost += cost / n;
 				}
 
@@ -110,22 +135,21 @@ public class ItemsetMining {
 
 	public void learnStructureStep(final double averageCost,
 			final HashMap<Itemset, Double> itemsets,
-			final List<Transaction> transactions,
-			final MemoryEfficientItemsetTree itemsetTree,
-			final int maxIterations) {
+			final List<Transaction> transactions, final ItemsetTree tree) {
 
 		// Try and find better itemset to add
 		final double n = transactions.size();
-		for (int i = 0; i < maxIterations; i++) {
+		for (int i = 0; i < MAX_STRUCTURE_ITERATIONS; i++) {
 
 			// Candidate itemset
-			final Itemset set = getCandidateItemset(itemsetTree);
+			Itemset set = new Itemset();
+			tree.randomWalk(set);
+			assert !set.getItems().isEmpty();
 
 			// Estimate itemset probability (M-step assuming always included)
 			double p = 0;
 			for (final Transaction transaction : transactions) {
-				if (transaction.getItems().containsAll(
-						Ints.asList(set.getItems()))) {
+				if (transaction.getItems().containsAll(set.getItems())) {
 					p++;
 				}
 			}
@@ -137,6 +161,7 @@ public class ItemsetMining {
 			for (final Transaction transaction : transactions) {
 
 				final Set<Itemset> covering = Sets.newHashSet();
+				// TODO parallelize inference step
 				final double cost = inferGreedy(covering, itemsets, transaction);
 				curCost += cost;
 			}
@@ -149,12 +174,6 @@ public class ItemsetMining {
 
 		}
 
-	}
-
-	public Itemset getCandidateItemset(
-			final MemoryEfficientItemsetTree itemsetTree) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 }

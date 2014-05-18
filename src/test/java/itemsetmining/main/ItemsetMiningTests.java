@@ -7,8 +7,6 @@ import java.util.Set;
 
 import org.junit.Test;
 
-import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemset;
-
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
