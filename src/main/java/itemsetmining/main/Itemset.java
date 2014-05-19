@@ -4,11 +4,10 @@ import java.util.HashSet;
 
 import com.google.common.collect.Sets;
 
-// TODO implement equals and hashcode?
 public class Itemset {
 
 	/** the set of items **/
-	private HashSet<Integer> itemset = Sets.newHashSet();
+	private final HashSet<Integer> itemset = Sets.newHashSet();
 
 	/** the support of this itemset */
 	private int support = -1;
@@ -28,7 +27,7 @@ public class Itemset {
 	 * @param items
 	 *            an array of items that should be added to the new itemset
 	 */
-	public Itemset(int... items) {
+	public Itemset(final int... items) {
 		add(items);
 	}
 
@@ -38,9 +37,13 @@ public class Itemset {
 	 * @param items
 	 *            an array of items that should be added to this itemset
 	 */
-	public void add(int... items) {
-		for (int item : items)
+	public void add(final int... items) {
+		for (final int item : items)
 			itemset.add(item);
+	}
+
+	public boolean isEmpty() {
+		return itemset.isEmpty();
 	}
 
 	/**
@@ -56,13 +59,41 @@ public class Itemset {
 	 * @param support
 	 *            the support
 	 */
-	public void setSupport(int support) {
+	public void setSupport(final int support) {
 		this.support = support;
 	}
 
 	@Override
 	public String toString() {
 		return itemset.toString();
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((itemset == null) ? 0 : itemset.hashCode());
+		result = prime * result + support;
+		return result;
+	}
+
+	@Override
+	public boolean equals(final Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		final Itemset other = (Itemset) obj;
+		if (itemset == null) {
+			if (other.itemset != null)
+				return false;
+		} else if (!itemset.equals(other.itemset))
+			return false;
+		if (support != other.support)
+			return false;
+		return true;
 	}
 
 }

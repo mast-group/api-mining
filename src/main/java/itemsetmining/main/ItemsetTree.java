@@ -43,8 +43,8 @@ public class ItemsetTree {
 
 	// root of the itemset tree
 	private ItemsetTreeNode root = null;
-	private int maxDepth = -1;
-	private Random rand = new Random();
+	private final int maxDepth = -1;
+	private final Random rand = new Random();
 
 	// statistics about tree construction
 	int nodeCount; // number of nodes in the tree (recalculated by
@@ -63,69 +63,47 @@ public class ItemsetTree {
 	}
 
 	/**
-	 * Set max. depth of tree
+	 * Random walk on tree. Uses support-weighted random walk.
 	 */
-	public void setMaxDepth() {
-		maxDepth = traverseDepth(root, 0);
-	}
+	public Itemset randomWalk() {
 
-	private int traverseDepth(ItemsetTreeNode node, int curDepth) {
+		final Itemset set = new Itemset();
+		traverse(root, set);
 
-		curDepth++;
-		if (node.children.isEmpty()) {
-			return curDepth;
-		}
-
-		int maxDepth = Integer.MIN_VALUE;
-		for (ItemsetTreeNode child : node.children) {
-			int depth = traverseDepth(child, curDepth);
-			if (depth > maxDepth) {
-				maxDepth = depth;
-			}
-		}
-		return maxDepth;
-
-	}
-
-	/**
-	 * Random walk on tree. Uses support-weighted random walk with random number
-	 * of steps.
-	 */
-	public void randomWalk(final Itemset itemset) {
-
-		assert maxDepth != -1;
-		int noSteps = rand.nextInt(maxDepth) + 1;
-		traverse(root, itemset, 0, noSteps);
+		return set;
 	}
 
 	/**
 	 * Traverse this tree in a random walk
 	 */
-	public void traverse(ItemsetTreeNode node, final Itemset itemset, int step,
-			int noSteps) {
+	public void traverse(final ItemsetTreeNode node, final Itemset itemset) {
 
-		step++;
-		if (step > noSteps) {
-			return;
+		// Add node's itemset elements with probability 0.5
+		if (!node.equals(root)) { // root node is empty
+			for (final int item : node.itemset) {
+				if (Math.random() < 0.5)
+					itemset.add(item);
+			}
 		}
 
-		// Add node's itemset
-		itemset.add(node.itemset);
+		if (node.children.isEmpty()) // leaf node
+			return;
 
 		// Get support of all children
 		double sumSupport = 0;
-		HashMap<ItemsetTreeNode, Integer> supports = Maps.newHashMap();
-		for (ItemsetTreeNode child : node.children) {
+		final HashMap<ItemsetTreeNode, Integer> supports = Maps.newHashMap();
+		for (final ItemsetTreeNode child : node.children) {
 			supports.put(child, child.support);
 			sumSupport += child.support;
 		}
 
-		// Randomly pick child proportional to its itemset support
+		// Randomly pick child to traverse proportional to its itemset support
 		double p = Math.random();
 		ItemsetTreeNode child = null;
-		for (Map.Entry<ItemsetTreeNode, Integer> entry : supports.entrySet()) {
+		for (final Map.Entry<ItemsetTreeNode, Integer> entry : supports
+				.entrySet()) {
 
-			double childProb = entry.getValue() / sumSupport;
+			final double childProb = entry.getValue() / sumSupport;
 			if (p < childProb) {
 				child = entry.getKey();
 			} else {
@@ -134,7 +112,7 @@ public class ItemsetTree {
 		}
 		assert child != null;
 
-		traverse(child, itemset, step, noSteps);
+		traverse(child, itemset);
 	}
 
 	/**
@@ -145,7 +123,7 @@ public class ItemsetTree {
 	 * @throws IOException
 	 *             exception if error while reading the file
 	 */
-	public void buildTree(String input) throws IOException {
+	public void buildTree(final String input) throws IOException {
 		// record start time
 		startTimestamp = System.currentTimeMillis();
 
@@ -156,7 +134,7 @@ public class ItemsetTree {
 		root = new ItemsetTreeNode(null, 0);
 
 		// Scan the database to read the transactions
-		BufferedReader reader = new BufferedReader(new FileReader(input));
+		final BufferedReader reader = new BufferedReader(new FileReader(input));
 		String line;
 		// for each line (transaction) until the end of file
 		while (((line = reader.readLine()) != null)) {
@@ -168,9 +146,9 @@ public class ItemsetTree {
 			}
 
 			// split the transaction into items
-			String[] lineSplited = line.split(" ");
+			final String[] lineSplited = line.split(" ");
 			// create a structure for storing the transaction
-			int[] itemset = new int[lineSplited.length];
+			final int[] itemset = new int[lineSplited.length];
 			// for each item in the transaction
 			for (int i = 0; i < lineSplited.length; i++) {
 				// convert the item to integer and add it to the structure
@@ -200,7 +178,7 @@ public class ItemsetTree {
 	 * @param transaction
 	 *            the transaction to be added (array of ints)
 	 */
-	public void addTransaction(int[] transaction) {
+	public void addTransaction(final int[] transaction) {
 		// call the "construct" algorithm to add it
 		construct(null, root, transaction, null);
 	}
@@ -217,8 +195,8 @@ public class ItemsetTree {
 	 *            the current item(s) explored in this branch of the tree until
 	 *            the current node r.
 	 */
-	private void construct(ItemsetTreeNode parentOfR, ItemsetTreeNode r,
-			int[] s, int[] prefix) {
+	private void construct(final ItemsetTreeNode parentOfR,
+			final ItemsetTreeNode r, final int[] s, final int[] prefix) {
 
 		// if the itemset in root node is the same as the one to be inserted,
 		// we just increase the support, and return.
@@ -227,7 +205,7 @@ public class ItemsetTree {
 			return;
 		}
 
-		int[] rprefix = append(prefix, r.itemset);
+		final int[] rprefix = append(prefix, r.itemset);
 
 		// if the node to be inserted is an ancestor of the itemset of the root
 		// node
@@ -246,13 +224,13 @@ public class ItemsetTree {
 		// {2}:4 --> {3}:7 --> {4,5,6}:6
 		if (ancestorOf(s, rprefix)) {
 			// Calculate s' and r' by using the prefix
-			int[] sprime = copyItemsetWithoutItemsFrom(s, prefix);
-			int[] rprime = copyItemsetWithoutItemsFrom(rprefix, sprime);
+			final int[] sprime = copyItemsetWithoutItemsFrom(s, prefix);
+			final int[] rprime = copyItemsetWithoutItemsFrom(rprefix, sprime);
 
 			// create a new node for the itemset to be inserted with the support
 			// of
 			// the subtree root node + 1
-			ItemsetTreeNode newNodeS = new ItemsetTreeNode(sprime,
+			final ItemsetTreeNode newNodeS = new ItemsetTreeNode(sprime,
 					r.support + 1);
 			// set the childs and parent pointers.
 			newNodeS.children.add(r);
@@ -265,14 +243,15 @@ public class ItemsetTree {
 
 		// Otherwise, calculate the largest common ancestor
 		// of the itemset to be inserted and the root of the sutree
-		int[] l = getLargestCommonAncestor(s, rprefix);
+		final int[] l = getLargestCommonAncestor(s, rprefix);
 		if (l != null) { // if there is one largest common ancestor
-			int[] sprime = copyItemsetWithoutItemsFrom(s, l);
-			int[] rprime = copyItemsetWithoutItemsFrom(r.itemset, l);
+			final int[] sprime = copyItemsetWithoutItemsFrom(s, l);
+			final int[] rprime = copyItemsetWithoutItemsFrom(r.itemset, l);
 
 			// create a new node with that ancestor and the support of
 			// the root +1.
-			ItemsetTreeNode newNode = new ItemsetTreeNode(l, r.support + 1);
+			final ItemsetTreeNode newNode = new ItemsetTreeNode(l,
+					r.support + 1);
 			// set the node childs and parent pointers
 			newNode.children.add(r);
 			parentOfR.children.remove(r);
@@ -281,7 +260,7 @@ public class ItemsetTree {
 			r.itemset = rprime;
 			// append second children which is the itemset to be added with a
 			// support of 1
-			ItemsetTreeNode newNode2 = new ItemsetTreeNode(sprime, 1);
+			final ItemsetTreeNode newNode2 = new ItemsetTreeNode(sprime, 1);
 			// update pointers for the new node
 			newNode.children.add(newNode2);
 			// newNode2.parent = newNode;
@@ -289,12 +268,12 @@ public class ItemsetTree {
 		}
 
 		// else get the length of the root itemset
-		int indexLastItemOfR = (rprefix == null) ? 0 : rprefix.length;
+		final int indexLastItemOfR = (rprefix == null) ? 0 : rprefix.length;
 		// increase the support of the root
 		r.support++;
 		// for each child of the root
-		for (ItemsetTreeNode ci : r.children) {
-			int[] ciprefix = append(rprefix, ci.itemset);
+		for (final ItemsetTreeNode ci : r.children) {
+			final int[] ciprefix = append(rprefix, ci.itemset);
 
 			// if one children of the root is the itemset to be inserted s,
 			// then increase its support and stop
@@ -305,12 +284,12 @@ public class ItemsetTree {
 
 			// if the itemset to be inserted is an ancestor of the child ci
 			if (ancestorOf(s, ciprefix)) { // case 3
-				int[] sprime = copyItemsetWithoutItemsFrom(s, rprefix);
-				int[] ciprime = copyItemsetWithoutItemsFrom(ci.itemset, s);
+				final int[] sprime = copyItemsetWithoutItemsFrom(s, rprefix);
+				final int[] ciprime = copyItemsetWithoutItemsFrom(ci.itemset, s);
 
 				// create a new node between ci and r in the tree
 				// and update child /parents pointers
-				ItemsetTreeNode newNode = new ItemsetTreeNode(sprime,
+				final ItemsetTreeNode newNode = new ItemsetTreeNode(sprime,
 						ci.support + 1);
 				newNode.children.add(ci);
 				// newNode.parent = r;
@@ -333,16 +312,16 @@ public class ItemsetTree {
 			// if ci and s have a common ancestor that is larger than r:
 			if (ciprefix[indexLastItemOfR] == s[indexLastItemOfR]) {
 				// find the largest common ancestor
-				int[] ancestor = getLargestCommonAncestor(s, ciprefix);
+				final int[] ancestor = getLargestCommonAncestor(s, ciprefix);
 				// create a new node for the ancestor itemset just found with
 				// the support
 				// of ci + 1
 
-				int[] ancestorprime = copyItemsetWithoutItemsFrom(ancestor,
-						rprefix);
+				final int[] ancestorprime = copyItemsetWithoutItemsFrom(
+						ancestor, rprefix);
 
-				ItemsetTreeNode newNode = new ItemsetTreeNode(ancestorprime,
-						ci.support + 1);
+				final ItemsetTreeNode newNode = new ItemsetTreeNode(
+						ancestorprime, ci.support + 1);
 				// set r as parent
 				// newNode.parent = r;
 				r.children.add(newNode);
@@ -354,9 +333,9 @@ public class ItemsetTree {
 				r.children.remove(ci);
 				// create another new node for s with a support of 1, which
 				// will be the child of the first new node
-				int[] sprime = copyItemsetWithoutItemsFromArrays(s,
+				final int[] sprime = copyItemsetWithoutItemsFromArrays(s,
 						ancestorprime, rprefix);
-				ItemsetTreeNode newNode2 = new ItemsetTreeNode(sprime, 1);
+				final ItemsetTreeNode newNode2 = new ItemsetTreeNode(sprime, 1);
 				// newNode2.parent = newNode;
 				newNode.children.add(newNode2);
 				// end
@@ -368,8 +347,8 @@ public class ItemsetTree {
 		// Otherwise, case 1:
 		// A new node is created for s with a support of 1 and is added
 		// below the node r.
-		int[] sprime = copyItemsetWithoutItemsFrom(s, rprefix);
-		ItemsetTreeNode newNode = new ItemsetTreeNode(sprime, 1);
+		final int[] sprime = copyItemsetWithoutItemsFrom(s, rprefix);
+		final ItemsetTreeNode newNode = new ItemsetTreeNode(sprime, 1);
 		// newNode.parent = r;
 		r.children.add(newNode);
 
@@ -387,18 +366,18 @@ public class ItemsetTree {
 	 *            the other itemset named "s"
 	 * @return the itemset
 	 */
-	private int[] copyItemsetWithoutItemsFromArrays(int[] r, int[] prefix,
-			int[] s) {
+	private int[] copyItemsetWithoutItemsFromArrays(final int[] r,
+			final int[] prefix, final int[] s) {
 
 		// create an empty itemset
-		List<Integer> rprime = new ArrayList<Integer>(r.length);
+		final List<Integer> rprime = new ArrayList<Integer>(r.length);
 
 		// for each item in r
-		loop1: for (Integer rvalue : r) {
+		loop1: for (final Integer rvalue : r) {
 			// if the other itemset prefix is not null
 			if (prefix != null) {
 				// for each item from the prefix
-				for (int pvalue : prefix) {
+				for (final int pvalue : prefix) {
 					// if it is the current item in r
 					if (pvalue == rvalue) {
 						// skip this item from r
@@ -416,7 +395,7 @@ public class ItemsetTree {
 			// if s is not null
 			if (s != null) {
 				// for each item in s
-				for (int svalue : s) {
+				for (final int svalue : s) {
 					// if this item in s is the current item in r
 					if (rvalue == svalue) {
 						// skip it (don't add it to the new itemset)
@@ -434,7 +413,7 @@ public class ItemsetTree {
 		}
 		// transform the new itemset "rprime" from ArrayList
 		// to an array.
-		int[] rprimeArray = new int[rprime.size()];
+		final int[] rprimeArray = new int[rprime.size()];
 		for (int i = 0; i < rprime.size(); i++) {
 			rprimeArray[i] = rprime.get(i);
 		}
@@ -451,18 +430,20 @@ public class ItemsetTree {
 	 *            the second itemset
 	 * @return the new itemset
 	 */
-	private int[] copyItemsetWithoutItemsFrom(int[] itemset1, int[] itemset2) {
+	private int[] copyItemsetWithoutItemsFrom(final int[] itemset1,
+			final int[] itemset2) {
 		// if the second itemset is null, just return the first itemset
 		if (itemset2 == null) {
 			return itemset1;
 		}
 
 		// create a new itemset
-		List<Integer> itemset1prime = new ArrayList<Integer>(itemset1.length);
+		final List<Integer> itemset1prime = new ArrayList<Integer>(
+				itemset1.length);
 		// for each item in the first itemset
-		loop1: for (int i1value : itemset1) {
+		loop1: for (final int i1value : itemset1) {
 			// for each it in the second itemset
-			for (int i2value : itemset2) {
+			for (final int i2value : itemset2) {
 				// if the items match, don't add the current item
 				// from itemset1 to the new itemset
 				if (i2value == i1value) {
@@ -480,7 +461,7 @@ public class ItemsetTree {
 			itemset1prime.add(i1value);
 		}
 		// convert the new itemset from an ArrayList to an array
-		int[] itemset1primeArray = new int[itemset1prime.size()];
+		final int[] itemset1primeArray = new int[itemset1prime.size()];
 		for (int i = 0; i < itemset1prime.size(); i++) {
 			itemset1primeArray[i] = itemset1prime.get(i);
 		}
@@ -499,7 +480,8 @@ public class ItemsetTree {
 	 * @return a new itemset which is the largest common ancestor or null if it
 	 *         is the empty set
 	 */
-	private int[] getLargestCommonAncestor(int[] itemset1, int[] itemset2) {
+	private int[] getLargestCommonAncestor(final int[] itemset1,
+			final int[] itemset2) {
 		// if one of the itemsets is null,
 		// return null.
 		if (itemset2 == null || itemset1 == null) {
@@ -507,7 +489,7 @@ public class ItemsetTree {
 		}
 
 		// find the minimum length of the itemsets
-		int minI = itemset1.length < itemset2.length ? itemset1.length
+		final int minI = itemset1.length < itemset2.length ? itemset1.length
 				: itemset2.length;
 
 		int count = 0; // to count the size of the common ancestor
@@ -532,7 +514,7 @@ public class ItemsetTree {
 		if (count > 0 && count < minI) {
 			// create the itemset by copying the first "count" elements of
 			// itemset1 and return it
-			int[] common = new int[count];
+			final int[] common = new int[count];
 			System.arraycopy(itemset1, 0, common, 0, count);
 			return common;
 		} else {
@@ -554,7 +536,7 @@ public class ItemsetTree {
 	 *            the second itemset
 	 * @return true, if yes, otherwise, false.
 	 */
-	private boolean ancestorOf(int[] itemset1, int[] itemset2) {
+	private boolean ancestorOf(final int[] itemset1, final int[] itemset2) {
 		// if the second itemset is null (empty set), return false
 		if (itemset2 == null) {
 			return false;
@@ -590,7 +572,7 @@ public class ItemsetTree {
 	 * @param prefix
 	 * @return true if they are the same or false otherwise
 	 */
-	private boolean same(int[] itemset1, int[] itemset2) {
+	private boolean same(final int[] itemset1, final int[] itemset2) {
 		// if one is null, then returns false
 		if (itemset2 == null || itemset1 == null) {
 			return false;
@@ -623,7 +605,8 @@ public class ItemsetTree {
 	 *            another itemset
 	 * @return true if the same otherwise false
 	 */
-	private boolean same(int[] itemset1, int[] prefix, int[] itemset2) {
+	private boolean same(final int[] itemset1, final int[] prefix,
+			final int[] itemset2) {
 		if (prefix == null) {
 			return same(itemset1, itemset2);
 		}
@@ -667,7 +650,7 @@ public class ItemsetTree {
 	 *            the second itemset
 	 * @return the new itemset
 	 */
-	public int[] append(int[] a1, int[] a2) {
+	public int[] append(final int[] a1, final int[] a2) {
 		// if the first itemset is null, return the second one
 		if (a1 == null) {
 			return a2;
@@ -677,7 +660,7 @@ public class ItemsetTree {
 			return a1;
 		}
 		// create the new itemset
-		int[] newArray = new int[a1.length + a2.length];
+		final int[] newArray = new int[a1.length + a2.length];
 
 		// copy the first itemset in the new itemset
 		int i = 0;
@@ -702,8 +685,8 @@ public class ItemsetTree {
 				.println("========== MEMORY EFFICIENT ITEMSET TREE CONSTRUCTION - STATS ============");
 		System.out.println(" Tree construction time ~: "
 				+ (endTimestamp - startTimestamp) + " ms");
-		System.out.println(" Max memory:"
-				+ MemoryLogger.getInstance().getMaxMemory());
+		System.out.println(" Max memory: "
+				+ MemoryLogger.getInstance().getMaxMemory() + " Mb");
 		nodeCount = 0;
 		totalItemCountInNodes = 0;
 		sumBranchesLength = 0;
@@ -724,7 +707,7 @@ public class ItemsetTree {
 	 * @param length
 	 *            the cummulative sum of length of itemsets
 	 */
-	private void recursiveStats(ItemsetTreeNode root, int length) {
+	private void recursiveStats(final ItemsetTreeNode root, int length) {
 		// if the root is not null or the empty set
 		if (root != null && root.itemset != null) {
 			// increase node count
@@ -733,7 +716,7 @@ public class ItemsetTree {
 			totalItemCountInNodes += root.itemset.length;
 		}
 		// for each child node, make a recursive call
-		for (ItemsetTreeNode node : root.children) {
+		for (final ItemsetTreeNode node : root.children) {
 			recursiveStats(node, ++length);
 		}
 		// if no child, this node is a leaf, so
@@ -755,6 +738,7 @@ public class ItemsetTree {
 	/**
 	 * Return a string representation of the tree.
 	 */
+	@Override
 	public String toString() {
 		return root.toString(new StringBuffer(), "");
 	}

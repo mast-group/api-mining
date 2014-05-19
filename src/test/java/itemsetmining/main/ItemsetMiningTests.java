@@ -9,14 +9,12 @@ import org.junit.Test;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 
 public class ItemsetMiningTests {
 
 	@Test
 	public void testDoInferenceGreedy() {
 
-		final ItemsetMining miner = new ItemsetMining();
 		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
 
 		itemsets.put(new Itemset(1), 0.2);
@@ -31,16 +29,16 @@ public class ItemsetMiningTests {
 		itemsets.put(s34, 0.2);
 
 		final Set<Itemset> actual = Sets.newHashSet();
-		miner.inferGreedy(actual, itemsets,
-				new Transaction(Ints.asList(new int[] { 1, 2, 3, 4 })));
+		ItemsetMining.inferGreedy(actual, itemsets, new Transaction(new int[] {
+				1, 2, 3, 4 }));
 		final Set<Itemset> expected = Sets.newHashSet();
 		expected.add(s12);
 		expected.add(s34);
 		assertEquals(expected, actual);
 
 		actual.clear();
-		miner.inferGreedy(actual, itemsets,
-				new Transaction(Ints.asList(new int[] { 2, 3, 4 })));
+		ItemsetMining.inferGreedy(actual, itemsets, new Transaction(new int[] {
+				2, 3, 4 }));
 		assertEquals(expected, actual);
 
 	}
