@@ -4,18 +4,14 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 
-import scpsolver.constraints.LinearBiggerThanEqualsConstraint;
-import scpsolver.lpsolver.LinearProgramSolver;
-import scpsolver.lpsolver.SolverFactory;
-import scpsolver.problems.LinearProgram;
 import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPGrowth;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
 
@@ -35,8 +31,7 @@ public class ItemsetMining {
 	private static final int MAX_RANDOM_WALKS = 100;
 	private static int LEN_INIT = 5; // No. of items to initialise
 
-	private static final LinearProgramSolver SOLVER = SolverFactory
-			.getSolver("CPLEX");
+	private static final Random rand = new Random();
 
 	// TODO don't read all transactions into memory
 	public static void main(final String[] args) throws IOException {
@@ -163,7 +158,10 @@ public class ItemsetMining {
 
 	/**
 	 * Infer ML parameters to explain transaction using greedy algorithm and
-	 * store in covering
+	 * store in covering.
+	 * <p>
+	 * This is an O(log(n))-approximation algorithm where n is the number of
+	 * elements in the transaction.
 	 */
 	public static double inferGreedy(final Set<Itemset> covering,
 			final HashMap<Itemset, Double> itemsets,
@@ -178,6 +176,7 @@ public class ItemsetMining {
 
 			double minCostPerItem = Double.POSITIVE_INFINITY;
 			Itemset bestSet = null;
+			double bestCost = -1;
 
 			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 
@@ -194,15 +193,17 @@ public class ItemsetMining {
 				if (costPerItem < minCostPerItem) {
 					minCostPerItem = costPerItem;
 					bestSet = entry.getKey();
-					totalCost += cost;
+					bestCost = cost;
 				}
 
 			}
 
 			// Allow incomplete coverings
+			// FIXME check that totalCost is properly calculated now
 			if (bestSet != null) {
 				covering.add(bestSet);
 				coveredItems.addAll(bestSet.getItems());
+				totalCost += bestCost;
 			} else {
 				// System.out.println("Incomplete covering.");
 				break;
@@ -214,63 +215,70 @@ public class ItemsetMining {
 	}
 
 	/**
-	 * Infer ML parameters to explain transaction using LP approximation and
-	 * store in covering
+	 * Infer ML parameters to explain transaction using Primal-Dual
+	 * approximation and store in covering.
+	 * <p>
+	 * This is an O(mn) run-time f-approximation algorithm, where m is the no.
+	 * elements to cover, n is the number of sets and f is the frequency of the
+	 * most frequent element in the sets.
 	 */
-	public static double inferLP(final Set<Itemset> covering,
-			final LinkedHashMap<Itemset, Double> itemsets,
-			final Transaction transaction, final double maxSup) {
+	public static double inferPrimalDual(final Set<Itemset> covering,
+			final HashMap<Itemset, Double> itemsets,
+			final Transaction transaction) {
 
-		final int probSize = itemsets.size();
+		double totalCost = 0;
+		final List<Integer> notCoveredItems = Lists.newArrayList(transaction
+				.getItems());
 
-		// Set up cost vector
-		int i = 0;
-		final double[] costs = new double[probSize];
-		for (final double p : itemsets.values()) {
-			costs[i] = -Math.log(p);
-			i++;
+		// Calculate costs
+		final HashMap<Itemset, Double> costs = Maps.newHashMap();
+		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+			costs.put(entry.getKey(), -Math.log(entry.getValue()));
 		}
 
-		// Set objective sum(c_s*z_s)
-		final LinearProgram lp = new LinearProgram(costs);
+		while (!notCoveredItems.isEmpty()) {
 
-		// Add covering constraint
-		i = 0;
-		final List<Integer> transactionItems = transaction.getItems();
-		final double[] cover = new double[probSize];
-		for (final Itemset set : itemsets.keySet()) {
-			for (final Integer item : set.getItems()) {
-				if (transactionItems.contains(item)) {
-					cover[i] = 1; // add set if item in transaction
-					break;
+			double minCost = Double.POSITIVE_INFINITY;
+			Itemset bestSet = null;
+
+			// Pick random element
+			final int index = rand.nextInt(notCoveredItems.size());
+			final Integer element = notCoveredItems.get(index);
+
+			// Increase dual of element as much as possible
+			for (final Entry<Itemset, Double> entry : costs.entrySet()) {
+
+				if (entry.getKey().getItems().contains(element)) {
+
+					final double cost = entry.getValue();
+					if (cost < minCost) {
+						minCost = cost;
+						bestSet = entry.getKey();
+					}
+
 				}
 			}
-			i++;
-		}
-		lp.addConstraint(new LinearBiggerThanEqualsConstraint(cover, 1.,
-				"cover"));
 
-		// Add z_s >= 0 constraints
-		for (int j = 0; j < probSize; j++) {
-			final double[] constraint = new double[probSize];
-			constraint[j] = 1;
-			lp.addConstraint(new LinearBiggerThanEqualsConstraint(constraint,
-					0., "p" + j));
-		}
-
-		// Solve
-		final double[] sol = SOLVER.solve(lp);
-
-		// Flip weighted coin with probability z_s to decide whether to retain S
-		i = 0;
-		double totalCost = 0;
-		for (final Itemset set : itemsets.keySet()) {
-			if (sol[i] >= 1 / maxSup) {
-				covering.add(set);
-				totalCost += costs[i] * sol[i];
+			// Make dual of element binding
+			for (final Itemset set : costs.keySet()) {
+				if (set.getItems().contains(element)) {
+					final double cost = costs.get(set);
+					costs.put(set, cost - minCost);
+				}
 			}
-			i++;
+
+			// Allow incomplete coverings
+			if (bestSet != null) {
+				covering.add(bestSet);
+				notCoveredItems.removeAll(bestSet.getItems());
+				totalCost += minCost;
+			} else {
+				// System.out.println("Incomplete covering.");
+				break;
+			}
+
 		}
+
 		return totalCost;
 	}
 
