@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import ca.pfv.spmf.tools.MemoryLogger;
 
@@ -43,8 +42,6 @@ public class ItemsetTree {
 
 	// root of the itemset tree
 	private ItemsetTreeNode root = null;
-	private final int maxDepth = -1;
-	private final Random rand = new Random();
 
 	// statistics about tree construction
 	int nodeCount; // number of nodes in the tree (recalculated by
@@ -123,6 +120,7 @@ public class ItemsetTree {
 	 * @throws IOException
 	 *             exception if error while reading the file
 	 */
+	// TODO sort transactions by support? cf. FPGrowth?
 	public void buildTree(final String input) throws IOException {
 		// record start time
 		startTimestamp = System.currentTimeMillis();
