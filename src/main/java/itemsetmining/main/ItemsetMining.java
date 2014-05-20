@@ -56,7 +56,9 @@ public class ItemsetMining {
 				LEN_INIT, tree, STRUCTURAL_EM_ITERATIONS);
 		System.out
 				.println("\n============= INTERESTING ITEMSETS =============\n"
-						+ itemsets + "\n\n");
+						+ itemsets + "\n");
+		System.out.println("======= Input Transactions =======\n"
+				+ Files.toString(new File(input), Charsets.UTF_8) + "\n");
 
 		// Compare with the FPGROWTH algorithm (we use a relative support)
 		final double minsup = 0.4; // means a minsup of 2 transaction
@@ -155,7 +157,6 @@ public class ItemsetMining {
 	 * Infer ML parameters to explain transaction using greedy algorithm and
 	 * store in covering
 	 */
-	// FIXME this is too sloooow...
 	public static double inferGreedy(final Set<Itemset> covering,
 			final HashMap<Itemset, Double> itemsets,
 			final Transaction transaction) {
@@ -172,12 +173,15 @@ public class ItemsetMining {
 
 			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 
-				final Set<Integer> notCoveredItems = Sets.newHashSet(entry
-						.getKey().getItems());
-				notCoveredItems.removeAll(coveredItems);
+				int notCovered = 0;
+				for (Integer item : entry.getKey().getItems()) {
+					if (!coveredItems.contains(item)) {
+						notCovered++;
+					}
+				}
 
 				final double cost = -Math.log(entry.getValue());
-				final double costPerItem = cost / notCoveredItems.size();
+				final double costPerItem = cost / notCovered;
 
 				if (costPerItem < minCostPerItem) {
 					minCostPerItem = costPerItem;

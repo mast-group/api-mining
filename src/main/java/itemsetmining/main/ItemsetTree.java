@@ -693,9 +693,9 @@ public class ItemsetTree {
 		totalNumberOfBranches = 0;
 		recursiveStats(root, 1);
 		System.out.println(" Node count: " + nodeCount);
-		System.out.println(" Sum of items in all node: "
-				+ totalItemCountInNodes + " avg per node :"
-				+ totalItemCountInNodes / ((double) nodeCount));
+		System.out.println(" No. items: " + totalItemCountInNodes
+				+ ", avg items per node: " + totalItemCountInNodes
+				/ ((double) nodeCount));
 		System.out.println("=====================================");
 	}
 
