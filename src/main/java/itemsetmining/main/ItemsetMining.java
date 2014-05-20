@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -11,6 +12,10 @@ import java.util.Set;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 
+import scpsolver.constraints.LinearBiggerThanEqualsConstraint;
+import scpsolver.lpsolver.LinearProgramSolver;
+import scpsolver.lpsolver.SolverFactory;
+import scpsolver.problems.LinearProgram;
 import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPGrowth;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
 
@@ -29,6 +34,9 @@ public class ItemsetMining {
 	private static final int OPTIMIZE_ITERATIONS = 100;
 	private static final int MAX_RANDOM_WALKS = 100;
 	private static int LEN_INIT = 5; // No. of items to initialise
+
+	private static final LinearProgramSolver SOLVER = SolverFactory
+			.getSolver("CPLEX");
 
 	// TODO don't read all transactions into memory
 	public static void main(final String[] args) throws IOException {
@@ -174,7 +182,7 @@ public class ItemsetMining {
 			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 
 				int notCovered = 0;
-				for (Integer item : entry.getKey().getItems()) {
+				for (final Integer item : entry.getKey().getItems()) {
 					if (!coveredItems.contains(item)) {
 						notCovered++;
 					}
@@ -205,6 +213,68 @@ public class ItemsetMining {
 		return totalCost;
 	}
 
+	/**
+	 * Infer ML parameters to explain transaction using LP approximation and
+	 * store in covering
+	 */
+	public static double inferLP(final Set<Itemset> covering,
+			final LinkedHashMap<Itemset, Double> itemsets,
+			final Transaction transaction, final double maxSup) {
+
+		final int probSize = itemsets.size();
+
+		// Set up cost vector
+		int i = 0;
+		final double[] costs = new double[probSize];
+		for (final double p : itemsets.values()) {
+			costs[i] = -Math.log(p);
+			i++;
+		}
+
+		// Set objective sum(c_s*z_s)
+		final LinearProgram lp = new LinearProgram(costs);
+
+		// Add covering constraint
+		i = 0;
+		final List<Integer> transactionItems = transaction.getItems();
+		final double[] cover = new double[probSize];
+		for (final Itemset set : itemsets.keySet()) {
+			for (final Integer item : set.getItems()) {
+				if (transactionItems.contains(item)) {
+					cover[i] = 1; // add set if item in transaction
+					break;
+				}
+			}
+			i++;
+		}
+		lp.addConstraint(new LinearBiggerThanEqualsConstraint(cover, 1.,
+				"cover"));
+
+		// Add z_s >= 0 constraints
+		for (int j = 0; j < probSize; j++) {
+			final double[] constraint = new double[probSize];
+			constraint[j] = 1;
+			lp.addConstraint(new LinearBiggerThanEqualsConstraint(constraint,
+					0., "p" + j));
+		}
+
+		// Solve
+		final double[] sol = SOLVER.solve(lp);
+
+		// Flip weighted coin with probability z_s to decide whether to retain S
+		i = 0;
+		double totalCost = 0;
+		for (final Itemset set : itemsets.keySet()) {
+			if (sol[i] >= 1 / maxSup) {
+				covering.add(set);
+				totalCost += costs[i] * sol[i];
+			}
+			i++;
+		}
+		return totalCost;
+	}
+
+	// TODO keep a set of previous suggestions for efficiency?
 	public static void learnStructureStep(final double averageCost,
 			final HashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions, final ItemsetTree tree) {
