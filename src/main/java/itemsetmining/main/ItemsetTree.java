@@ -1,16 +1,22 @@
 package itemsetmining.main;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
+
 import ca.pfv.spmf.tools.MemoryLogger;
 
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multiset;
+import com.google.common.primitives.Ints;
 
 /**
  * This is the original implementation of the Memory Efficient Itemset-tree as
@@ -117,11 +123,10 @@ public class ItemsetTree {
 	 * 
 	 * @param input
 	 *            an input file
-	 * @throws IOException
-	 *             exception if error while reading the file
+	 * @return
 	 */
-	// TODO sort transactions by support? cf. FPGrowth?
-	public void buildTree(final String input) throws IOException {
+	public void buildTree(final File inputFile, final Multiset<Integer> support)
+			throws IOException {
 		// record start time
 		startTimestamp = System.currentTimeMillis();
 
@@ -132,10 +137,10 @@ public class ItemsetTree {
 		root = new ItemsetTreeNode(null, 0);
 
 		// Scan the database to read the transactions
-		final BufferedReader reader = new BufferedReader(new FileReader(input));
-		String line;
-		// for each line (transaction) until the end of file
-		while (((line = reader.readLine()) != null)) {
+		final LineIterator it = FileUtils.lineIterator(inputFile, "UTF-8");
+		while (it.hasNext()) {
+
+			final String line = it.nextLine();
 			// if the line is a comment, is empty or is a
 			// kind of metadata
 			if (line.isEmpty() == true || line.charAt(0) == '#'
@@ -146,23 +151,37 @@ public class ItemsetTree {
 			// split the transaction into items
 			final String[] lineSplited = line.split(" ");
 			// create a structure for storing the transaction
-			final int[] itemset = new int[lineSplited.length];
+			final List<Integer> itemset = new ArrayList<Integer>();
 			// for each item in the transaction
 			for (int i = 0; i < lineSplited.length; i++) {
 				// convert the item to integer and add it to the structure
-				itemset[i] = Integer.parseInt(lineSplited[i]);
+				// TODO ignore low frequency items like FPGrowth?
+				itemset.add(Integer.parseInt(lineSplited[i]));
 
-				// The next line is commented and was only used
-				// for testing the performance of random queries
-				// items.add(itemset[i]);
 			}
-			// printTree();
+
+			// sort items in the itemset by descending order of support
+			Collections.sort(itemset, new Comparator<Integer>() {
+				@Override
+				public int compare(final Integer item1, final Integer item2) {
+					// compare the frequency
+					final int compare = support.count(item2)
+							- support.count(item1);
+					// if the same frequency, we check the lexical ordering!
+					if (compare == 0) {
+						return (item1 - item2);
+					}
+					// otherwise, just use the frequency
+					return compare;
+				}
+			});
+
 			// call the method "construct" to add the transaction to the tree
-			construct(null, root, itemset, null);
-			// System.out.println(".");
+			construct(null, root, Ints.toArray(itemset), null);
+
 		}
 		// close the input file
-		reader.close();
+		LineIterator.closeQuietly(it);
 
 		// check the memory usage
 		MemoryLogger.getInstance().checkMemory();

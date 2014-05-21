@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -12,12 +13,18 @@ import java.util.Set;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 
+import scpsolver.constraints.LinearBiggerThanEqualsConstraint;
+import scpsolver.lpsolver.LinearProgramSolver;
+import scpsolver.lpsolver.SolverFactory;
+import scpsolver.problems.LinearProgram;
 import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPGrowth;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 
@@ -26,14 +33,13 @@ public class ItemsetMining {
 	private static final int STRUCTURAL_EM_ITERATIONS = 100;
 	private static final int OPTIMIZE_PARAMS_EVERY = 5;
 	private static final int OPTIMIZE_PARAMS_BURNIN = 5;
+	private static final double OPTIMIZE_TOL = 1e-10;
 
-	private static final int OPTIMIZE_ITERATIONS = 100;
 	private static final int MAX_RANDOM_WALKS = 100;
-	private static int LEN_INIT = 5; // No. of items to initialise
 
 	private static final Random rand = new Random();
+	private static LinearProgramSolver SOLVER; // For exact ILP
 
-	// TODO don't read all transactions into memory
 	public static void main(final String[] args) throws IOException {
 
 		// Read in transaction database
@@ -42,13 +48,18 @@ public class ItemsetMining {
 		// final URL url = ItemsetMining.class.getClassLoader().getResource(
 		// "chess.txt");
 		final String input = java.net.URLDecoder.decode(url.getPath(), "UTF-8");
+		final File inputFile = new File(input);
 		System.out.println("======= Input Transactions =======\n"
-				+ Files.toString(new File(input), Charsets.UTF_8));
-		final List<Transaction> transactions = readTransactions(input);
+				+ Files.toString(inputFile, Charsets.UTF_8));
+		// TODO don't read all transactions into memory
+		final List<Transaction> transactions = readTransactions(inputFile);
+
+		// Determine most frequent singletons
+		final Multiset<Integer> singletons = scanDatabaseToDetermineFrequencyOfSingleItems(inputFile);
 
 		// Apply the algorithm to build the itemset tree
 		final ItemsetTree tree = new ItemsetTree();
-		tree.buildTree(input);
+		tree.buildTree(inputFile, singletons);
 		tree.printStatistics();
 		System.out.println("THIS IS THE TREE:");
 		tree.printTree();
@@ -56,15 +67,15 @@ public class ItemsetMining {
 		// Run inference to find interesting itemsets
 		System.out.println("============= ITEMSET INFERENCE =============");
 		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
-				LEN_INIT, tree, STRUCTURAL_EM_ITERATIONS);
+				singletons.elementSet(), tree, STRUCTURAL_EM_ITERATIONS);
 		System.out
 				.println("\n============= INTERESTING ITEMSETS =============\n"
 						+ itemsets + "\n");
 		System.out.println("======= Input Transactions =======\n"
-				+ Files.toString(new File(input), Charsets.UTF_8) + "\n");
+				+ Files.toString(inputFile, Charsets.UTF_8) + "\n");
 
 		// Compare with the FPGROWTH algorithm (we use a relative support)
-		final double minsup = 0.4; // means a minsup of 2 transaction
+		final double minsup = 0.6; // means a minsup of 3
 		final AlgoFPGrowth algo = new AlgoFPGrowth();
 		final Itemsets patterns = algo.runAlgorithm(input, null, minsup);
 		algo.printStats();
@@ -74,21 +85,17 @@ public class ItemsetMining {
 
 	/** Learn itemsets model using structural EM */
 	public static HashMap<Itemset, Double> structuralEM(
-			final List<Transaction> transactions, final int lenUniverse,
-			final ItemsetTree tree, final int iterations) {
+			final List<Transaction> transactions,
+			final Set<Integer> singletons, final ItemsetTree tree,
+			final int iterations) {
 
 		// Intialize with equiprobable singleton sets
 		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
-		for (int i = 0; i < lenUniverse; i++) {
-			itemsets.put(new Itemset(i + 1), 0.1);
+		for (final int singleton : singletons) {
+			itemsets.put(new Itemset(singleton), 0.1);
 		}
-		// itemsets.put(new Itemset(1), 0.1);
-		// itemsets.put(new Itemset(3), 0.1);
-		// itemsets.put(new Itemset(4), 0.1);
-		// itemsets.put(new Itemset(5), 0.1);
-		// itemsets.put(new Itemset(6), 0.1);
 		System.out.println(" Initial itemsets: " + itemsets);
-		double averageCost = 0;
+		double averageCost = Double.POSITIVE_INFINITY;
 
 		// Structural EM
 		for (int i = 1; i <= iterations; i++) {
@@ -120,7 +127,9 @@ public class ItemsetMining {
 		double averageCost = 0;
 		HashMap<Itemset, Double> prevItemsets = itemsets;
 		final double n = transactions.size();
-		for (int i = 0; i < OPTIMIZE_ITERATIONS; i++) {
+
+		double norm = 1;
+		while (norm > OPTIMIZE_TOL) {
 
 			// E step and M step combined
 			final HashMap<Itemset, Double> newItemsets = Maps.newHashMap();
@@ -139,21 +148,84 @@ public class ItemsetMining {
 						newItemsets.put(set, 1. / n);
 					}
 				}
-
-				// Save cost on last iteration
-				if (i == OPTIMIZE_ITERATIONS - 1) {
-					averageCost += cost / n;
-				}
+				averageCost += cost / n;
 
 			}
+
+			// If set has stabilised calculate norm(p_prev - p_new)
+			if (prevItemsets.size() == newItemsets.size()) {
+				norm = 0;
+				for (final Itemset set : prevItemsets.keySet()) {
+					norm += Math.pow(
+							prevItemsets.get(set) - newItemsets.get(set), 2);
+				}
+				norm = Math.sqrt(norm);
+			}
+
 			prevItemsets = newItemsets;
 		}
+
 		itemsets.clear();
 		itemsets.putAll(prevItemsets);
 		System.out.println("\n***** Parameter Optimization Step");
 		System.out.println(" Parameter Optimal Itemsets: " + itemsets);
 		System.out.println(" Average cost: " + averageCost);
 		return averageCost;
+	}
+
+	// TODO keep a set of previous suggestions for efficiency?
+	public static void learnStructureStep(final double averageCost,
+			final HashMap<Itemset, Double> itemsets,
+			final List<Transaction> transactions, final ItemsetTree tree) {
+
+		// Try and find better itemset to add
+		final double n = transactions.size();
+		System.out.print(" Structural candidate itemsets: ");
+		for (int i = 0; i < MAX_RANDOM_WALKS; i++) {
+
+			// Candidate itemset
+			final Itemset set = tree.randomWalk();
+			System.out.print(set + ", ");
+
+			// Skip empty candidates and candidates already present
+			if (!set.isEmpty() && !itemsets.keySet().contains(set)) {
+
+				System.out.print("\n potential candidate: " + set);
+				// Estimate itemset probability (M-step assuming always
+				// included)
+				double p = 0;
+				for (final Transaction transaction : transactions) {
+					if (transaction.getItems().containsAll(set.getItems())) {
+						p++;
+					}
+				}
+				p = p / n;
+
+				// Add itemset and find cost
+				itemsets.put(set, p);
+				double curCost = 0;
+				for (final Transaction transaction : transactions) {
+
+					final Set<Itemset> covering = Sets.newHashSet();
+					// TODO parallelize inference step
+					final double cost = inferGreedy(covering, itemsets,
+							transaction);
+					curCost += cost;
+				}
+				curCost = curCost / n;
+				System.out.print(", candidate cost: " + curCost);
+
+				if (curCost < averageCost) { // found better set of itemsets
+					System.out.print("\n Candidate Accepted.");
+					break;
+				} // otherwise keep trying
+				itemsets.remove(set);
+				System.out.print("\n Structural candidate itemsets: ");
+			}
+
+		}
+		System.out.println("\n Structure Optimal Itemsets: " + itemsets);
+
 	}
 
 	/**
@@ -199,7 +271,6 @@ public class ItemsetMining {
 			}
 
 			// Allow incomplete coverings
-			// FIXME check that totalCost is properly calculated now
 			if (bestSet != null) {
 				covering.add(bestSet);
 				coveredItems.addAll(bestSet.getItems());
@@ -282,69 +353,90 @@ public class ItemsetMining {
 		return totalCost;
 	}
 
-	// TODO keep a set of previous suggestions for efficiency?
-	public static void learnStructureStep(final double averageCost,
-			final HashMap<Itemset, Double> itemsets,
-			final List<Transaction> transactions, final ItemsetTree tree) {
+	/**
+	 * Infer ML parameters to explain transaction exactly using ILP and store in
+	 * covering.
+	 * <p>
+	 * This is an NP-hard problem.
+	 */
+	public static double inferILP(final Set<Itemset> covering,
+			final LinkedHashMap<Itemset, Double> itemsets,
+			final Transaction transaction) {
 
-		// Try and find better itemset to add
-		final double n = transactions.size();
-		System.out.print(" Structural candidate itemsets: ");
-		for (int i = 0; i < MAX_RANDOM_WALKS; i++) {
+		// Load solver if necessary
+		if (SOLVER == null)
+			SOLVER = SolverFactory.getSolver("CPLEX");
 
-			// Candidate itemset
-			final Itemset set = tree.randomWalk();
-			System.out.print(set + ", ");
+		final int probSize = itemsets.size();
 
-			// Skip empty candidates and candidates already present
-			if (!set.isEmpty() && !itemsets.keySet().contains(set)) {
+		// Set up cost vector
+		int i = 0;
+		final double[] costs = new double[probSize];
+		for (final double p : itemsets.values()) {
+			costs[i] = -Math.log(p);
+			i++;
+		}
 
-				System.out.print("\n potential candidate: " + set);
-				// Estimate itemset probability (M-step assuming always
-				// included)
-				double p = 0;
-				for (final Transaction transaction : transactions) {
-					if (transaction.getItems().containsAll(set.getItems())) {
-						p++;
-					}
+		// Set objective sum(c_s*z_s)
+		final LinearProgram lp = new LinearProgram(costs);
+
+		// Add covering constraint
+		for (final Integer item : transaction.getItems()) {
+
+			i = 0;
+			final double[] cover = new double[probSize];
+			for (final Itemset set : itemsets.keySet()) {
+
+				// at least one set covers item
+				if (set.getItems().contains(item)) {
+					cover[i] = 1;
 				}
-				p = p / n;
-
-				// Add itemset and find cost
-				itemsets.put(set, p);
-				double curCost = 0;
-				for (final Transaction transaction : transactions) {
-
-					final Set<Itemset> covering = Sets.newHashSet();
-					// TODO parallelize inference step
-					final double cost = inferGreedy(covering, itemsets,
-							transaction);
-					curCost += cost;
-				}
-				curCost = curCost / n;
-				System.out.print(", candidate cost: " + curCost);
-
-				if (curCost > averageCost) { // found better set of itemsets
-					System.out.print("\n Candidate Accepted.");
-					break;
-				} // otherwise keep trying
-				itemsets.remove(set);
-				System.out.print("\n Structural candidate itemsets: ");
+				i++;
 			}
+			lp.addConstraint(new LinearBiggerThanEqualsConstraint(cover, 1.,
+					"cover"));
 
 		}
-		System.out.println("\n Structure Optimal Itemsets: " + itemsets);
 
+		// Set all variables to binary
+		for (int j = 0; j < probSize; j++) {
+			lp.setBinary(j);
+		}
+
+		System.out.println(lp.convertToCPLEX());
+
+		// Solve
+		lp.setMinProblem(true);
+		final double[] sol = SOLVER.solve(lp);
+
+		// Add chosen sets to covering
+		i = 0;
+		double totalCost = 0;
+		for (final Itemset set : itemsets.keySet()) {
+			if (doubleToBoolean(sol[i])) {
+				covering.add(set);
+				totalCost += costs[i] * sol[i];
+			}
+			i++;
+		}
+		return totalCost;
 	}
 
-	public static List<Transaction> readTransactions(final String input)
+	/** Round double to boolean */
+	private static boolean doubleToBoolean(final double d) {
+		if ((int) Math.round(d) == 1)
+			return true;
+		return false;
+	}
+
+	// TODO don't read all transactions into memory
+	public static List<Transaction> readTransactions(final File inputFile)
 			throws IOException {
 
 		final List<Transaction> transactions = Lists.newArrayList();
 
 		// for each line (transaction) until the end of file
-		final LineIterator it = FileUtils
-				.lineIterator(new File(input), "UTF-8");
+		final LineIterator it = FileUtils.lineIterator(inputFile, "UTF-8");
 		while (it.hasNext()) {
 
 			final String line = it.nextLine();
@@ -373,4 +465,44 @@ public class ItemsetMining {
 
 		return transactions;
 	}
+
+	/**
+	 * This method scans the input database to calculate the support of single
+	 * items.
+	 * 
+	 * @param inputFile
+	 *            the input file
+	 * @return a multiset for storing the support of each item
+	 */
+	private static Multiset<Integer> scanDatabaseToDetermineFrequencyOfSingleItems(
+			final File inputFile) throws IOException {
+
+		final Multiset<Integer> singletons = HashMultiset.create();
+
+		// for each line (transaction) until the end of file
+		final LineIterator it = FileUtils.lineIterator(inputFile, "UTF-8");
+		while (it.hasNext()) {
+
+			final String line = it.nextLine();
+			// if the line is a comment, is empty or is a
+			// kind of metadata
+			if (line.isEmpty() == true || line.charAt(0) == '#'
+					|| line.charAt(0) == '%' || line.charAt(0) == '@') {
+				continue;
+			}
+
+			// split the line into items
+			final String[] lineSplited = line.split(" ");
+			// for each item
+			for (final String itemString : lineSplited) {
+				// increase the support count of the item
+				singletons.add(Integer.parseInt(itemString));
+			}
+		}
+		// close the input file
+		LineIterator.closeQuietly(it);
+
+		return singletons;
+	}
+
 }
