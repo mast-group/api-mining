@@ -224,6 +224,7 @@ public class ItemsetMining {
 				// included)
 				double p = 0;
 				for (final Transaction transaction : transactions) {
+					// TODO does this assumption make sense
 					if (transaction.getItems().containsAll(set.getItems())) {
 						p++;
 					}
