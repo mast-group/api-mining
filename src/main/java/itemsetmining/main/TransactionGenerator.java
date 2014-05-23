@@ -66,6 +66,7 @@ public class TransactionGenerator {
 		while (it.hasNext()) {
 			System.out.println(it.nextLine());
 		}
+		LineIterator.closeQuietly(it);
 	}
 
 	/** Randomly generate itemset with its probability */
