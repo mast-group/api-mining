@@ -21,7 +21,10 @@ public class ItemsetMiningTests {
 		itemsets.put(new Itemset(1), 0.2);
 		itemsets.put(new Itemset(2), 0.2);
 		itemsets.put(new Itemset(3), 0.4);
-		itemsets.put(new Itemset(4), 0.4);
+		final Itemset s4 = new Itemset(4);
+		double p4 = 0.4;
+		itemsets.put(s4, p4);
+
 		final Itemset s12 = new Itemset(1, 2);
 		final Itemset s23 = new Itemset(2, 3);
 		final Itemset s24 = new Itemset(2, 4);
@@ -36,31 +39,34 @@ public class ItemsetMiningTests {
 		itemsets.put(s34, p34);
 
 		double actualCost = 0;
-		double expectedCost = 0;
 		final Set<Itemset> actual = Sets.newHashSet();
-		final Set<Itemset> expected = Sets.newHashSet();
 		final Set<Integer> actualItems = Sets.newHashSet();
 
-		// Transactions
+		// Transaction #1
 		final Transaction transaction1234 = new Transaction(1, 2, 3, 4);
+
+		// Expected solution #1
+		double expectedCost1234 = -Math.log(p12) - Math.log(p34);
+		final Set<Itemset> expected1234 = Sets.newHashSet(s12, s34);
+
+		// Transaction #2
 		final Transaction transaction234 = new Transaction(2, 3, 4);
 
-		// Expected solution
-		expectedCost = -Math.log(p12) - Math.log(p34);
-		expected.add(s12);
-		expected.add(s34);
+		// Expected solution #2
+		double expectedCost234 = -Math.log(p23) - Math.log(p4);
+		final Set<Itemset> expected234 = Sets.newHashSet(s23, s4);
 
 		// Test greedy
 		actual.clear();
 		actualCost = ItemsetMining.inferGreedy(actual, itemsets,
 				transaction1234);
-		assertEquals(expected, actual);
-		assertEquals(expectedCost, actualCost, 1e-15);
+		assertEquals(expected1234, actual);
+		assertEquals(expectedCost1234, actualCost, 1e-15);
 
 		actual.clear();
 		ItemsetMining.inferGreedy(actual, itemsets, transaction234);
-		assertEquals(expected, actual);
-		assertEquals(expectedCost, actualCost, 1e-15);
+		assertEquals(expected234, actual);
+		assertEquals(expectedCost234, actualCost, 1e-15);
 
 		// Test primal-dual (only gives rough approximation)
 		actual.clear();
@@ -81,13 +87,13 @@ public class ItemsetMiningTests {
 		// Test ILP
 		actual.clear();
 		actualCost = ItemsetMining.inferILP(actual, itemsets, transaction1234);
-		assertEquals(expected, actual);
-		assertEquals(expectedCost, actualCost, 1e-15);
+		assertEquals(expected1234, actual);
+		assertEquals(expectedCost1234, actualCost, 1e-15);
 
 		actual.clear();
 		ItemsetMining.inferILP(actual, itemsets, transaction234);
-		assertEquals(expected, actual);
-		assertEquals(expectedCost, actualCost, 1e-15);
+		assertEquals(expected234, actual);
+		assertEquals(expectedCost234, actualCost, 1e-15);
 
 	}
 }

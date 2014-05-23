@@ -6,6 +6,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
@@ -34,8 +35,11 @@ import com.google.common.io.Files;
 
 public class ItemsetMining {
 
-	private static final String DATASET = "contextPasquier99.txt";
+	// private static final String DATASET = "contextPasquier99.txt";
 	// private static final String DATASET = "chess.txt";
+	private static final String DATASET = "caviar.txt";
+	// private static final String DATASET = "freerider.txt";
+	private static final double FPGROWTH_SUPPORT = 0.25;
 
 	private static final int STOP_AFTER_MAX_WALKS = 3;
 	private static final int MAX_RANDOM_WALKS = 100;
@@ -81,7 +85,7 @@ public class ItemsetMining {
 				+ Files.toString(inputFile, Charsets.UTF_8) + "\n");
 
 		// Compare with the FPGROWTH algorithm
-		final double minsup = 0.8; // relative support
+		final double minsup = FPGROWTH_SUPPORT; // relative support
 		final AlgoFPGrowth algo = new AlgoFPGrowth();
 		final Itemsets patterns = algo.runAlgorithm(input, null, minsup);
 		algo.printStats();
@@ -301,7 +305,9 @@ public class ItemsetMining {
 				final double cost = -Math.log(entry.getValue());
 				final double costPerItem = cost / notCovered;
 
-				if (costPerItem < minCostPerItem) {
+				if (costPerItem < minCostPerItem
+						&& transactionItems.containsAll(entry.getKey()
+								.getItems())) { // Don't over-cover
 					minCostPerItem = costPerItem;
 					bestSet = entry.getKey();
 					bestCost = cost;
@@ -309,13 +315,13 @@ public class ItemsetMining {
 
 			}
 
-			// Allow incomplete coverings
 			if (bestSet != null) {
 				covering.add(bestSet);
 				coveredItems.addAll(bestSet.getItems());
 				totalCost += bestCost;
-			} else {
-				// System.out.println("Incomplete covering.");
+			} else { // Allow incomplete coverings
+				if (totalCost == 0) // no covering is bad
+					totalCost = Double.POSITIVE_INFINITY;
 				break;
 			}
 
@@ -332,6 +338,7 @@ public class ItemsetMining {
 	 * elements to cover, n is the number of sets and f is the frequency of the
 	 * most frequent element in the sets.
 	 */
+	// TODO fix overcover problem and no covering is good problem
 	public static double inferPrimalDual(final Set<Itemset> covering,
 			final HashMap<Itemset, Double> itemsets,
 			final Transaction transaction) {
@@ -361,12 +368,25 @@ public class ItemsetMining {
 				if (entry.getKey().getItems().contains(element)) {
 
 					final double cost = entry.getValue();
-					if (cost < minCost) {
+					if (cost < minCost
+							&& transaction.getItems().containsAll(
+									entry.getKey().getItems())) { // don't
+																	// over-cover
 						minCost = cost;
 						bestSet = entry.getKey();
 					}
 
 				}
+			}
+
+			if (bestSet != null) {
+				covering.add(bestSet);
+				notCoveredItems.removeAll(bestSet.getItems());
+				totalCost += minCost;
+			} else { // Allow incomplete coverings
+				if (totalCost == 0) // no covering is bad
+					totalCost = Double.POSITIVE_INFINITY;
+				break;
 			}
 
 			// Make dual of element binding
@@ -375,16 +395,6 @@ public class ItemsetMining {
 					final double cost = costs.get(set);
 					costs.put(set, cost - minCost);
 				}
-			}
-
-			// Allow incomplete coverings
-			if (bestSet != null) {
-				covering.add(bestSet);
-				notCoveredItems.removeAll(bestSet.getItems());
-				totalCost += minCost;
-			} else {
-				// System.out.println("Incomplete covering.");
-				break;
 			}
 
 		}
@@ -398,6 +408,7 @@ public class ItemsetMining {
 	 * <p>
 	 * This is an NP-hard problem.
 	 */
+	// TODO use Guava's filter to filter out sets
 	public static double inferILP(final Set<Itemset> covering,
 			final LinkedHashMap<Itemset, Double> itemsets,
 			final Transaction transaction) {
@@ -406,12 +417,20 @@ public class ItemsetMining {
 		if (solver == null)
 			solver = SolverFactory.getSolver("CPLEX");
 
-		final int probSize = itemsets.size();
+		// Filter out sets containing items not in transaction
+		LinkedHashMap<Itemset, Double> filteredItemsets = Maps
+				.newLinkedHashMap(itemsets);
+		for (Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
+			if (transaction.getItems().containsAll(entry.getKey().getItems()))
+				filteredItemsets.put(entry.getKey(), entry.getValue());
+		}
+
+		final int probSize = filteredItemsets.size();
 
 		// Set up cost vector
 		int i = 0;
 		final double[] costs = new double[probSize];
-		for (final double p : itemsets.values()) {
+		for (final double p : filteredItemsets.values()) {
 			costs[i] = -Math.log(p);
 			i++;
 		}
@@ -424,7 +443,7 @@ public class ItemsetMining {
 
 			i = 0;
 			final double[] cover = new double[probSize];
-			for (final Itemset set : itemsets.keySet()) {
+			for (final Itemset set : filteredItemsets.keySet()) {
 
 				// at least one set covers item
 				if (set.getItems().contains(item)) {
@@ -451,13 +470,18 @@ public class ItemsetMining {
 		// Add chosen sets to covering
 		i = 0;
 		double totalCost = 0;
-		for (final Itemset set : itemsets.keySet()) {
+		for (final Itemset set : filteredItemsets.keySet()) {
 			if (doubleToBoolean(sol[i])) {
 				covering.add(set);
 				totalCost += costs[i] * sol[i];
 			}
 			i++;
 		}
+
+		// no covering is bad
+		if (totalCost == 0)
+			totalCost = Double.POSITIVE_INFINITY;
+
 		return totalCost;
 	}
 

@@ -45,8 +45,8 @@ public class TransactionGenerator {
 
 			Itemset s12 = new Itemset(1, 2);
 			Itemset s3 = new Itemset(3);
-			double p12 = 0.25;
-			double p3 = 0.25;
+			double p12 = 0.5;
+			double p3 = 0.5;
 			itemsets.put(s12, p12);
 			itemsets.put(s3, p3);
 
