@@ -22,10 +22,10 @@ public class ItemsetMiningTests {
 		itemsets.put(new Itemset(2), 0.2);
 		itemsets.put(new Itemset(3), 0.4);
 		itemsets.put(new Itemset(4), 0.4);
-		final Itemset s12 = new Itemset(new int[] { 1, 2 });
-		final Itemset s23 = new Itemset(new int[] { 2, 3 });
-		final Itemset s24 = new Itemset(new int[] { 2, 4 });
-		final Itemset s34 = new Itemset(new int[] { 3, 4 });
+		final Itemset s12 = new Itemset(1, 2);
+		final Itemset s23 = new Itemset(2, 3);
+		final Itemset s24 = new Itemset(2, 4);
+		final Itemset s34 = new Itemset(3, 4);
 		final double p12 = 0.4;
 		final double p23 = 0.2;
 		final double p24 = 0.2;
@@ -42,10 +42,8 @@ public class ItemsetMiningTests {
 		final Set<Integer> actualItems = Sets.newHashSet();
 
 		// Transactions
-		final Transaction transaction1234 = new Transaction(new int[] { 1, 2,
-				3, 4 });
-		final Transaction transaction234 = new Transaction(
-				new int[] { 2, 3, 4 });
+		final Transaction transaction1234 = new Transaction(1, 2, 3, 4);
+		final Transaction transaction234 = new Transaction(2, 3, 4);
 
 		// Expected solution
 		expectedCost = -Math.log(p12) - Math.log(p34);
@@ -67,15 +65,14 @@ public class ItemsetMiningTests {
 		// Test primal-dual (only gives rough approximation)
 		actual.clear();
 		actualCost = ItemsetMining.inferPrimalDual(actual, itemsets,
-				new Transaction(new int[] { 1, 2, 3, 4 }));
+				transaction1234);
 		actualItems.clear();
 		for (final Itemset set : actual)
 			actualItems.addAll(set.getItems());
 		assertTrue(actualItems.containsAll(transaction1234.getItems()));
 
 		actual.clear();
-		ItemsetMining.inferPrimalDual(actual, itemsets, new Transaction(
-				new int[] { 2, 3, 4 }));
+		ItemsetMining.inferPrimalDual(actual, itemsets, transaction234);
 		actualItems.clear();
 		for (final Itemset set : actual)
 			actualItems.addAll(set.getItems());
