@@ -27,6 +27,20 @@ public class TransactionGenerator {
 		// Create interesting itemsets
 		if (args[0].equals("caviar")) {
 
+			// Champagne & Caviar
+			Itemset s12 = new Itemset(1, 2);
+			double p12 = 0.1;
+			itemsets.put(s12, p12);
+
+			// Other transactions
+			Itemset s3 = new Itemset(3);
+			double p3 = 0.8;
+			itemsets.put(s3, p3);
+
+			Itemset s4 = new Itemset(4);
+			double p4 = 0.5;
+			itemsets.put(s4, p4);
+
 		} else if (args[0].equals("freerider")) {
 
 			Itemset s12 = new Itemset(1, 2);
@@ -37,6 +51,14 @@ public class TransactionGenerator {
 			itemsets.put(s3, p3);
 
 		} else if (args[0].equals("unlifted")) {
+
+			Itemset s1 = new Itemset(1);
+			double p1 = 0.1;
+			itemsets.put(s1, p1);
+
+			Itemset s2 = new Itemset(2);
+			double p2 = 0.8;
+			itemsets.put(s2, p2);
 
 		} else
 			throw new IllegalArgumentException("Incorrect problem name.");
@@ -74,7 +96,7 @@ public class TransactionGenerator {
 
 		Set<Integer> transaction = Sets.newHashSet();
 		for (Entry<Itemset, Double> entry : itemsets.entrySet()) {
-			if (Math.random() > entry.getValue()) {
+			if (Math.random() < entry.getValue()) {
 				transaction.addAll(entry.getKey().getItems());
 			}
 		}
