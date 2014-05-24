@@ -43,7 +43,8 @@ public class ItemsetMining {
 	// private static final String DATASET = "freerider.txt";
 	// private static final String DATASET = "crossSupp.txt";
 	private static final double FPGROWTH_SUPPORT = 0.25; // relative support
-	private static final double FPGROWTH_MIN_CONF = 0.25;
+	private static final double FPGROWTH_MIN_CONF = 0;
+	private static final double FPGROWTH_MIN_LIFT = 0;
 	// TODO add PUMS dataset
 
 	private static final int STOP_AFTER_MAX_WALKS = 3;
@@ -97,7 +98,7 @@ public class ItemsetMining {
 		// Generate association rules from FPGROWTH itemsets
 		AlgoAgrawalFaster94 algo2 = new AlgoAgrawalFaster94();
 		Rules rules = algo2.runAlgorithm(patterns, null,
-				algo.getDatabaseSize(), FPGROWTH_MIN_CONF);
+				algo.getDatabaseSize(), FPGROWTH_MIN_CONF, FPGROWTH_MIN_LIFT);
 		rules.printRulesWithLift(algo.getDatabaseSize());
 
 	}
