@@ -19,6 +19,8 @@ import scpsolver.constraints.LinearBiggerThanEqualsConstraint;
 import scpsolver.lpsolver.LinearProgramSolver;
 import scpsolver.lpsolver.SolverFactory;
 import scpsolver.problems.LinearProgram;
+import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.AlgoAgrawalFaster94;
+import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.Rules;
 import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPGrowth;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
 import codemining.util.StatsUtil;
@@ -39,7 +41,10 @@ public class ItemsetMining {
 	// private static final String DATASET = "chess.txt";
 	private static final String DATASET = "caviar.txt";
 	// private static final String DATASET = "freerider.txt";
-	private static final double FPGROWTH_SUPPORT = 0.25;
+	// private static final String DATASET = "crossSupp.txt";
+	private static final double FPGROWTH_SUPPORT = 0.25; // relative support
+	private static final double FPGROWTH_MIN_CONF = 0.25;
+	// TODO add PUMS dataset
 
 	private static final int STOP_AFTER_MAX_WALKS = 3;
 	private static final int MAX_RANDOM_WALKS = 100;
@@ -59,7 +64,7 @@ public class ItemsetMining {
 				DATASET);
 		final String input = java.net.URLDecoder.decode(url.getPath(), "UTF-8");
 		final File inputFile = new File(input);
-		System.out.println("======= Input Transactions =======\n"
+		System.out.println("======= Transaction Database =======\n"
 				+ Files.toString(inputFile, Charsets.UTF_8));
 		// TODO don't read all transactions into memory
 		final List<Transaction> transactions = readTransactions(inputFile);
@@ -81,15 +86,19 @@ public class ItemsetMining {
 		System.out
 				.println("\n============= INTERESTING ITEMSETS =============\n"
 						+ itemsets + "\n");
-		System.out.println("======= Input Transactions =======\n"
-				+ Files.toString(inputFile, Charsets.UTF_8) + "\n");
 
 		// Compare with the FPGROWTH algorithm
-		final double minsup = FPGROWTH_SUPPORT; // relative support
 		final AlgoFPGrowth algo = new AlgoFPGrowth();
-		final Itemsets patterns = algo.runAlgorithm(input, null, minsup);
+		final Itemsets patterns = algo.runAlgorithm(input, null,
+				FPGROWTH_SUPPORT);
 		algo.printStats();
 		patterns.printItemsets(algo.getDatabaseSize());
+
+		// Generate association rules from FPGROWTH itemsets
+		AlgoAgrawalFaster94 algo2 = new AlgoAgrawalFaster94();
+		Rules rules = algo2.runAlgorithm(patterns, null,
+				algo.getDatabaseSize(), FPGROWTH_MIN_CONF);
+		rules.printRulesWithLift(algo.getDatabaseSize());
 
 	}
 

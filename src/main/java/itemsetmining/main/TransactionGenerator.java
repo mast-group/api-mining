@@ -24,7 +24,9 @@ public class TransactionGenerator {
 			System.exit(-1);
 		}
 
-		// Create interesting itemsets
+		// Create interesting itemsets that highlight problems
+		// Here [1,2] is the champagne & caviar problem
+		// (not generated when support is too high)
 		if (args[0].equals("caviar")) {
 
 			// Champagne & Caviar
@@ -50,10 +52,12 @@ public class TransactionGenerator {
 			itemsets.put(s12, p12);
 			itemsets.put(s3, p3);
 
+			// Here [1,2] is known as a cross-support pattern
+			// (spuriously generated when support is too low)
 		} else if (args[0].equals("unlifted")) {
 
 			Itemset s1 = new Itemset(1);
-			double p1 = 0.1;
+			double p1 = 0.2;
 			itemsets.put(s1, p1);
 
 			Itemset s2 = new Itemset(2);
