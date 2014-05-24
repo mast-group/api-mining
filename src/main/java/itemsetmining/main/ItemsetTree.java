@@ -89,9 +89,6 @@ public class ItemsetTree {
 			}
 		}
 
-		if (node.children.isEmpty()) // leaf node
-			return;
-
 		// Get support of all children
 		double sumSupport = 0;
 		final HashMap<ItemsetTreeNode, Integer> supports = Maps.newHashMap();
@@ -99,6 +96,11 @@ public class ItemsetTree {
 			supports.put(child, child.support);
 			sumSupport += child.support;
 		}
+
+		// Stop with probability dependent on support of children
+		double pStop = (node.support - sumSupport) / node.support;
+		if (Math.random() < pStop)
+			return;
 
 		// Randomly pick child to traverse proportional to its itemset support
 		double p = Math.random();
