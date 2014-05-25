@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +87,15 @@ public class ItemsetMining {
 				singletons.elementSet(), tree);
 		System.out
 				.println("\n============= INTERESTING ITEMSETS =============\n"
-						+ itemsets + "\n");
+						+ itemsets);
+
+		// Generate Association rules from the interesting itemsets
+		List<Rule> rules = generateAssociationRules(itemsets);
+		System.out.println("\n============= ASSOCIATION RULES =============");
+		for (Rule rule : rules) {
+			System.out.println(rule.toString());
+		}
+		System.out.println("\n");
 
 		// Compare with the FPGROWTH algorithm
 		final AlgoFPGrowth algo = new AlgoFPGrowth();
@@ -97,9 +106,9 @@ public class ItemsetMining {
 
 		// Generate association rules from FPGROWTH itemsets
 		AlgoAgrawalFaster94 algo2 = new AlgoAgrawalFaster94();
-		Rules rules = algo2.runAlgorithm(patterns, null,
+		Rules rules2 = algo2.runAlgorithm(patterns, null,
 				algo.getDatabaseSize(), FPGROWTH_MIN_CONF, FPGROWTH_MIN_LIFT);
-		rules.printRulesWithLift(algo.getDatabaseSize());
+		rules2.printRulesWithLift(algo.getDatabaseSize());
 
 	}
 
@@ -576,6 +585,44 @@ public class ItemsetMining {
 		LineIterator.closeQuietly(it);
 
 		return singletons;
+	}
+
+	private static List<Rule> generateAssociationRules(
+			HashMap<Itemset, Double> itemsets) {
+
+		List<Rule> rules = Lists.newArrayList();
+
+		for (Entry<Itemset, Double> entry : itemsets.entrySet()) {
+			HashSet<Integer> setForRecursion = Sets.newHashSet(entry.getKey()
+					.getItems());
+			recursiveGenRules(rules, setForRecursion, new HashSet<Integer>(),
+					entry.getValue());
+		}
+
+		return rules;
+	}
+
+	private static void recursiveGenRules(List<Rule> rules,
+			HashSet<Integer> antecedent, HashSet<Integer> consequent,
+			double prob) {
+
+		// Stop if no more rules to generate
+		if (antecedent.isEmpty())
+			return;
+
+		// Add rule
+		if (!antecedent.isEmpty() && !consequent.isEmpty())
+			rules.add(new Rule(antecedent, consequent, prob));
+
+		// Recursively generate more rules
+		for (Integer element : antecedent) {
+			HashSet<Integer> newAntecedent = Sets.newHashSet(antecedent);
+			newAntecedent.remove(element);
+			HashSet<Integer> newConsequent = Sets.newHashSet(consequent);
+			newConsequent.add(element);
+			recursiveGenRules(rules, newAntecedent, newConsequent, prob);
+		}
+
 	}
 
 }
