@@ -30,25 +30,25 @@ public class TransactionGenerator {
 		if (args[0].equals("caviar")) {
 
 			// Champagne & Caviar
-			Itemset s12 = new Itemset(1, 2);
-			double p12 = 0.1;
+			final Itemset s12 = new Itemset(1, 2);
+			final double p12 = 0.1;
 			itemsets.put(s12, p12);
 
 			// Other transactions
-			Itemset s3 = new Itemset(3);
-			double p3 = 0.8;
+			final Itemset s3 = new Itemset(3);
+			final double p3 = 0.8;
 			itemsets.put(s3, p3);
 
-			Itemset s4 = new Itemset(4);
-			double p4 = 0.5;
+			final Itemset s4 = new Itemset(4);
+			final double p4 = 0.5;
 			itemsets.put(s4, p4);
 
 		} else if (args[0].equals("freerider")) {
 
-			Itemset s12 = new Itemset(1, 2);
-			Itemset s3 = new Itemset(3);
-			double p12 = 0.5;
-			double p3 = 0.5;
+			final Itemset s12 = new Itemset(1, 2);
+			final Itemset s3 = new Itemset(3);
+			final double p12 = 0.5;
+			final double p3 = 0.5;
 			itemsets.put(s12, p12);
 			itemsets.put(s3, p3);
 
@@ -56,12 +56,22 @@ public class TransactionGenerator {
 			// (spuriously generated when support is too low)
 		} else if (args[0].equals("unlifted")) {
 
-			Itemset s1 = new Itemset(1);
-			double p1 = 0.2;
+			final Itemset s1 = new Itemset(1);
+			final double p1 = 0.2;
 			itemsets.put(s1, p1);
 
-			Itemset s2 = new Itemset(2);
-			double p2 = 0.8;
+			final Itemset s2 = new Itemset(2);
+			final double p2 = 0.8;
+			itemsets.put(s2, p2);
+
+		} else if (args[0].equals("overlap")) {
+
+			final Itemset s1 = new Itemset(2, 3, 5);
+			final double p1 = 0.5;
+			itemsets.put(s1, p1);
+
+			final Itemset s2 = new Itemset(2, 5);
+			final double p2 = 0.5;
 			itemsets.put(s2, p2);
 
 		} else
@@ -72,12 +82,12 @@ public class TransactionGenerator {
 		final PrintWriter out = new PrintWriter(outFile, "UTF-8");
 
 		// Generate transaction database
-		int noTransactions = Integer.parseInt(args[1]);
+		final int noTransactions = Integer.parseInt(args[1]);
 		for (int i = 0; i < noTransactions; i++) {
 
 			// Generate transaction from distribution
-			Set<Integer> transaction = sampleFromDistribution();
-			for (int item : transaction) {
+			final Set<Integer> transaction = sampleFromDistribution();
+			for (final int item : transaction) {
 				out.print(item + " ");
 			}
 			if (!transaction.isEmpty())
@@ -87,8 +97,8 @@ public class TransactionGenerator {
 		out.close();
 
 		// Print file to screen
-		FileReader reader = new FileReader(outFile);
-		LineIterator it = new LineIterator(reader);
+		final FileReader reader = new FileReader(outFile);
+		final LineIterator it = new LineIterator(reader);
 		while (it.hasNext()) {
 			System.out.println(it.nextLine());
 		}
@@ -98,8 +108,8 @@ public class TransactionGenerator {
 	/** Randomly generate itemset with its probability */
 	private static Set<Integer> sampleFromDistribution() {
 
-		Set<Integer> transaction = Sets.newHashSet();
-		for (Entry<Itemset, Double> entry : itemsets.entrySet()) {
+		final Set<Integer> transaction = Sets.newHashSet();
+		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 			if (Math.random() < entry.getValue()) {
 				transaction.addAll(entry.getKey().getItems());
 			}

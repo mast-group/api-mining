@@ -38,26 +38,25 @@ import com.google.common.io.Files;
 
 public class ItemsetMining {
 
-	private static final String DATASET = "contextPasquier99.txt";
+	// private static final String DATASET = "contextPasquier99.txt";
 	// private static final String DATASET = "chess.txt";
 	// private static final String DATASET = "caviar.txt";
 	// private static final String DATASET = "freerider.txt";
 	// private static final String DATASET = "crossSupp.txt";
 	// private static final String DATASET = "unlifted.txt";
+	private static final String DATASET = "overlap.txt";
 	private static final double FPGROWTH_SUPPORT = 0.25; // relative support
 	private static final double FPGROWTH_MIN_CONF = 0;
 	private static final double FPGROWTH_MIN_LIFT = 0;
-	// TODO add PUMS dataset
 
 	private static final int STOP_AFTER_MAX_WALKS = 3;
 	private static final int MAX_RANDOM_WALKS = 100;
 	private static final int MAX_STRUCTURE_ITERATIONS = 100;
 
-	private static final int OPTIMIZE_PARAMS_EVERY = 5;
-	private static final int OPTIMIZE_PARAMS_BURNIN = 5;
+	private static final int OPTIMIZE_PARAMS_EVERY = 10;
 	private static final double OPTIMIZE_TOL = 1e-10;
 
-	private static final Random rand = new Random();
+	private static final Random rand = new Random(); // For primal-dual
 	private static LinearProgramSolver solver; // For exact ILP
 
 	public static void main(final String[] args) throws IOException {
@@ -86,6 +85,8 @@ public class ItemsetMining {
 		System.out.println("============= ITEMSET INFERENCE =============");
 		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
 				singletons.elementSet(), tree);
+		System.out.println("\n======= Transaction Database =======\n"
+				+ Files.toString(inputFile, Charsets.UTF_8));
 		System.out
 				.println("\n============= INTERESTING ITEMSETS =============");
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
@@ -144,8 +145,7 @@ public class ItemsetMining {
 				maxWalkCount = 0;
 
 			// Optimize parameters of new structure
-			if (iteration >= OPTIMIZE_PARAMS_BURNIN
-					&& iteration % OPTIMIZE_PARAMS_EVERY == 0)
+			if (iteration % OPTIMIZE_PARAMS_EVERY == 0)
 				averageCost = expectationMaximizationStep(itemsets,
 						transactions);
 
@@ -363,7 +363,6 @@ public class ItemsetMining {
 	 * elements to cover, n is the number of sets and f is the frequency of the
 	 * most frequent element in the sets.
 	 */
-	// TODO fix overcover problem and no covering is good problem
 	public static double inferPrimalDual(final Set<Itemset> covering,
 			final HashMap<Itemset, Double> itemsets,
 			final Transaction transaction) {
