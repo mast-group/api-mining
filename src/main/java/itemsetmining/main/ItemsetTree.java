@@ -19,7 +19,7 @@ import com.google.common.collect.Multiset;
 import com.google.common.primitives.Ints;
 
 /**
- * This is the original implementation of the Memory Efficient Itemset-tree as
+ * This is a modified implementation of the Memory Efficient Itemset-tree as
  * proposed in:
  * 
  * Fournier-Viger, P., Mwamikazi, E., Gueniche, T., Faghihi, U. (2013). Memory
@@ -27,10 +27,9 @@ import com.google.common.primitives.Ints;
  * International Conference on Advanced Data Mining and Applications (ADMA 2013)
  * Part II, Springer LNAI 8347, pp. 95-106.
  * 
- * Copyright (c) 2013 Philippe Fournier-Viger
- * 
- * This file is part of the SPMF DATA MINING SOFTWARE
- * (http://www.philippe-fournier-viger.com/spmf).
+ * This file is adapted from the SPMF DATA MINING SOFTWARE
+ * (http://www.philippe-fournier-viger.com/spmf). Copyright (c) 2013 Philippe
+ * Fournier-Viger
  * 
  * SPMF is free software: you can redistribute it and/or modify it under the
  * terms of the GNU General Public License as published by the Free Software
@@ -89,6 +88,10 @@ public class ItemsetTree {
 			}
 		}
 
+		// Stop if leaf node
+		if (node.children.isEmpty())
+			return;
+
 		// Get support of all children
 		double sumSupport = 0;
 		final HashMap<ItemsetTreeNode, Integer> supports = Maps.newHashMap();
@@ -97,8 +100,10 @@ public class ItemsetTree {
 			sumSupport += child.support;
 		}
 
-		// Stop with probability dependent on support of children
-		double pStop = (node.support - sumSupport) / node.support;
+		// Stop with probability dependent on average support of children
+		// TODO does this random walk stopping rule make sense?
+		final double averageSupport = sumSupport / node.children.size();
+		final double pStop = (node.support - averageSupport) / node.support;
 		if (Math.random() < pStop)
 			return;
 
@@ -234,7 +239,7 @@ public class ItemsetTree {
 		// e.g. for a regular itemset tree
 		// {2}:4 --> {2,3,4,5,6}:6
 		// we insert {2,3}
-		// {2}È4 --> {2,3}:7 --> {2,3,4,5,6}:6
+		// {2}:4 --> {2,3}:7 --> {2,3,4,5,6}:6
 		// e.g. for a compact itemset tree
 		// r_parent r
 		// {2}:4 --> {3,4,5,6}:6
@@ -401,12 +406,6 @@ public class ItemsetTree {
 					if (pvalue == rvalue) {
 						// skip this item from r
 						continue loop1;
-						// if the current item from prefix is larger
-						// than the current item from r,
-						// then break because itemsets are lexically ordered
-						// so there will be no match.
-					} else if (pvalue > rvalue) {
-						break;
 					}
 				}
 			}
@@ -419,12 +418,6 @@ public class ItemsetTree {
 					if (rvalue == svalue) {
 						// skip it (don't add it to the new itemset)
 						continue loop1;
-						// if the current item from s is larger
-						// than the current item from r,
-						// then break because itemsets are lexically ordered
-						// so there will be no match.
-					} else if (svalue > rvalue) {
-						break;
 					}
 				}
 			}
@@ -467,12 +460,6 @@ public class ItemsetTree {
 				// from itemset1 to the new itemset
 				if (i2value == i1value) {
 					continue loop1;
-					// otherwise, if the current item from "itemset2"
-					// is larger than the current item from "itemset1"
-					// there will be no match because itemsets are
-					// lexically ordered.
-				} else if (i2value > i1value) {
-					break;
 				}
 			}
 			// if the current item from itemset1 was not in itemset2,
@@ -518,13 +505,12 @@ public class ItemsetTree {
 		// the maximum ancestor to be equal to itemset1 or itemset2
 		for (int i = 0; i < minI; i++) {
 			// if the two items are different, we stop because
-			// of the lexical ordering
+			// of the ordering
 			if (itemset1[i] != itemset2[i]) {
 				break;
 			} else {
-				// otherwise we inscrease the counter indicating the number of
-				// common
-				// items in the prefix
+				// otherwise we increase the counter indicating the number of
+				// common items in the prefix
 				count++;
 			}
 		}
