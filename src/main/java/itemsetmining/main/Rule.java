@@ -3,9 +3,9 @@ package itemsetmining.main;
 import java.util.HashSet;
 
 public class Rule {
-	private HashSet<Integer> itemset1; // antecedent
-	private HashSet<Integer> itemset2; // consequent
-	private double probability;
+	private final HashSet<Integer> itemset1; // antecedent
+	private final HashSet<Integer> itemset2; // consequent
+	private final double probability;
 
 	/**
 	 * Constructor
@@ -17,8 +17,8 @@ public class Rule {
 	 * @param probablity
 	 *            probability of the rule (integer)
 	 */
-	public Rule(HashSet<Integer> itemset1, HashSet<Integer> itemset2,
-			double probability) {
+	public Rule(final HashSet<Integer> itemset1,
+			final HashSet<Integer> itemset2, final double probability) {
 		this.itemset1 = itemset1;
 		this.itemset2 = itemset2;
 		this.probability = probability;
@@ -29,9 +29,10 @@ public class Rule {
 	 * 
 	 * @return a String
 	 */
+	@Override
 	public String toString() {
-		return itemset1.toString() + " ==> " + itemset2.toString() + " prob: "
-				+ probability;
+		return itemset1.toString() + " ==> " + itemset2.toString() + "\tprob: "
+				+ String.format("%1.5f", probability);
 	}
 
 	/**

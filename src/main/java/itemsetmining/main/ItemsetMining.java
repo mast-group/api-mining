@@ -38,11 +38,12 @@ import com.google.common.io.Files;
 
 public class ItemsetMining {
 
-	// private static final String DATASET = "contextPasquier99.txt";
+	private static final String DATASET = "contextPasquier99.txt";
 	// private static final String DATASET = "chess.txt";
-	private static final String DATASET = "caviar.txt";
+	// private static final String DATASET = "caviar.txt";
 	// private static final String DATASET = "freerider.txt";
 	// private static final String DATASET = "crossSupp.txt";
+	// private static final String DATASET = "unlifted.txt";
 	private static final double FPGROWTH_SUPPORT = 0.25; // relative support
 	private static final double FPGROWTH_MIN_CONF = 0;
 	private static final double FPGROWTH_MIN_LIFT = 0;
@@ -86,13 +87,16 @@ public class ItemsetMining {
 		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
 				singletons.elementSet(), tree);
 		System.out
-				.println("\n============= INTERESTING ITEMSETS =============\n"
-						+ itemsets);
+				.println("\n============= INTERESTING ITEMSETS =============");
+		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+			System.out.printf("%s\tprob: %1.5f %n", entry.getKey(),
+					entry.getValue());
+		}
 
 		// Generate Association rules from the interesting itemsets
-		List<Rule> rules = generateAssociationRules(itemsets);
+		final List<Rule> rules = generateAssociationRules(itemsets);
 		System.out.println("\n============= ASSOCIATION RULES =============");
-		for (Rule rule : rules) {
+		for (final Rule rule : rules) {
 			System.out.println(rule.toString());
 		}
 		System.out.println("\n");
@@ -105,8 +109,8 @@ public class ItemsetMining {
 		patterns.printItemsets(algo.getDatabaseSize());
 
 		// Generate association rules from FPGROWTH itemsets
-		AlgoAgrawalFaster94 algo2 = new AlgoAgrawalFaster94();
-		Rules rules2 = algo2.runAlgorithm(patterns, null,
+		final AlgoAgrawalFaster94 algo2 = new AlgoAgrawalFaster94();
+		final Rules rules2 = algo2.runAlgorithm(patterns, null,
 				algo.getDatabaseSize(), FPGROWTH_MIN_CONF, FPGROWTH_MIN_LIFT);
 		rules2.printRulesWithLift(algo.getDatabaseSize());
 
@@ -146,8 +150,10 @@ public class ItemsetMining {
 						transactions);
 
 			// Break if structure step has failed STOP_AFTER_MAX_WALKS times
-			if (maxWalkCount == STOP_AFTER_MAX_WALKS)
+			if (maxWalkCount == STOP_AFTER_MAX_WALKS) {
+				expectationMaximizationStep(itemsets, transactions);
 				break;
+			}
 
 		}
 
@@ -437,9 +443,9 @@ public class ItemsetMining {
 			solver = SolverFactory.getSolver("CPLEX");
 
 		// Filter out sets containing items not in transaction
-		LinkedHashMap<Itemset, Double> filteredItemsets = Maps
+		final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
 				.newLinkedHashMap(itemsets);
-		for (Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
+		for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
 			if (transaction.getItems().containsAll(entry.getKey().getItems()))
 				filteredItemsets.put(entry.getKey(), entry.getValue());
 		}
@@ -588,13 +594,13 @@ public class ItemsetMining {
 	}
 
 	private static List<Rule> generateAssociationRules(
-			HashMap<Itemset, Double> itemsets) {
+			final HashMap<Itemset, Double> itemsets) {
 
-		List<Rule> rules = Lists.newArrayList();
+		final List<Rule> rules = Lists.newArrayList();
 
-		for (Entry<Itemset, Double> entry : itemsets.entrySet()) {
-			HashSet<Integer> setForRecursion = Sets.newHashSet(entry.getKey()
-					.getItems());
+		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+			final HashSet<Integer> setForRecursion = Sets.newHashSet(entry
+					.getKey().getItems());
 			recursiveGenRules(rules, setForRecursion, new HashSet<Integer>(),
 					entry.getValue());
 		}
@@ -602,9 +608,9 @@ public class ItemsetMining {
 		return rules;
 	}
 
-	private static void recursiveGenRules(List<Rule> rules,
-			HashSet<Integer> antecedent, HashSet<Integer> consequent,
-			double prob) {
+	private static void recursiveGenRules(final List<Rule> rules,
+			final HashSet<Integer> antecedent,
+			final HashSet<Integer> consequent, final double prob) {
 
 		// Stop if no more rules to generate
 		if (antecedent.isEmpty())
@@ -615,10 +621,10 @@ public class ItemsetMining {
 			rules.add(new Rule(antecedent, consequent, prob));
 
 		// Recursively generate more rules
-		for (Integer element : antecedent) {
-			HashSet<Integer> newAntecedent = Sets.newHashSet(antecedent);
+		for (final Integer element : antecedent) {
+			final HashSet<Integer> newAntecedent = Sets.newHashSet(antecedent);
 			newAntecedent.remove(element);
-			HashSet<Integer> newConsequent = Sets.newHashSet(consequent);
+			final HashSet<Integer> newConsequent = Sets.newHashSet(consequent);
 			newConsequent.add(element);
 			recursiveGenRules(rules, newAntecedent, newConsequent, prob);
 		}
