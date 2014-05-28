@@ -31,12 +31,18 @@
       <artifactId>scpsolver</artifactId>
       <version>${project.version}</version>
     </dependency>
+     <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
 	<groupId>spmf</groupId>
-	<artifactId>spmf</artifactId>
-	<version>0.96c</version>
-	<scope>system</scope>
-	<systemPath>${project.basedir}/../../dependencies/spmf/spmf.jar</systemPath>
+	  <artifactId>spmf</artifactId>
+	  <version>0.96c</version>
+	  <scope>system</scope>
+	  <systemPath>${project.basedir}/../../dependencies/spmf/spmf.jar</systemPath>
     </dependency> 
   </dependencies>
 </project>
