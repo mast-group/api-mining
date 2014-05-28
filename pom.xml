@@ -26,6 +26,11 @@
       <artifactId>codemining-utils</artifactId>
       <version>${project.version}</version>
     </dependency>
+     <dependency>
+      <groupId>codemining</groupId>
+      <artifactId>scpsolver</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <dependency>
 	<groupId>spmf</groupId>
 	<artifactId>spmf</artifactId>
