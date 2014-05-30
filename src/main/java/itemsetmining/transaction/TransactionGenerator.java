@@ -1,4 +1,6 @@
-package itemsetmining.main;
+package itemsetmining.transaction;
+
+import itemsetmining.itemset.Itemset;
 
 import java.io.File;
 import java.io.FileReader;
@@ -15,6 +17,8 @@ import com.google.common.collect.Sets;
 
 public class TransactionGenerator {
 
+	private static final boolean LARGE_SCALE = true;
+	private static final int NO_EXTRA_ELEMS = 10;
 	private static HashMap<Itemset, Double> itemsets = Maps.newHashMap();
 
 	public static void main(final String[] args) throws IOException {
@@ -77,8 +81,17 @@ public class TransactionGenerator {
 		} else
 			throw new IllegalArgumentException("Incorrect problem name.");
 
+		// Add more itemsets if large scale
+		if (LARGE_SCALE) {
+			for (int i = 10; i <= 10 + NO_EXTRA_ELEMS; i++) {
+				final Itemset s = new Itemset(i);
+				itemsets.put(s, 0.5);
+			}
+		}
+
 		// Set output file
-		final File outFile = new File("src/main/resources/" + args[0] + ".txt");
+		final File outFile = new File("src/main/resources/" + args[0]
+				+ (LARGE_SCALE ? "_big" : "") + ".txt");
 		final PrintWriter out = new PrintWriter(outFile, "UTF-8");
 
 		// Generate transaction database

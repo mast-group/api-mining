@@ -1,4 +1,4 @@
-package itemsetmining.main;
+package itemsetmining.transaction;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package itemsetmining.main;
+package itemsetmining.itemset;
 
 import java.io.File;
 import java.io.IOException;
@@ -100,10 +100,9 @@ public class ItemsetTree {
 			sumSupport += child.support;
 		}
 
-		// Stop with probability dependent on average support of children
+		// Stop with probability dependent on total support of children
 		// TODO does this random walk stopping rule make sense?
-		final double averageSupport = sumSupport / node.children.size();
-		final double pStop = (node.support - averageSupport) / node.support;
+		final double pStop = (node.support - sumSupport) / node.support;
 		if (Math.random() < pStop)
 			return;
 

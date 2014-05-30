@@ -1,5 +1,11 @@
 package itemsetmining.main;
 
+import itemsetmining.itemset.Itemset;
+import itemsetmining.itemset.ItemsetTree;
+import itemsetmining.itemset.Rule;
+import itemsetmining.transaction.Transaction;
+import itemsetmining.util.FutureThreadPool;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -24,8 +30,6 @@ import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.AlgoA
 import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.Rules;
 import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPGrowth;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
-import codemining.util.StatsUtil;
-import codemining.util.parallel.FutureThreadPool;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ConcurrentHashMultiset;
@@ -38,24 +42,21 @@ import com.google.common.io.Files;
 
 public class ItemsetMining {
 
-	// private static final String DATASET = "contextPasquier99.txt";
-	// private static final String DATASET = "chess.txt";
-	private static final String DATASET = "caviar.txt";
-	// private static final String DATASET = "freerider.txt";
-	// private static final String DATASET = "crossSupp.txt";
-	// private static final String DATASET = "unlifted.txt";
-	// private static final String DATASET = "overlap.txt";
+	private static final String DATASET = "caviar_big.txt";
+	private static final boolean LARGE_SCALE = true;
+
 	private static final double FPGROWTH_SUPPORT = 0.25; // relative support
 	private static final double FPGROWTH_MIN_CONF = 0;
 	private static final double FPGROWTH_MIN_LIFT = 0;
 
 	private static final int STOP_AFTER_MAX_WALKS = 3;
-	private static final int MAX_RANDOM_WALKS = 100;
-	private static final int MAX_STRUCTURE_ITERATIONS = 100;
+	private static final int MAX_RANDOM_WALKS = 1000;
+	private static final int MAX_STRUCTURE_ITERATIONS = 1000;
 
-	private static final int OPTIMIZE_PARAMS_EVERY = 10;
+	private static final int OPTIMIZE_PARAMS_EVERY = 50;
 	private static final double OPTIMIZE_TOL = 1e-10;
 
+	private static int maxWalkCount;
 	private static final Random rand = new Random(); // For primal-dual
 	private static LinearProgramSolver solver; // For exact ILP
 
@@ -66,8 +67,10 @@ public class ItemsetMining {
 				DATASET);
 		final String input = java.net.URLDecoder.decode(url.getPath(), "UTF-8");
 		final File inputFile = new File(input);
-		System.out.println("======= Transaction Database =======\n"
-				+ Files.toString(inputFile, Charsets.UTF_8));
+		if (!LARGE_SCALE) {
+			System.out.println("======= Transaction Database =======\n"
+					+ Files.toString(inputFile, Charsets.UTF_8));
+		}
 		// TODO don't read all transactions into memory
 		final List<Transaction> transactions = readTransactions(inputFile);
 
@@ -78,15 +81,19 @@ public class ItemsetMining {
 		final ItemsetTree tree = new ItemsetTree();
 		tree.buildTree(inputFile, singletons);
 		tree.printStatistics();
-		System.out.println("THIS IS THE TREE:");
-		tree.printTree();
+		if (!LARGE_SCALE) {
+			System.out.println("THIS IS THE TREE:");
+			tree.printTree();
+		}
 
 		// Run inference to find interesting itemsets
 		System.out.println("============= ITEMSET INFERENCE =============");
 		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
 				singletons.elementSet(), tree);
-		System.out.println("\n======= Transaction Database =======\n"
-				+ Files.toString(inputFile, Charsets.UTF_8));
+		if (!LARGE_SCALE) {
+			System.out.println("\n======= Transaction Database =======\n"
+					+ Files.toString(inputFile, Charsets.UTF_8));
+		}
 		System.out
 				.println("\n============= INTERESTING ITEMSETS =============");
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
@@ -94,26 +101,30 @@ public class ItemsetMining {
 					entry.getValue());
 		}
 
-		// Generate Association rules from the interesting itemsets
-		final List<Rule> rules = generateAssociationRules(itemsets);
-		System.out.println("\n============= ASSOCIATION RULES =============");
-		for (final Rule rule : rules) {
-			System.out.println(rule.toString());
+		if (!LARGE_SCALE) {
+			// Generate Association rules from the interesting itemsets
+			final List<Rule> rules = generateAssociationRules(itemsets);
+			System.out
+					.println("\n============= ASSOCIATION RULES =============");
+			for (final Rule rule : rules) {
+				System.out.println(rule.toString());
+			}
+			System.out.println("\n");
+
+			// Compare with the FPGROWTH algorithm
+			final AlgoFPGrowth algo = new AlgoFPGrowth();
+			final Itemsets patterns = algo.runAlgorithm(input, null,
+					FPGROWTH_SUPPORT);
+			algo.printStats();
+			patterns.printItemsets(algo.getDatabaseSize());
+
+			// Generate association rules from FPGROWTH itemsets
+			final AlgoAgrawalFaster94 algo2 = new AlgoAgrawalFaster94();
+			final Rules rules2 = algo2.runAlgorithm(patterns, null,
+					algo.getDatabaseSize(), FPGROWTH_MIN_CONF,
+					FPGROWTH_MIN_LIFT);
+			rules2.printRulesWithLift(algo.getDatabaseSize());
 		}
-		System.out.println("\n");
-
-		// Compare with the FPGROWTH algorithm
-		final AlgoFPGrowth algo = new AlgoFPGrowth();
-		final Itemsets patterns = algo.runAlgorithm(input, null,
-				FPGROWTH_SUPPORT);
-		algo.printStats();
-		patterns.printItemsets(algo.getDatabaseSize());
-
-		// Generate association rules from FPGROWTH itemsets
-		final AlgoAgrawalFaster94 algo2 = new AlgoAgrawalFaster94();
-		final Rules rules2 = algo2.runAlgorithm(patterns, null,
-				algo.getDatabaseSize(), FPGROWTH_MIN_CONF, FPGROWTH_MIN_LIFT);
-		rules2.printRulesWithLift(algo.getDatabaseSize());
 
 	}
 
@@ -131,18 +142,13 @@ public class ItemsetMining {
 		double averageCost = Double.POSITIVE_INFINITY;
 
 		// Structural EM
-		int maxWalkCount = 0;
 		for (int iteration = 1; iteration <= MAX_STRUCTURE_ITERATIONS; iteration++) {
 
 			// Learn structure
 			System.out.println("\n+++++ Structural Optimization Step "
 					+ iteration);
-			final boolean maxedOut = learnStructureStep(averageCost, itemsets,
+			averageCost = learnStructureStep(averageCost, itemsets,
 					transactions, tree);
-			if (maxedOut)
-				maxWalkCount++;
-			else
-				maxWalkCount = 0;
 
 			// Optimize parameters of new structure
 			if (iteration % OPTIMIZE_PARAMS_EVERY == 0)
@@ -152,6 +158,9 @@ public class ItemsetMining {
 			// Break if structure step has failed STOP_AFTER_MAX_WALKS times
 			if (maxWalkCount == STOP_AFTER_MAX_WALKS) {
 				expectationMaximizationStep(itemsets, transactions);
+				System.out
+						.println("\nStructural candidate generation has failed "
+								+ maxWalkCount + " times in a row. Aborting.");
 				break;
 			}
 
@@ -170,6 +179,9 @@ public class ItemsetMining {
 	public static double expectationMaximizationStep(
 			final HashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions) {
+
+		System.out.println("\n***** Parameter Optimization Step");
+		System.out.println(" Structure Optimal Itemsets: " + itemsets);
 
 		double averageCost = 0;
 		HashMap<Itemset, Double> prevItemsets = itemsets;
@@ -201,7 +213,7 @@ public class ItemsetMining {
 
 			}
 			final List<Double> costs = ftp.getCompletedTasks();
-			averageCost = StatsUtil.sum(costs) / n;
+			averageCost = sum(costs) / n;
 
 			// Normalise probabilities
 			for (final Itemset set : allCoverings.elementSet()) {
@@ -223,14 +235,13 @@ public class ItemsetMining {
 
 		itemsets.clear();
 		itemsets.putAll(prevItemsets);
-		System.out.println("\n***** Parameter Optimization Step");
 		System.out.println(" Parameter Optimal Itemsets: " + itemsets);
 		System.out.println(" Average cost: " + averageCost);
 		return averageCost;
 	}
 
 	// TODO keep a set of previous suggestions for efficiency?
-	public static boolean learnStructureStep(final double averageCost,
+	public static double learnStructureStep(final double averageCost,
 			final HashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions, final ItemsetTree tree) {
 
@@ -277,23 +288,22 @@ public class ItemsetMining {
 				}
 
 				final List<Double> costs = ftp.getCompletedTasks();
-				final double curCost = StatsUtil.sum(costs) / n;
-				System.out.print(", candidate cost: " + curCost);
+				final double curCost = sum(costs) / n;
+				System.out.printf(", cost: %.2f", curCost);
 
 				if (curCost < averageCost) { // found better set of itemsets
-					System.out.print("\n Candidate Accepted.");
-					break;
+					System.out.print("\n Candidate Accepted.\n");
+					return curCost;
 				} // otherwise keep trying
 				itemsets.remove(set);
 				System.out.print("\n Structural candidate itemsets: ");
 			}
 
 		}
-		System.out.println("\n Structure Optimal Itemsets: " + itemsets);
+		System.out.println();
+		maxWalkCount++;
 
-		if (iteration == MAX_RANDOM_WALKS)
-			return true;
-		return false;
+		return averageCost;
 	}
 
 	/**
@@ -432,7 +442,6 @@ public class ItemsetMining {
 	 * <p>
 	 * This is an NP-hard problem.
 	 */
-	// TODO use Guava's filter to filter out sets
 	public static double inferILP(final Set<Itemset> covering,
 			final LinkedHashMap<Itemset, Double> itemsets,
 			final Transaction transaction) {
@@ -628,6 +637,17 @@ public class ItemsetMining {
 			recursiveGenRules(rules, newAntecedent, newConsequent, prob);
 		}
 
+	}
+
+	/**
+	 * Calculates the sum of a Collection
+	 */
+	public static double sum(final Iterable<Double> values) {
+		double sum = 0;
+		for (final Double element : values) {
+			sum += element;
+		}
+		return sum;
 	}
 
 }

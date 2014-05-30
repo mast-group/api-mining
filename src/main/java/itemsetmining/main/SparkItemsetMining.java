@@ -1,5 +1,9 @@
 package itemsetmining.main;
 
+import itemsetmining.itemset.Itemset;
+import itemsetmining.itemset.ItemsetTree;
+import itemsetmining.transaction.Transaction;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -28,14 +32,16 @@ import com.google.common.collect.Sets;
 
 public class SparkItemsetMining {
 
-	private static final String DATASET = "chess.txt";
+	private static final String DATASET = "pumsb.txt";
 
 	private static final int STOP_AFTER_MAX_WALKS = 3;
-	private static final int MAX_RANDOM_WALKS = 100;
-	private static final int MAX_STRUCTURE_ITERATIONS = 100;
+	private static final int MAX_RANDOM_WALKS = 1000;
+	private static final int MAX_STRUCTURE_ITERATIONS = 1000;
 
-	private static final int OPTIMIZE_PARAMS_EVERY = 10;
+	private static final int OPTIMIZE_PARAMS_EVERY = 50;
 	private static final double OPTIMIZE_TOL = 1e-10;
+
+	private static int maxWalkCount;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -45,15 +51,14 @@ public class SparkItemsetMining {
 				.setAppName("itemsets")
 				.setSparkHome("/disk/data1/jfowkes/spark-0.9.1-bin-hadoop1")
 				.setJars(
-						new String[] { "/afs/inf.ed.ac.uk/user/j/jfowkes/.m2/repository/codemining/itemset-mining/1.1-SNAPSHOT/itemset-mining-1.1-SNAPSHOT.jar" });
+						new String[] { "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/target/itemset-mining-1.1-SNAPSHOT.jar" });
 		conf.set("spark.executor.memory", "10g");
 		conf.set("spark.default.parallelism", "8");
-		// TODO fix Kryo version clash with one from codemining-utils
-		// (needed for FutureThreadPool)
+		// TODO fix Kryo issue
 		// conf.set("spark.serializer",
 		// "org.apache.spark.serializer.KryoSerializer");
 		// conf.set("spark.kryo.registrator",
-		// "itemsetmining.main.ClassRegistrator");
+		// "itemsetmining.util.ClassRegistrator");
 		final JavaSparkContext sc = new JavaSparkContext(conf);
 
 		// Read in transaction database
@@ -112,18 +117,13 @@ public class SparkItemsetMining {
 		double averageCost = Double.POSITIVE_INFINITY;
 
 		// Structural EM
-		int maxWalkCount = 0;
 		for (int iteration = 1; iteration <= MAX_STRUCTURE_ITERATIONS; iteration++) {
 
 			// Learn structure
 			System.out.println("\n+++++ Structural Optimization Step "
 					+ iteration);
-			final boolean maxedOut = learnStructureStep(averageCost, itemsets,
+			averageCost = learnStructureStep(averageCost, itemsets,
 					transactions, noTransactions, tree);
-			if (maxedOut)
-				maxWalkCount++;
-			else
-				maxWalkCount = 0;
 
 			// Optimize parameters of new structure
 			if (iteration % OPTIMIZE_PARAMS_EVERY == 0)
@@ -134,6 +134,9 @@ public class SparkItemsetMining {
 			if (maxWalkCount == STOP_AFTER_MAX_WALKS) {
 				expectationMaximizationStep(itemsets, transactions,
 						noTransactions);
+				System.out
+						.println("\nStructural candidate generation has failed "
+								+ maxWalkCount + " times in a row. Aborting.");
 				break;
 			}
 
@@ -152,6 +155,9 @@ public class SparkItemsetMining {
 	public static double expectationMaximizationStep(
 			final HashMap<Itemset, Double> itemsets,
 			final JavaRDD<Transaction> transactions, final double noTransactions) {
+
+		System.out.println("\n***** Parameter Optimization Step");
+		System.out.println(" Structure Optimal Itemsets: " + itemsets);
 
 		double averageCost = 0;
 		HashMap<Itemset, Double> prevItemsets = itemsets;
@@ -204,13 +210,12 @@ public class SparkItemsetMining {
 
 		itemsets.clear();
 		itemsets.putAll(prevItemsets);
-		System.out.println("\n***** Parameter Optimization Step");
 		System.out.println(" Parameter Optimal Itemsets: " + itemsets);
 		System.out.println(" Average cost: " + averageCost);
 		return averageCost;
 	}
 
-	public static boolean learnStructureStep(final double averageCost,
+	public static double learnStructureStep(final double averageCost,
 			final HashMap<Itemset, Double> itemsets,
 			final JavaRDD<Transaction> transactions,
 			final double noTransactions, final ItemsetTree tree) {
@@ -268,22 +273,21 @@ public class SparkItemsetMining {
 				final double curCost = coveringWithCost.values().reduce(
 						new SumCost())
 						/ noTransactions;
-				System.out.print(", candidate cost: " + curCost);
+				System.out.printf(", cost: %.2f", curCost);
 
 				if (curCost < averageCost) { // found better set of itemsets
-					System.out.print("\n Candidate Accepted.");
-					break;
+					System.out.print("\n Candidate Accepted.\n");
+					return curCost;
 				} // otherwise keep trying
 				itemsets.remove(set);
 				System.out.print("\n Structural candidate itemsets: ");
 			}
 
 		}
-		System.out.println("\n Structure Optimal Itemsets: " + itemsets);
+		System.out.println();
+		maxWalkCount++;
 
-		if (iteration == MAX_RANDOM_WALKS)
-			return true;
-		return false;
+		return averageCost;
 	}
 
 	/**

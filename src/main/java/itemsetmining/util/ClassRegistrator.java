@@ -1,4 +1,6 @@
-package itemsetmining.main;
+package itemsetmining.util;
+
+import itemsetmining.itemset.Itemset;
 
 import org.apache.spark.serializer.KryoRegistrator;
 

@@ -1,4 +1,4 @@
-package itemsetmining.main;
+package itemsetmining.itemset;
 
 import java.util.Collection;
 import java.util.HashSet;

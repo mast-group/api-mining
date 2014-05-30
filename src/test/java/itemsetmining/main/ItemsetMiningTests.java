@@ -2,6 +2,9 @@ package itemsetmining.main;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import itemsetmining.itemset.Itemset;
+import itemsetmining.main.ItemsetMining;
+import itemsetmining.transaction.Transaction;
 
 import java.util.LinkedHashMap;
 import java.util.Set;
@@ -22,7 +25,7 @@ public class ItemsetMiningTests {
 		itemsets.put(new Itemset(2), 0.2);
 		itemsets.put(new Itemset(3), 0.4);
 		final Itemset s4 = new Itemset(4);
-		double p4 = 0.4;
+		final double p4 = 0.4;
 		itemsets.put(s4, p4);
 
 		final Itemset s12 = new Itemset(1, 2);
@@ -46,14 +49,14 @@ public class ItemsetMiningTests {
 		final Transaction transaction1234 = new Transaction(1, 2, 3, 4);
 
 		// Expected solution #1
-		double expectedCost1234 = -Math.log(p12) - Math.log(p34);
+		final double expectedCost1234 = -Math.log(p12) - Math.log(p34);
 		final Set<Itemset> expected1234 = Sets.newHashSet(s12, s34);
 
 		// Transaction #2
 		final Transaction transaction234 = new Transaction(2, 3, 4);
 
 		// Expected solution #2
-		double expectedCost234 = -Math.log(p23) - Math.log(p4);
+		final double expectedCost234 = -Math.log(p23) - Math.log(p4);
 		final Set<Itemset> expected234 = Sets.newHashSet(s23, s4);
 
 		// Test greedy
