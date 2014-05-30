@@ -40,11 +40,11 @@ public class ItemsetMining {
 
 	// private static final String DATASET = "contextPasquier99.txt";
 	// private static final String DATASET = "chess.txt";
-	// private static final String DATASET = "caviar.txt";
+	private static final String DATASET = "caviar.txt";
 	// private static final String DATASET = "freerider.txt";
 	// private static final String DATASET = "crossSupp.txt";
 	// private static final String DATASET = "unlifted.txt";
-	private static final String DATASET = "overlap.txt";
+	// private static final String DATASET = "overlap.txt";
 	private static final double FPGROWTH_SUPPORT = 0.25; // relative support
 	private static final double FPGROWTH_MIN_CONF = 0;
 	private static final double FPGROWTH_MIN_LIFT = 0;

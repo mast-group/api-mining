@@ -1,10 +1,12 @@
 package itemsetmining.main;
 
+import java.io.Serializable;
 import java.util.HashSet;
 
 import com.google.common.collect.Sets;
 
-public class Itemset {
+public class Itemset implements Serializable {
+	private static final long serialVersionUID = 4667217256957834826L;
 
 	/** the set of items **/
 	private final HashSet<Integer> itemset = Sets.newHashSet();

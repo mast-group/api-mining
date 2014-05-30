@@ -21,16 +21,16 @@
         <relativePath>../../pom.xml</relativePath>
   </parent>
   <dependencies>
-    <dependency>
+     <dependency>
       <groupId>codemining</groupId>
       <artifactId>codemining-utils</artifactId>
       <version>${project.version}</version>
-    </dependency>
+     </dependency>
      <dependency>
       <groupId>codemining</groupId>
       <artifactId>scpsolver</artifactId>
       <version>${project.version}</version>
-    </dependency>
+     </dependency>
      <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -44,5 +44,15 @@
 	  <scope>system</scope>
 	  <systemPath>${project.basedir}/../../dependencies/spmf/spmf.jar</systemPath>
     </dependency> 
+     <dependency> <!-- Spark dependency -->
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_2.10</artifactId>
+      <version>0.9.1</version>
+    </dependency>
+    <dependency> <!-- HDFS dependency -->
+	  <groupId>org.apache.hadoop</groupId>
+	  <artifactId>hadoop-client</artifactId>
+	  <version>1.0.4</version>
+	</dependency>
   </dependencies>
 </project>
