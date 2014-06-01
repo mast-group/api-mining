@@ -52,7 +52,7 @@
      <dependency> <!-- Spark dependency -->
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-core_2.10</artifactId>
-      <version>0.9.1</version>
+      <version>1.0.0</version>
     </dependency>
     <dependency> <!-- HDFS dependency -->
 	  <groupId>org.apache.hadoop</groupId>

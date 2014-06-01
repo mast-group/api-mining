@@ -69,8 +69,9 @@ public class SparkItemsetMining {
 
 		// Determine most frequent singletons
 		final Map<Integer, Integer> singletons = transactions
-				.flatMap(new GetTransactionItems()).map(new PairItemCount())
-				.reduceByKey(new SumCounts()).collectAsMap();
+				.flatMap(new GetTransactionItems())
+				.mapToPair(new PairItemCount()).reduceByKey(new SumCounts())
+				.collectAsMap();
 		// TODO don't do this stupid conversion
 		final Multiset<Integer> support = HashMultiset.create();
 		for (final Entry<Integer, Integer> entry : singletons.entrySet()) {
@@ -171,7 +172,7 @@ public class SparkItemsetMining {
 			// Map: Parallel E-step and M-step combined
 			final HashMap<Itemset, Double> parItemsets = prevItemsets;
 			final JavaPairRDD<Itemset, Double> coveringWithCost = transactions
-					.flatMap(new PairFlatMapFunction<Transaction, Itemset, Double>() {
+					.flatMapToPair(new PairFlatMapFunction<Transaction, Itemset, Double>() {
 						private static final long serialVersionUID = -4944391752990605173L;
 
 						@Override
@@ -183,7 +184,7 @@ public class SparkItemsetMining {
 
 			// Reduce: get Itemset counts
 			final List<Tuple2<Itemset, Integer>> coveringWithCounts = coveringWithCost
-					.keys().map(new PairItemsetCount())
+					.keys().mapToPair(new PairItemsetCount())
 					.reduceByKey(new SumCounts()).collect();
 
 			// Reduce: sum Itemset costs
@@ -259,7 +260,7 @@ public class SparkItemsetMining {
 
 				// Map: Parallel E-step and M-step combined
 				final JavaPairRDD<Itemset, Double> coveringWithCost = transactions
-						.flatMap(new PairFlatMapFunction<Transaction, Itemset, Double>() {
+						.flatMapToPair(new PairFlatMapFunction<Transaction, Itemset, Double>() {
 							private static final long serialVersionUID = -4944391752990605173L;
 
 							@Override
@@ -350,7 +351,8 @@ public class SparkItemsetMining {
 	}
 
 	/** Read in transactions */
-	private static class ParseTransaction extends Function<String, Transaction> {
+	private static class ParseTransaction implements
+			Function<String, Transaction> {
 		private static final long serialVersionUID = -9092218383491621520L;
 
 		@Override
@@ -373,7 +375,7 @@ public class SparkItemsetMining {
 	}
 
 	/** Pair itemsets with counts */
-	private static class PairItemsetCount extends
+	private static class PairItemsetCount implements
 			PairFunction<Itemset, Itemset, Integer> {
 		private static final long serialVersionUID = 2455054429227183005L;
 
@@ -384,7 +386,8 @@ public class SparkItemsetMining {
 	}
 
 	/** Add together counts */
-	private static class SumCounts extends Function2<Integer, Integer, Integer> {
+	private static class SumCounts implements
+			Function2<Integer, Integer, Integer> {
 		private static final long serialVersionUID = 2511101612333272343L;
 
 		@Override
@@ -394,7 +397,7 @@ public class SparkItemsetMining {
 	}
 
 	/** Add together itemset costs */
-	private static class SumCost extends Function2<Double, Double, Double> {
+	private static class SumCost implements Function2<Double, Double, Double> {
 		private static final long serialVersionUID = -6157566765215482009L;
 
 		@Override
@@ -403,7 +406,7 @@ public class SparkItemsetMining {
 		}
 	}
 
-	private static class PairItemCount extends
+	private static class PairItemCount implements
 			PairFunction<Integer, Integer, Integer> {
 		private static final long serialVersionUID = 8400960661406105632L;
 
@@ -413,7 +416,7 @@ public class SparkItemsetMining {
 		}
 	}
 
-	private static class GetTransactionItems extends
+	private static class GetTransactionItems implements
 			FlatMapFunction<Transaction, Integer> {
 		private static final long serialVersionUID = -7433022039627649227L;
 
