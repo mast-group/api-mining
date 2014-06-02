@@ -1,6 +1,7 @@
 package itemsetmining.util;
 
 import itemsetmining.itemset.Itemset;
+import itemsetmining.transaction.Transaction;
 
 import org.apache.spark.serializer.KryoRegistrator;
 
@@ -12,6 +13,7 @@ public class ClassRegistrator implements KryoRegistrator {
 	@Override
 	public void registerClasses(final Kryo kryo) {
 		kryo.register(Itemset.class);
+		kryo.register(Transaction.class);
 	}
 
 }
