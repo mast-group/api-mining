@@ -32,7 +32,7 @@ import com.google.common.collect.Sets;
 
 public class SparkItemsetMining {
 
-	private static final String DATASET = "pumsb.txt";
+	private static final String DATASET = "caviar_big.txt";
 
 	private static final int STOP_AFTER_MAX_WALKS = 3;
 	private static final int MAX_RANDOM_WALKS = 1000;
@@ -49,7 +49,7 @@ public class SparkItemsetMining {
 		final SparkConf conf = new SparkConf();
 		conf.setMaster("spark://cup04.inf.ed.ac.uk:7077")
 				.setAppName("itemsets")
-				.setSparkHome("/disk/data1/jfowkes/spark-0.9.1-bin-hadoop1")
+				.setSparkHome("/disk/data1/jfowkes/spark-1.0.0-bin-hadoop1")
 				.setJars(
 						new String[] { "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/target/itemset-mining-1.1-SNAPSHOT.jar" });
 		conf.set("spark.executor.memory", "10g");
