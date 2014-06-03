@@ -33,15 +33,13 @@ import com.google.common.collect.Sets;
 public class SparkItemsetMining {
 
 	private static final String DATASET = "caviar_big.txt";
+	private static final double SINGLETON_PRIOR_PROB = 0.5;
 
-	private static final int STOP_AFTER_MAX_WALKS = 3;
 	private static final int MAX_RANDOM_WALKS = 1000;
 	private static final int MAX_STRUCTURE_ITERATIONS = 1000;
 
 	private static final int OPTIMIZE_PARAMS_EVERY = 50;
 	private static final double OPTIMIZE_TOL = 1e-10;
-
-	private static int maxWalkCount;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -112,7 +110,7 @@ public class SparkItemsetMining {
 		// Intialize with equiprobable singleton sets
 		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
 		for (final int singleton : singletons) {
-			itemsets.put(new Itemset(singleton), 0.1);
+			itemsets.put(new Itemset(singleton), SINGLETON_PRIOR_PROB);
 		}
 		System.out.println(" Initial itemsets: " + itemsets);
 		double averageCost = Double.POSITIVE_INFINITY;
@@ -125,21 +123,12 @@ public class SparkItemsetMining {
 					+ iteration);
 			averageCost = learnStructureStep(averageCost, itemsets,
 					transactions, noTransactions, tree);
+			System.out.printf(" Average cost: %.2f\n", averageCost);
 
 			// Optimize parameters of new structure
 			if (iteration % OPTIMIZE_PARAMS_EVERY == 0)
 				averageCost = expectationMaximizationStep(itemsets,
 						transactions, noTransactions);
-
-			// Break if structure step has failed STOP_AFTER_MAX_WALKS times
-			if (maxWalkCount == STOP_AFTER_MAX_WALKS) {
-				expectationMaximizationStep(itemsets, transactions,
-						noTransactions);
-				System.out
-						.println("\nStructural candidate generation has failed "
-								+ maxWalkCount + " times in a row. Aborting.");
-				break;
-			}
 
 		}
 
@@ -212,7 +201,7 @@ public class SparkItemsetMining {
 		itemsets.clear();
 		itemsets.putAll(prevItemsets);
 		System.out.println(" Parameter Optimal Itemsets: " + itemsets);
-		System.out.println(" Average cost: " + averageCost);
+		System.out.printf(" Average cost: %.2f\n", averageCost);
 		return averageCost;
 	}
 
@@ -286,7 +275,6 @@ public class SparkItemsetMining {
 
 		}
 		System.out.println();
-		maxWalkCount++;
 
 		return averageCost;
 	}

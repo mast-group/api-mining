@@ -3,8 +3,9 @@ package itemsetmining.main;
 import itemsetmining.itemset.Itemset;
 import itemsetmining.itemset.ItemsetTree;
 import itemsetmining.itemset.Rule;
+import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
+import itemsetmining.main.InferenceAlgorithms.inferILP;
 import itemsetmining.transaction.Transaction;
-import itemsetmining.util.FutureThreadPool;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,19 +14,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.Callable;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 
-import scpsolver.constraints.LinearBiggerThanEqualsConstraint;
-import scpsolver.lpsolver.LinearProgramSolver;
-import scpsolver.lpsolver.SolverFactory;
-import scpsolver.problems.LinearProgram;
 import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.AlgoAgrawalFaster94;
 import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.Rules;
 import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPGrowth;
@@ -42,23 +36,20 @@ import com.google.common.io.Files;
 
 public class ItemsetMining {
 
-	private static final String DATASET = "caviar_big.txt";
-	private static final boolean LARGE_SCALE = true;
+	private static final String DATASET = "caviar.txt";
+	private static final boolean VERBOSE = false;
+	private static final InferenceAlgorithm inferenceAlg = new inferILP();
+	private static final double SINGLETON_PRIOR_PROB = 0.1;
 
 	private static final double FPGROWTH_SUPPORT = 0.25; // relative support
 	private static final double FPGROWTH_MIN_CONF = 0;
 	private static final double FPGROWTH_MIN_LIFT = 0;
 
-	private static final int STOP_AFTER_MAX_WALKS = 3;
-	private static final int MAX_RANDOM_WALKS = 1000;
-	private static final int MAX_STRUCTURE_ITERATIONS = 1000;
+	private static final int MAX_RANDOM_WALKS = 100;
+	private static final int MAX_STRUCTURE_ITERATIONS = 50;
 
-	private static final int OPTIMIZE_PARAMS_EVERY = 50;
+	private static final int OPTIMIZE_PARAMS_EVERY = 10;
 	private static final double OPTIMIZE_TOL = 1e-10;
-
-	private static int maxWalkCount;
-	private static final Random rand = new Random(); // For primal-dual
-	private static LinearProgramSolver solver; // For exact ILP
 
 	public static void main(final String[] args) throws IOException {
 
@@ -67,7 +58,7 @@ public class ItemsetMining {
 				DATASET);
 		final String input = java.net.URLDecoder.decode(url.getPath(), "UTF-8");
 		final File inputFile = new File(input);
-		if (!LARGE_SCALE) {
+		if (VERBOSE) {
 			System.out.println("======= Transaction Database =======\n"
 					+ Files.toString(inputFile, Charsets.UTF_8));
 		}
@@ -81,7 +72,7 @@ public class ItemsetMining {
 		final ItemsetTree tree = new ItemsetTree();
 		tree.buildTree(inputFile, singletons);
 		tree.printStatistics();
-		if (!LARGE_SCALE) {
+		if (VERBOSE) {
 			System.out.println("THIS IS THE TREE:");
 			tree.printTree();
 		}
@@ -89,8 +80,8 @@ public class ItemsetMining {
 		// Run inference to find interesting itemsets
 		System.out.println("============= ITEMSET INFERENCE =============");
 		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
-				singletons.elementSet(), tree);
-		if (!LARGE_SCALE) {
+				singletons.elementSet(), tree, inferenceAlg);
+		if (VERBOSE) {
 			System.out.println("\n======= Transaction Database =======\n"
 					+ Files.toString(inputFile, Charsets.UTF_8));
 		}
@@ -101,7 +92,7 @@ public class ItemsetMining {
 					entry.getValue());
 		}
 
-		if (!LARGE_SCALE) {
+		if (VERBOSE) {
 			// Generate Association rules from the interesting itemsets
 			final List<Rule> rules = generateAssociationRules(itemsets);
 			System.out
@@ -128,15 +119,21 @@ public class ItemsetMining {
 
 	}
 
-	/** Learn itemsets model using structural EM */
+	/**
+	 * Learn itemsets model using structural EM
+	 * 
+	 * @param inferenceAlgorithm
+	 *            TODO
+	 */
 	public static HashMap<Itemset, Double> structuralEM(
 			final List<Transaction> transactions,
-			final Set<Integer> singletons, final ItemsetTree tree) {
+			final Set<Integer> singletons, final ItemsetTree tree,
+			final InferenceAlgorithm inferenceAlgorithm) {
 
 		// Intialize with equiprobable singleton sets
-		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
+		final LinkedHashMap<Itemset, Double> itemsets = Maps.newLinkedHashMap();
 		for (final int singleton : singletons) {
-			itemsets.put(new Itemset(singleton), 0.1);
+			itemsets.put(new Itemset(singleton), SINGLETON_PRIOR_PROB);
 		}
 		System.out.println(" Initial itemsets: " + itemsets);
 		double averageCost = Double.POSITIVE_INFINITY;
@@ -148,21 +145,13 @@ public class ItemsetMining {
 			System.out.println("\n+++++ Structural Optimization Step "
 					+ iteration);
 			averageCost = learnStructureStep(averageCost, itemsets,
-					transactions, tree);
+					transactions, tree, inferenceAlgorithm);
+			System.out.printf(" Average cost: %.2f\n", averageCost);
 
 			// Optimize parameters of new structure
 			if (iteration % OPTIMIZE_PARAMS_EVERY == 0)
 				averageCost = expectationMaximizationStep(itemsets,
-						transactions);
-
-			// Break if structure step has failed STOP_AFTER_MAX_WALKS times
-			if (maxWalkCount == STOP_AFTER_MAX_WALKS) {
-				expectationMaximizationStep(itemsets, transactions);
-				System.out
-						.println("\nStructural candidate generation has failed "
-								+ maxWalkCount + " times in a row. Aborting.");
-				break;
-			}
+						transactions, inferenceAlgorithm);
 
 		}
 
@@ -172,48 +161,48 @@ public class ItemsetMining {
 	/**
 	 * Find optimal parameters for given set of itemsets and store in itemsets
 	 * 
+	 * @param inferenceAlgorithm
+	 *            TODO
+	 * 
 	 * @return average cost per transaction
 	 *         <p>
 	 *         NB. zero probability itemsets are dropped
 	 */
 	public static double expectationMaximizationStep(
-			final HashMap<Itemset, Double> itemsets,
-			final List<Transaction> transactions) {
+			final LinkedHashMap<Itemset, Double> itemsets,
+			final List<Transaction> transactions,
+			final InferenceAlgorithm inferenceAlgorithm) {
 
 		System.out.println("\n***** Parameter Optimization Step");
 		System.out.println(" Structure Optimal Itemsets: " + itemsets);
 
 		double averageCost = 0;
-		HashMap<Itemset, Double> prevItemsets = itemsets;
+		LinkedHashMap<Itemset, Double> prevItemsets = itemsets;
 		final double n = transactions.size();
 
 		double norm = 1;
 		while (norm > OPTIMIZE_TOL) {
 
 			// Set up storage
-			final HashMap<Itemset, Double> newItemsets = Maps.newHashMap();
+			final LinkedHashMap<Itemset, Double> newItemsets = Maps
+					.newLinkedHashMap();
 			final Multiset<Itemset> allCoverings = ConcurrentHashMultiset
 					.create();
 
 			// Parallel E-step and M-step combined
-			final FutureThreadPool<Double> ftp = new FutureThreadPool<Double>();
+			averageCost = 0;
 			for (final Transaction transaction : transactions) {
 
-				final HashMap<Itemset, Double> parItemsets = prevItemsets;
-				ftp.pushTask(new Callable<Double>() {
-					@Override
-					public Double call() {
-						final Set<Itemset> covering = Sets.newHashSet();
-						final double cost = inferGreedy(covering, parItemsets,
-								transaction);
-						allCoverings.addAll(covering);
-						return cost;
-					}
-				});
+				final LinkedHashMap<Itemset, Double> parItemsets = prevItemsets;
+
+				final Set<Itemset> covering = Sets.newHashSet();
+				final double cost = inferenceAlgorithm.infer(covering,
+						parItemsets, transaction);
+				averageCost += cost;
+				allCoverings.addAll(covering);
 
 			}
-			final List<Double> costs = ftp.getCompletedTasks();
-			averageCost = sum(costs) / n;
+			averageCost = averageCost / n;
 
 			// Normalise probabilities
 			for (final Itemset set : allCoverings.elementSet()) {
@@ -236,14 +225,15 @@ public class ItemsetMining {
 		itemsets.clear();
 		itemsets.putAll(prevItemsets);
 		System.out.println(" Parameter Optimal Itemsets: " + itemsets);
-		System.out.println(" Average cost: " + averageCost);
+		System.out.printf(" Average cost: %.2f\n", averageCost);
 		return averageCost;
 	}
 
 	// TODO keep a set of previous suggestions for efficiency?
 	public static double learnStructureStep(final double averageCost,
-			final HashMap<Itemset, Double> itemsets,
-			final List<Transaction> transactions, final ItemsetTree tree) {
+			final LinkedHashMap<Itemset, Double> itemsets,
+			final List<Transaction> transactions, final ItemsetTree tree,
+			final InferenceAlgorithm inferenceAlgorithm) {
 
 		// Try and find better itemset to add
 		final double n = transactions.size();
@@ -275,20 +265,16 @@ public class ItemsetMining {
 				itemsets.put(set, p);
 
 				// Find cost in parallel
-				final FutureThreadPool<Double> ftp = new FutureThreadPool<Double>();
+				double curCost = 0;
 				for (final Transaction transaction : transactions) {
 
-					ftp.pushTask(new Callable<Double>() {
-						@Override
-						public Double call() {
-							final Set<Itemset> covering = Sets.newHashSet();
-							return inferGreedy(covering, itemsets, transaction);
-						}
-					});
-				}
+					final Set<Itemset> covering = Sets.newHashSet();
+					final double cost = inferenceAlgorithm.infer(covering,
+							itemsets, transaction);
+					curCost += cost;
 
-				final List<Double> costs = ftp.getCompletedTasks();
-				final double curCost = sum(costs) / n;
+				}
+				curCost = curCost / n;
 				System.out.printf(", cost: %.2f", curCost);
 
 				if (curCost < averageCost) { // found better set of itemsets
@@ -301,228 +287,8 @@ public class ItemsetMining {
 
 		}
 		System.out.println();
-		maxWalkCount++;
 
 		return averageCost;
-	}
-
-	/**
-	 * Infer ML parameters to explain transaction using greedy algorithm and
-	 * store in covering.
-	 * <p>
-	 * This is an O(log(n))-approximation algorithm where n is the number of
-	 * elements in the transaction.
-	 */
-	public static double inferGreedy(final Set<Itemset> covering,
-			final HashMap<Itemset, Double> itemsets,
-			final Transaction transaction) {
-
-		// TODO priority queue implementation?
-		double totalCost = 0;
-		final Set<Integer> coveredItems = Sets.newHashSet();
-		final List<Integer> transactionItems = transaction.getItems();
-
-		while (!coveredItems.containsAll(transactionItems)) {
-
-			double minCostPerItem = Double.POSITIVE_INFINITY;
-			Itemset bestSet = null;
-			double bestCost = -1;
-
-			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-
-				int notCovered = 0;
-				for (final Integer item : entry.getKey().getItems()) {
-					if (!coveredItems.contains(item)) {
-						notCovered++;
-					}
-				}
-
-				final double cost = -Math.log(entry.getValue());
-				final double costPerItem = cost / notCovered;
-
-				if (costPerItem < minCostPerItem
-						&& transactionItems.containsAll(entry.getKey()
-								.getItems())) { // Don't over-cover
-					minCostPerItem = costPerItem;
-					bestSet = entry.getKey();
-					bestCost = cost;
-				}
-
-			}
-
-			if (bestSet != null) {
-				covering.add(bestSet);
-				coveredItems.addAll(bestSet.getItems());
-				totalCost += bestCost;
-			} else { // Allow incomplete coverings
-				if (totalCost == 0) // no covering is bad
-					totalCost = Double.POSITIVE_INFINITY;
-				break;
-			}
-
-		}
-
-		return totalCost;
-	}
-
-	/**
-	 * Infer ML parameters to explain transaction using Primal-Dual
-	 * approximation and store in covering.
-	 * <p>
-	 * This is an O(mn) run-time f-approximation algorithm, where m is the no.
-	 * elements to cover, n is the number of sets and f is the frequency of the
-	 * most frequent element in the sets.
-	 */
-	public static double inferPrimalDual(final Set<Itemset> covering,
-			final HashMap<Itemset, Double> itemsets,
-			final Transaction transaction) {
-
-		double totalCost = 0;
-		final List<Integer> notCoveredItems = Lists.newArrayList(transaction
-				.getItems());
-
-		// Calculate costs
-		final HashMap<Itemset, Double> costs = Maps.newHashMap();
-		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-			costs.put(entry.getKey(), -Math.log(entry.getValue()));
-		}
-
-		while (!notCoveredItems.isEmpty()) {
-
-			double minCost = Double.POSITIVE_INFINITY;
-			Itemset bestSet = null;
-
-			// Pick random element
-			final int index = rand.nextInt(notCoveredItems.size());
-			final Integer element = notCoveredItems.get(index);
-
-			// Increase dual of element as much as possible
-			for (final Entry<Itemset, Double> entry : costs.entrySet()) {
-
-				if (entry.getKey().getItems().contains(element)) {
-
-					final double cost = entry.getValue();
-					if (cost < minCost
-							&& transaction.getItems().containsAll(
-									entry.getKey().getItems())) { // don't
-																	// over-cover
-						minCost = cost;
-						bestSet = entry.getKey();
-					}
-
-				}
-			}
-
-			if (bestSet != null) {
-				covering.add(bestSet);
-				notCoveredItems.removeAll(bestSet.getItems());
-				totalCost += minCost;
-			} else { // Allow incomplete coverings
-				if (totalCost == 0) // no covering is bad
-					totalCost = Double.POSITIVE_INFINITY;
-				break;
-			}
-
-			// Make dual of element binding
-			for (final Itemset set : costs.keySet()) {
-				if (set.getItems().contains(element)) {
-					final double cost = costs.get(set);
-					costs.put(set, cost - minCost);
-				}
-			}
-
-		}
-
-		return totalCost;
-	}
-
-	/**
-	 * Infer ML parameters to explain transaction exactly using ILP and store in
-	 * covering.
-	 * <p>
-	 * This is an NP-hard problem.
-	 */
-	public static double inferILP(final Set<Itemset> covering,
-			final LinkedHashMap<Itemset, Double> itemsets,
-			final Transaction transaction) {
-
-		// Load solver if necessary
-		if (solver == null)
-			solver = SolverFactory.getSolver("CPLEX");
-
-		// Filter out sets containing items not in transaction
-		final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
-				.newLinkedHashMap(itemsets);
-		for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
-			if (transaction.getItems().containsAll(entry.getKey().getItems()))
-				filteredItemsets.put(entry.getKey(), entry.getValue());
-		}
-
-		final int probSize = filteredItemsets.size();
-
-		// Set up cost vector
-		int i = 0;
-		final double[] costs = new double[probSize];
-		for (final double p : filteredItemsets.values()) {
-			costs[i] = -Math.log(p);
-			i++;
-		}
-
-		// Set objective sum(c_s*z_s)
-		final LinearProgram lp = new LinearProgram(costs);
-
-		// Add covering constraint
-		for (final Integer item : transaction.getItems()) {
-
-			i = 0;
-			final double[] cover = new double[probSize];
-			for (final Itemset set : filteredItemsets.keySet()) {
-
-				// at least one set covers item
-				if (set.getItems().contains(item)) {
-					cover[i] = 1;
-				}
-				i++;
-			}
-			lp.addConstraint(new LinearBiggerThanEqualsConstraint(cover, 1.,
-					"cover"));
-
-		}
-
-		// Set all variables to binary
-		for (int j = 0; j < probSize; j++) {
-			lp.setBinary(j);
-		}
-
-		System.out.println(lp.convertToCPLEX());
-
-		// Solve
-		lp.setMinProblem(true);
-		final double[] sol = solver.solve(lp);
-
-		// Add chosen sets to covering
-		i = 0;
-		double totalCost = 0;
-		for (final Itemset set : filteredItemsets.keySet()) {
-			if (doubleToBoolean(sol[i])) {
-				covering.add(set);
-				totalCost += costs[i] * sol[i];
-			}
-			i++;
-		}
-
-		// no covering is bad
-		if (totalCost == 0)
-			totalCost = Double.POSITIVE_INFINITY;
-
-		return totalCost;
-	}
-
-	/** Round double to boolean */
-	private static boolean doubleToBoolean(final double d) {
-		if ((int) Math.round(d) == 1)
-			return true;
-		return false;
 	}
 
 	// TODO don't read all transactions into memory
@@ -637,17 +403,6 @@ public class ItemsetMining {
 			recursiveGenRules(rules, newAntecedent, newConsequent, prob);
 		}
 
-	}
-
-	/**
-	 * Calculates the sum of a Collection
-	 */
-	public static double sum(final Iterable<Double> values) {
-		double sum = 0;
-		for (final Double element : values) {
-			sum += element;
-		}
-		return sum;
 	}
 
 }
