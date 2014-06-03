@@ -37,18 +37,20 @@ import com.google.common.io.Files;
 public class ItemsetMining {
 
 	private static final String DATASET = "caviar.txt";
-	private static final boolean VERBOSE = false;
+	private static final boolean VERBOSE = true;
+	private static final boolean ASSOCIATION_RULES = false;
 	private static final InferenceAlgorithm inferenceAlg = new inferILP();
-	private static final double SINGLETON_PRIOR_PROB = 0.1;
+	private static final double SINGLETON_PRIOR_PROB = 0.5;
 
+	private static final boolean FPGROWTH = false;
 	private static final double FPGROWTH_SUPPORT = 0.25; // relative support
 	private static final double FPGROWTH_MIN_CONF = 0;
 	private static final double FPGROWTH_MIN_LIFT = 0;
 
 	private static final int MAX_RANDOM_WALKS = 100;
-	private static final int MAX_STRUCTURE_ITERATIONS = 50;
+	private static final int MAX_STRUCTURE_ITERATIONS = 10;
 
-	private static final int OPTIMIZE_PARAMS_EVERY = 10;
+	private static final int OPTIMIZE_PARAMS_EVERY = 1;
 	private static final double OPTIMIZE_TOL = 1e-10;
 
 	public static void main(final String[] args) throws IOException {
@@ -58,10 +60,7 @@ public class ItemsetMining {
 				DATASET);
 		final String input = java.net.URLDecoder.decode(url.getPath(), "UTF-8");
 		final File inputFile = new File(input);
-		if (VERBOSE) {
-			System.out.println("======= Transaction Database =======\n"
-					+ Files.toString(inputFile, Charsets.UTF_8));
-		}
+
 		// TODO don't read all transactions into memory
 		final List<Transaction> transactions = readTransactions(inputFile);
 
@@ -92,7 +91,7 @@ public class ItemsetMining {
 					entry.getValue());
 		}
 
-		if (VERBOSE) {
+		if (ASSOCIATION_RULES) {
 			// Generate Association rules from the interesting itemsets
 			final List<Rule> rules = generateAssociationRules(itemsets);
 			System.out
@@ -101,8 +100,10 @@ public class ItemsetMining {
 				System.out.println(rule.toString());
 			}
 			System.out.println("\n");
+		}
 
-			// Compare with the FPGROWTH algorithm
+		// Compare with the FPGROWTH algorithm
+		if (FPGROWTH) {
 			final AlgoFPGrowth algo = new AlgoFPGrowth();
 			final Itemsets patterns = algo.runAlgorithm(input, null,
 					FPGROWTH_SUPPORT);
@@ -110,11 +111,13 @@ public class ItemsetMining {
 			patterns.printItemsets(algo.getDatabaseSize());
 
 			// Generate association rules from FPGROWTH itemsets
-			final AlgoAgrawalFaster94 algo2 = new AlgoAgrawalFaster94();
-			final Rules rules2 = algo2.runAlgorithm(patterns, null,
-					algo.getDatabaseSize(), FPGROWTH_MIN_CONF,
-					FPGROWTH_MIN_LIFT);
-			rules2.printRulesWithLift(algo.getDatabaseSize());
+			if (ASSOCIATION_RULES) {
+				final AlgoAgrawalFaster94 algo2 = new AlgoAgrawalFaster94();
+				final Rules rules2 = algo2.runAlgorithm(patterns, null,
+						algo.getDatabaseSize(), FPGROWTH_MIN_CONF,
+						FPGROWTH_MIN_LIFT);
+				rules2.printRulesWithLift(algo.getDatabaseSize());
+			}
 		}
 
 	}
