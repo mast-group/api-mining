@@ -141,6 +141,10 @@ public class ItemsetMining {
 		System.out.println(" Initial itemsets: " + itemsets);
 		double averageCost = Double.POSITIVE_INFINITY;
 
+		// Initial parameter optimization step
+		averageCost = expectationMaximizationStep(itemsets, transactions,
+				inferenceAlgorithm);
+
 		// Structural EM
 		for (int iteration = 1; iteration <= MAX_STRUCTURE_ITERATIONS; iteration++) {
 
