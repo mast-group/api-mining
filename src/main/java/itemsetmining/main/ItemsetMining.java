@@ -4,7 +4,7 @@ import itemsetmining.itemset.Itemset;
 import itemsetmining.itemset.ItemsetTree;
 import itemsetmining.itemset.Rule;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
-import itemsetmining.main.InferenceAlgorithms.inferILP;
+import itemsetmining.main.InferenceAlgorithms.inferGreedy;
 import itemsetmining.transaction.Transaction;
 
 import java.io.File;
@@ -39,7 +39,7 @@ public class ItemsetMining {
 	private static final String DATASET = "caviar.txt";
 	private static final boolean VERBOSE = true;
 	private static final boolean ASSOCIATION_RULES = false;
-	private static final InferenceAlgorithm inferenceAlg = new inferILP();
+	private static final InferenceAlgorithm inferenceAlg = new inferGreedy();
 	private static final double SINGLETON_PRIOR_PROB = 0.5;
 
 	private static final boolean FPGROWTH = false;

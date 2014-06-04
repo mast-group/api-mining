@@ -84,11 +84,15 @@ public class InferenceAlgorithms {
 					coveredItems.addAll(bestSet.getItems());
 					totalCost += bestCost;
 				} else { // Allow incomplete coverings
-					if (totalCost == 0) // no covering is bad
-						totalCost = Double.POSITIVE_INFINITY;
 					break;
 				}
 
+			}
+
+			// Add on cost of uncovered itemsets
+			for (final Itemset set : Sets.difference(itemsets.keySet(),
+					covering)) {
+				totalCost += -Math.log(1 - itemsets.get(set));
 			}
 
 			return totalCost;
@@ -153,8 +157,6 @@ public class InferenceAlgorithms {
 					notCoveredItems.removeAll(bestSet.getItems());
 					totalCost += minCost;
 				} else { // Allow incomplete coverings
-					if (totalCost == 0) // no covering is bad
-						totalCost = Double.POSITIVE_INFINITY;
 					break;
 				}
 
@@ -166,6 +168,12 @@ public class InferenceAlgorithms {
 					}
 				}
 
+			}
+
+			// Add on cost of uncovered itemsets
+			for (final Itemset set : Sets.difference(itemsets.keySet(),
+					covering)) {
+				totalCost += -Math.log(1 - itemsets.get(set));
 			}
 
 			return totalCost;
@@ -205,7 +213,7 @@ public class InferenceAlgorithms {
 			int i = 0;
 			final double[] costs = new double[probSize];
 			for (final double p : filteredItemsets.values()) {
-				costs[i] = -Math.log(p);
+				costs[i] = -Math.log(p / (1 - p));
 				i++;
 			}
 
@@ -244,17 +252,16 @@ public class InferenceAlgorithms {
 			// Add chosen sets to covering
 			i = 0;
 			double totalCost = 0;
-			for (final Itemset set : filteredItemsets.keySet()) {
+			for (final Entry<Itemset, Double> entry : filteredItemsets
+					.entrySet()) {
 				if (doubleToBoolean(sol[i])) {
+					final Itemset set = entry.getKey();
+					final double p = entry.getValue();
 					covering.add(set);
-					totalCost += costs[i] * sol[i];
+					totalCost += costs[i] * sol[i] - Math.log(1 - p);
 				}
 				i++;
 			}
-
-			// no covering is bad
-			if (totalCost == 0)
-				totalCost = Double.POSITIVE_INFINITY;
 
 			return totalCost;
 		}

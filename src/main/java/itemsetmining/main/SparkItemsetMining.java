@@ -291,6 +291,7 @@ public class SparkItemsetMining {
 	 * 
 	 * @return
 	 */
+	// FIXME Switch to Bernoulli -- need to return cost with dropouts
 	private static Set<Tuple2<Itemset, Double>> inferGreedy(
 			final Transaction transaction,
 			final HashMap<Itemset, Double> itemsets) {
