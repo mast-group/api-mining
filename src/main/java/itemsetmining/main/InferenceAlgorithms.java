@@ -198,12 +198,14 @@ public class InferenceAlgorithms {
 			final LinearProgramSolver solver = SolverFactory.getSolver("CPLEX");
 			solver.printToScreen(false);
 
-			// Filter out sets containing items not in transaction
+			// Filter out sets containing items not in transaction (and with
+			// zero cost)
 			final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
 					.newLinkedHashMap();
 			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
 				if (transaction.getItems().containsAll(
-						entry.getKey().getItems()))
+						entry.getKey().getItems())
+						&& entry.getValue() > 0.0)
 					filteredItemsets.put(entry.getKey(), entry.getValue());
 			}
 
