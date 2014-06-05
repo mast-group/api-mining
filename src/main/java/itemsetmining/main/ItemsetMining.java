@@ -4,7 +4,7 @@ import itemsetmining.itemset.Itemset;
 import itemsetmining.itemset.ItemsetTree;
 import itemsetmining.itemset.Rule;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
-import itemsetmining.main.InferenceAlgorithms.inferGreedy;
+import itemsetmining.main.InferenceAlgorithms.inferILP;
 import itemsetmining.transaction.Transaction;
 
 import java.io.File;
@@ -36,10 +36,10 @@ import com.google.common.io.Files;
 
 public class ItemsetMining {
 
-	private static final String DATASET = "caviar.txt";
+	private static final String DATASET = "freerider.txt";
 	private static final boolean VERBOSE = true;
 	private static final boolean ASSOCIATION_RULES = false;
-	private static final InferenceAlgorithm inferenceAlg = new inferGreedy();
+	private static final InferenceAlgorithm inferenceAlg = new inferILP();
 	private static final double SINGLETON_PRIOR_PROB = 0.5;
 
 	private static final boolean FPGROWTH = false;
@@ -260,14 +260,20 @@ public class ItemsetMining {
 				// Estimate itemset probability (M-step assuming always
 				// included)
 				double p = 0;
+
 				for (final Transaction transaction : transactions) {
-					// TODO does this assumption make sense
 					if (transaction.getItems().containsAll(set.getItems())) {
 						p++;
 					}
 				}
 				p = p / n;
 
+				// Adjust probabilities for subsets of itemset
+				for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+					if (set.getItems().containsAll(entry.getKey().getItems())) {
+						itemsets.put(entry.getKey(), entry.getValue() - p);
+					}
+				}
 				// Add itemset
 				itemsets.put(set, p);
 
@@ -289,6 +295,13 @@ public class ItemsetMining {
 					return curCost;
 				} // otherwise keep trying
 				itemsets.remove(set);
+				// and restore original probabilities
+				for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+					if (set.getItems().containsAll(entry.getKey().getItems())) {
+						itemsets.put(entry.getKey(), entry.getValue() + p);
+					}
+				}
+
 				System.out.print("\n Structural candidate itemsets: ");
 			}
 
