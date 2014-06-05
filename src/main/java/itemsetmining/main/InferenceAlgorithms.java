@@ -46,7 +46,6 @@ public class InferenceAlgorithms {
 				final LinkedHashMap<Itemset, Double> itemsets,
 				final Transaction transaction) {
 
-			// TODO priority queue implementation?
 			double totalCost = 0;
 			final Set<Integer> coveredItems = Sets.newHashSet();
 			final List<Integer> transactionItems = transaction.getItems();
@@ -90,10 +89,10 @@ public class InferenceAlgorithms {
 			}
 
 			// Add on cost of uncovered itemsets
-			for (final Itemset set : Sets.difference(itemsets.keySet(),
-					covering)) {
-				totalCost += -Math.log(1 - itemsets.get(set));
-			}
+			// for (final Itemset set : Sets.difference(itemsets.keySet(),
+			// covering)) {
+			// totalCost += -Math.log(1 - itemsets.get(set));
+			// }
 
 			return totalCost;
 		}
@@ -245,11 +244,13 @@ public class InferenceAlgorithms {
 				lp.setBinary(j);
 			}
 
-			// System.out.println(lp.convertToCPLEX());
-
 			// Solve
 			lp.setMinProblem(true);
 			final double[] sol = solver.solve(lp);
+
+			// No solution is bad
+			if (sol == null)
+				return Double.POSITIVE_INFINITY;
 
 			// Add chosen sets to covering
 			i = 0;
