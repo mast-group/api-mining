@@ -248,6 +248,8 @@ public class SparkItemsetMining {
 						}).reduce(new SumCounts());
 				p = p / noTransactions;
 
+				// FIXME update subset probabilities
+
 				// Add itemset
 				itemsets.put(set, p);
 
@@ -292,6 +294,7 @@ public class SparkItemsetMining {
 	 * @return
 	 */
 	// FIXME Switch to Bernoulli -- need to return cost with dropouts
+	// TODO priority queue implementation?
 	private static Set<Tuple2<Itemset, Double>> inferGreedy(
 			final Transaction transaction,
 			final HashMap<Itemset, Double> itemsets) {
@@ -334,7 +337,6 @@ public class SparkItemsetMining {
 				covering.add(new Tuple2<Itemset, Double>(bestSet, bestCost));
 				coveredItems.addAll(bestSet.getItems());
 			} else { // Allow incomplete coverings
-				// TODO no covering is bad?
 				break;
 			}
 

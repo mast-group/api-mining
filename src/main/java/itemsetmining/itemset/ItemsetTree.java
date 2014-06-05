@@ -101,7 +101,6 @@ public class ItemsetTree {
 		}
 
 		// Stop with probability dependent on total support of children
-		// TODO does this random walk stopping rule make sense?
 		final double pStop = (node.support - sumSupport) / node.support;
 		if (Math.random() < pStop)
 			return;
@@ -161,7 +160,6 @@ public class ItemsetTree {
 			// for each item in the transaction
 			for (int i = 0; i < lineSplited.length; i++) {
 				// convert the item to integer and add it to the structure
-				// TODO ignore low frequency items like FPGrowth?
 				itemset.add(Integer.parseInt(lineSplited[i]));
 
 			}
