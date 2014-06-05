@@ -36,7 +36,7 @@ import com.google.common.io.Files;
 
 public class ItemsetMining {
 
-	private static final String DATASET = "freerider.txt";
+	private static final String DATASET = "caviar.txt";
 	private static final boolean VERBOSE = true;
 	private static final boolean ASSOCIATION_RULES = false;
 	private static final InferenceAlgorithm inferenceAlg = new inferILP();
@@ -61,7 +61,6 @@ public class ItemsetMining {
 		final String input = java.net.URLDecoder.decode(url.getPath(), "UTF-8");
 		final File inputFile = new File(input);
 
-		// TODO don't read all transactions into memory
 		final List<Transaction> transactions = readTransactions(inputFile);
 
 		// Determine most frequent singletons
@@ -125,8 +124,6 @@ public class ItemsetMining {
 	/**
 	 * Learn itemsets model using structural EM
 	 * 
-	 * @param inferenceAlgorithm
-	 *            TODO
 	 */
 	public static HashMap<Itemset, Double> structuralEM(
 			final List<Transaction> transactions,
@@ -167,9 +164,6 @@ public class ItemsetMining {
 
 	/**
 	 * Find optimal parameters for given set of itemsets and store in itemsets
-	 * 
-	 * @param inferenceAlgorithm
-	 *            TODO
 	 * 
 	 * @return average cost per transaction
 	 *         <p>
@@ -233,10 +227,11 @@ public class ItemsetMining {
 		itemsets.putAll(prevItemsets);
 		System.out.println(" Parameter Optimal Itemsets: " + itemsets);
 		System.out.printf(" Average cost: %.2f\n", averageCost);
+		assert !Double.isNaN(averageCost);
+		assert !Double.isInfinite(averageCost);
 		return averageCost;
 	}
 
-	// TODO keep a set of previous suggestions for efficiency?
 	public static double learnStructureStep(final double averageCost,
 			final LinkedHashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions, final ItemsetTree tree,
@@ -311,7 +306,6 @@ public class ItemsetMining {
 		return averageCost;
 	}
 
-	// TODO don't read all transactions into memory
 	public static List<Transaction> readTransactions(final File inputFile)
 			throws IOException {
 
