@@ -17,28 +17,32 @@ import com.google.common.collect.Sets;
 
 public class TransactionGenerator {
 
-	private static HashMap<Itemset, Double> itemsets = Maps.newHashMap();
+	private static final boolean VERBOSE = false;
 
 	public static void main(final String[] args) throws IOException {
 
 		if (args.length != 3) {
 			System.err
-					.println("Usage <problemName> <noTransactions> <noisePercentage>");
+					.println("Usage <problemName> <noTransactions> <noExtraElems>");
 			System.exit(-1);
 		}
 
 		final int noTransactions = Integer.parseInt(args[1]);
-		final double noisePercent = Double.parseDouble(args[2]);
+		final int noExtraElems = Integer.parseInt(args[2]);
 
-		generateDatabase(args[0], noTransactions, noisePercent,
-				"src/main/resources/");
+		final HashMap<Itemset, Double> itemsets = generateItemsets(args[0],
+				noExtraElems);
+
+		final File outFile = new File("src/main/resources/" + args[0] + ".txt");
+		generateTransactionDatabase(itemsets, noTransactions, outFile);
 
 	}
 
-	/** Create transactions using interesting itemsets that highlight problems */
-	public static void generateDatabase(final String name,
-			final int noTransactions, final double noisePercent,
-			final String outDir) throws IOException {
+	/** Create interesting itemsets that highlight problems */
+	public static HashMap<Itemset, Double> generateItemsets(final String name,
+			final int noExtraElems) {
+
+		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
 
 		// Here [1 2] is the champagne & caviar problem
 		// (not generated when support is too high)
@@ -99,19 +103,26 @@ public class TransactionGenerator {
 			throw new IllegalArgumentException("Incorrect problem name.");
 
 		// Add more itemsets if large scale
-		for (int i = 10; i < 10 + noisePercent * noTransactions; i++) {
+		for (int i = 10; i < 10 + noExtraElems; i++) {
 			itemsets.put(new Itemset(i), 0.5);
 		}
 
+		return itemsets;
+	}
+
+	/** Generate transactions from set of interesting itemsets */
+	public static void generateTransactionDatabase(
+			final HashMap<Itemset, Double> itemsets, final int noTransactions,
+			final File outFile) throws IOException {
+
 		// Set output file
-		final File outFile = new File(outDir + name + ".txt");
 		final PrintWriter out = new PrintWriter(outFile, "UTF-8");
 
 		// Generate transaction database
 		for (int i = 0; i < noTransactions; i++) {
 
 			// Generate transaction from distribution
-			final Set<Integer> transaction = sampleFromDistribution();
+			final Set<Integer> transaction = sampleFromDistribution(itemsets);
 			for (final int item : transaction) {
 				out.print(item + " ");
 			}
@@ -122,16 +133,19 @@ public class TransactionGenerator {
 		out.close();
 
 		// Print file to screen
-		final FileReader reader = new FileReader(outFile);
-		final LineIterator it = new LineIterator(reader);
-		while (it.hasNext()) {
-			System.out.println(it.nextLine());
+		if (VERBOSE) {
+			final FileReader reader = new FileReader(outFile);
+			final LineIterator it = new LineIterator(reader);
+			while (it.hasNext()) {
+				System.out.println(it.nextLine());
+			}
+			LineIterator.closeQuietly(it);
 		}
-		LineIterator.closeQuietly(it);
 	}
 
 	/** Randomly generate itemset with its probability */
-	private static Set<Integer> sampleFromDistribution() {
+	private static Set<Integer> sampleFromDistribution(
+			final HashMap<Itemset, Double> itemsets) {
 
 		final Set<Integer> transaction = Sets.newHashSet();
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {

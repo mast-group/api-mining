@@ -4,7 +4,7 @@ import itemsetmining.itemset.Itemset;
 import itemsetmining.itemset.ItemsetTree;
 import itemsetmining.itemset.Rule;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
-import itemsetmining.main.InferenceAlgorithms.inferILP;
+import itemsetmining.main.InferenceAlgorithms.inferGreedy;
 import itemsetmining.transaction.Transaction;
 
 import java.io.File;
@@ -36,17 +36,19 @@ import com.google.common.io.Files;
 
 public class ItemsetMining {
 
-	private static final String DATASET = "caviar.txt";
-	private static final boolean VERBOSE = true;
-	private static final boolean ASSOCIATION_RULES = false;
-	private static final InferenceAlgorithm inferenceAlg = new inferILP();
+	// Main function parameters
+	private static final String dataset = "caviar.txt";
+	private static final boolean verbose = false;
+	private static final boolean associationRules = false;
+	private static final InferenceAlgorithm inferenceAlg = new inferGreedy();
+
+	private static final boolean fpGrowth = false;
+	private static final double fpGrowthSupport = 0.25; // relative support
+	private static final double fpGrowthMinConf = 0;
+	private static final double fpGrowthMinLift = 0;
+
+	// Global Constants
 	private static final double SINGLETON_PRIOR_PROB = 0.5;
-
-	private static final boolean FPGROWTH = false;
-	private static final double FPGROWTH_SUPPORT = 0.25; // relative support
-	private static final double FPGROWTH_MIN_CONF = 0;
-	private static final double FPGROWTH_MIN_LIFT = 0;
-
 	private static final int MAX_RANDOM_WALKS = 100;
 	private static final int MAX_STRUCTURE_ITERATIONS = 10;
 
@@ -55,43 +57,17 @@ public class ItemsetMining {
 
 	public static void main(final String[] args) throws IOException {
 
-		// Read in transaction database
+		// Find transaction database
 		final URL url = ItemsetMining.class.getClassLoader().getResource(
-				DATASET);
+				dataset);
 		final String input = java.net.URLDecoder.decode(url.getPath(), "UTF-8");
 		final File inputFile = new File(input);
 
-		final List<Transaction> transactions = readTransactions(inputFile);
+		// Mine interesting itemsets
+		final HashMap<Itemset, Double> itemsets = mineItemsets(inputFile);
 
-		// Determine most frequent singletons
-		final Multiset<Integer> singletons = scanDatabaseToDetermineFrequencyOfSingleItems(inputFile);
-
-		// Apply the algorithm to build the itemset tree
-		final ItemsetTree tree = new ItemsetTree();
-		tree.buildTree(inputFile, singletons);
-		tree.printStatistics();
-		if (VERBOSE) {
-			System.out.println("THIS IS THE TREE:");
-			tree.printTree();
-		}
-
-		// Run inference to find interesting itemsets
-		System.out.println("============= ITEMSET INFERENCE =============");
-		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
-				singletons.elementSet(), tree, inferenceAlg);
-		if (VERBOSE) {
-			System.out.println("\n======= Transaction Database =======\n"
-					+ Files.toString(inputFile, Charsets.UTF_8));
-		}
-		System.out
-				.println("\n============= INTERESTING ITEMSETS =============");
-		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-			System.out.printf("%s\tprob: %1.5f %n", entry.getKey(),
-					entry.getValue());
-		}
-
-		if (ASSOCIATION_RULES) {
-			// Generate Association rules from the interesting itemsets
+		// Generate Association rules from the interesting itemsets
+		if (associationRules) {
 			final List<Rule> rules = generateAssociationRules(itemsets);
 			System.out
 					.println("\n============= ASSOCIATION RULES =============");
@@ -102,23 +78,59 @@ public class ItemsetMining {
 		}
 
 		// Compare with the FPGROWTH algorithm
-		if (FPGROWTH) {
+		if (fpGrowth) {
 			final AlgoFPGrowth algo = new AlgoFPGrowth();
 			final Itemsets patterns = algo.runAlgorithm(input, null,
-					FPGROWTH_SUPPORT);
+					fpGrowthSupport);
 			algo.printStats();
 			patterns.printItemsets(algo.getDatabaseSize());
 
 			// Generate association rules from FPGROWTH itemsets
-			if (ASSOCIATION_RULES) {
+			if (associationRules) {
 				final AlgoAgrawalFaster94 algo2 = new AlgoAgrawalFaster94();
 				final Rules rules2 = algo2.runAlgorithm(patterns, null,
-						algo.getDatabaseSize(), FPGROWTH_MIN_CONF,
-						FPGROWTH_MIN_LIFT);
+						algo.getDatabaseSize(), fpGrowthMinConf,
+						fpGrowthMinLift);
 				rules2.printRulesWithLift(algo.getDatabaseSize());
 			}
 		}
 
+	}
+
+	/** Mine interesting itemsets */
+	public static HashMap<Itemset, Double> mineItemsets(final File inputFile)
+			throws IOException {
+
+		// Read in transaction database
+		final List<Transaction> transactions = readTransactions(inputFile);
+
+		// Determine most frequent singletons
+		final Multiset<Integer> singletons = scanDatabaseToDetermineFrequencyOfSingleItems(inputFile);
+
+		// Apply the algorithm to build the itemset tree
+		final ItemsetTree tree = new ItemsetTree();
+		tree.buildTree(inputFile, singletons);
+		tree.printStatistics();
+		if (verbose) {
+			System.out.println("THIS IS THE TREE:");
+			tree.printTree();
+		}
+
+		// Run inference to find interesting itemsets
+		System.out.println("============= ITEMSET INFERENCE =============");
+		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
+				singletons.elementSet(), tree, inferenceAlg);
+		if (verbose) {
+			System.out.println("\n======= Transaction Database =======\n"
+					+ Files.toString(inputFile, Charsets.UTF_8));
+		}
+		System.out
+				.println("\n============= INTERESTING ITEMSETS =============");
+		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+			System.out.printf("%s\tprob: %1.5f %n", entry.getKey(),
+					entry.getValue());
+		}
+		return itemsets;
 	}
 
 	/**
