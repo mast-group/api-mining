@@ -106,12 +106,14 @@ public class ItemsetTree {
 			return;
 
 		// Randomly pick child to traverse proportional to its itemset support
+		// TODO changed to purely random traversal, is this what we want?
 		double p = Math.random();
 		ItemsetTreeNode child = null;
 		for (final Map.Entry<ItemsetTreeNode, Integer> entry : supports
 				.entrySet()) {
 
-			final double childProb = entry.getValue() / sumSupport;
+			// final double childProb = entry.getValue() / sumSupport;
+			final double childProb = 1. / node.children.size();
 			if (p < childProb) {
 				child = entry.getKey();
 			} else {

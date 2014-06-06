@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Set;
 
 import org.apache.commons.io.LineIterator;
@@ -21,28 +22,39 @@ public class TransactionGenerator {
 
 	public static void main(final String[] args) throws IOException {
 
-		if (args.length != 3) {
+		if (args.length != 5) {
 			System.err
-					.println("Usage <problemName> <noTransactions> <noExtraElems>");
+					.println("Usage <problemName> <noTransactions> <difficultyLevel> <noExtraSets> <maxSetSize>");
 			System.exit(-1);
 		}
 
 		final int noTransactions = Integer.parseInt(args[1]);
-		final int noExtraElems = Integer.parseInt(args[2]);
+		final int difficultyLevel = Integer.parseInt(args[2]);
+		final int noExtraSets = Integer.parseInt(args[3]);
+		final int maxSetSize = Integer.parseInt(args[3]);
 
 		final HashMap<Itemset, Double> itemsets = generateItemsets(args[0],
-				noExtraElems);
+				difficultyLevel, noExtraSets, maxSetSize);
 
 		final File outFile = new File("src/main/resources/" + args[0] + ".txt");
 		generateTransactionDatabase(itemsets, noTransactions, outFile);
 
 	}
 
-	/** Create interesting itemsets that highlight problems */
+	/**
+	 * Create interesting itemsets that highlight problems
+	 * 
+	 * @param difficultyLevel
+	 *            An integer between 0 and 10
+	 */
 	public static HashMap<Itemset, Double> generateItemsets(final String name,
-			final int noExtraElems) {
+			final int difficultyLevel, final int noExtraSets,
+			final int maxSetSize) {
 
 		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
+
+		// Difficulty scaling (times 10^0 to 10^-1)
+		final double scaling = Math.pow(10, -difficultyLevel / 10.);
 
 		// Here [1 2] is the champagne & caviar problem
 		// (not generated when support is too high)
@@ -50,7 +62,7 @@ public class TransactionGenerator {
 
 			// Champagne & Caviar
 			final Itemset s12 = new Itemset(1, 2);
-			final double p12 = 0.1;
+			final double p12 = 0.1 * scaling;
 			itemsets.put(s12, p12);
 
 			// Other transactions
@@ -69,8 +81,8 @@ public class TransactionGenerator {
 
 			final Itemset s12 = new Itemset(1, 2);
 			final Itemset s3 = new Itemset(3);
-			final double p12 = 0.5;
-			final double p3 = 0.5;
+			final double p12 = 0.5 * scaling;
+			final double p3 = 0.5 * scaling;
 			itemsets.put(s12, p12);
 			itemsets.put(s3, p3);
 
@@ -80,15 +92,16 @@ public class TransactionGenerator {
 		else if (name.equals("cross-supp")) {
 
 			final Itemset s1 = new Itemset(1);
-			final double p1 = 0.95;
+			final double p1 = 0.95 * scaling;
 			itemsets.put(s1, p1);
 
 			final Itemset s2 = new Itemset(2, 3);
-			final double p2 = 0.2;
+			final double p2 = 0.2 * scaling;
 			itemsets.put(s2, p2);
 
 		}
 		// This one probably doesn't make sense
+		// (structure probability adjustment favours [2 5],[3])
 		else if (name.equals("overlap")) {
 
 			final Itemset s1 = new Itemset(2, 3, 5);
@@ -103,11 +116,32 @@ public class TransactionGenerator {
 			throw new IllegalArgumentException("Incorrect problem name.");
 
 		// Add more itemsets if large scale
-		for (int i = 10; i < 10 + noExtraElems; i++) {
-			itemsets.put(new Itemset(i), 0.5);
-		}
+		itemsets.putAll(getNoisyItemsets(noExtraSets, maxSetSize));
 
 		return itemsets;
+	}
+
+	/** Generate some disjoint itemsets as background noise */
+	public static HashMap<Itemset, Double> getNoisyItemsets(
+			final int noExtraSets, final int maxSetSize) {
+
+		final HashMap<Itemset, Double> noisyItemsets = Maps.newHashMap();
+
+		final Random rand = new Random(1);
+		int maxElement = 10;
+		for (int s = 0; s < noExtraSets; s++) {
+
+			final int len = rand.nextInt(maxSetSize) + 1;
+			final Itemset set = new Itemset();
+			for (int i = maxElement; i < maxElement + len; i++) {
+				set.add(i);
+			}
+			noisyItemsets.put(set, 0.5);
+			maxElement += len;
+
+		}
+
+		return noisyItemsets;
 	}
 
 	/** Generate transactions from set of interesting itemsets */

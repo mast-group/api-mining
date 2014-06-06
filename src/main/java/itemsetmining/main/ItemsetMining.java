@@ -63,7 +63,7 @@ public class ItemsetMining {
 
 	private static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
-	private static final Level LOGLEVEL = Level.INFO;
+	private static final Level LOGLEVEL = Level.FINE;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -114,11 +114,11 @@ public class ItemsetMining {
 		// Set up logging
 		LogManager.getLogManager().reset();
 		logger.setLevel(LOGLEVEL);
-		ConsoleHandler handler = new Handler();
+		final ConsoleHandler handler = new Handler();
 		handler.setLevel(Level.ALL);
-		Formatter formatter = new Formatter() {
+		final Formatter formatter = new Formatter() {
 			@Override
-			public String format(LogRecord record) {
+			public String format(final LogRecord record) {
 				return record.getMessage();
 			}
 		};
@@ -459,7 +459,8 @@ public class ItemsetMining {
 	}
 
 	public static class Handler extends ConsoleHandler {
-		protected void setOutputStream(OutputStream out)
+		@Override
+		protected void setOutputStream(final OutputStream out)
 				throws SecurityException {
 			super.setOutputStream(System.out);
 		}
