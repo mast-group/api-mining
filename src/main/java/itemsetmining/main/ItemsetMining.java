@@ -9,6 +9,7 @@ import itemsetmining.transaction.Transaction;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,6 +17,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Formatter;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
@@ -38,7 +45,6 @@ public class ItemsetMining {
 
 	// Main function parameters
 	private static final String dataset = "caviar.txt";
-	private static final boolean verbose = false;
 	private static final boolean associationRules = false;
 	private static final InferenceAlgorithm inferenceAlg = new inferGreedy();
 
@@ -54,6 +60,10 @@ public class ItemsetMining {
 
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
 	private static final double OPTIMIZE_TOL = 1e-10;
+
+	private static final Logger logger = Logger.getLogger(ItemsetMining.class
+			.getName());
+	private static final Level LOGLEVEL = Level.INFO;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -101,6 +111,20 @@ public class ItemsetMining {
 	public static HashMap<Itemset, Double> mineItemsets(final File inputFile)
 			throws IOException {
 
+		// Set up logging
+		LogManager.getLogManager().reset();
+		logger.setLevel(LOGLEVEL);
+		ConsoleHandler handler = new Handler();
+		handler.setLevel(Level.ALL);
+		Formatter formatter = new Formatter() {
+			@Override
+			public String format(LogRecord record) {
+				return record.getMessage();
+			}
+		};
+		handler.setFormatter(formatter);
+		logger.addHandler(handler);
+
 		// Read in transaction database
 		final List<Transaction> transactions = readTransactions(inputFile);
 
@@ -110,26 +134,27 @@ public class ItemsetMining {
 		// Apply the algorithm to build the itemset tree
 		final ItemsetTree tree = new ItemsetTree();
 		tree.buildTree(inputFile, singletons);
-		tree.printStatistics();
-		if (verbose) {
-			System.out.println("THIS IS THE TREE:");
-			tree.printTree();
+		if (LOGLEVEL.equals(Level.FINE))
+			tree.printStatistics();
+		if (LOGLEVEL.equals(Level.FINEST)) {
+			logger.finest("THIS IS THE TREE:\n");
+			logger.finest(tree.toString());
 		}
 
 		// Run inference to find interesting itemsets
-		System.out.println("============= ITEMSET INFERENCE =============");
+		logger.fine("\n============= ITEMSET INFERENCE =============\n");
 		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
 				singletons.elementSet(), tree, inferenceAlg);
-		if (verbose) {
-			System.out.println("\n======= Transaction Database =======\n"
-					+ Files.toString(inputFile, Charsets.UTF_8));
-		}
-		System.out
-				.println("\n============= INTERESTING ITEMSETS =============");
+		if (LOGLEVEL.equals(Level.FINEST))
+			logger.finest("\n======= Transaction Database =======\n"
+					+ Files.toString(inputFile, Charsets.UTF_8) + "\n");
+		logger.info("\n============= INTERESTING ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-			System.out.printf("%s\tprob: %1.5f %n", entry.getKey(),
-					entry.getValue());
+			logger.info(String.format("%s\tprob: %1.5f %n", entry.getKey(),
+					entry.getValue()));
 		}
+		logger.info("\n");
+
 		return itemsets;
 	}
 
@@ -147,7 +172,7 @@ public class ItemsetMining {
 		for (final int singleton : singletons) {
 			itemsets.put(new Itemset(singleton), SINGLETON_PRIOR_PROB);
 		}
-		System.out.println(" Initial itemsets: " + itemsets);
+		logger.fine(" Initial itemsets: " + itemsets + "\n");
 		double averageCost = Double.POSITIVE_INFINITY;
 
 		// Initial parameter optimization step
@@ -158,16 +183,19 @@ public class ItemsetMining {
 		for (int iteration = 1; iteration <= MAX_STRUCTURE_ITERATIONS; iteration++) {
 
 			// Learn structure
-			System.out.println("\n+++++ Structural Optimization Step "
-					+ iteration);
+			logger.finer("\n+++++ Structural Optimization Step " + iteration
+					+ "\n");
 			averageCost = learnStructureStep(averageCost, itemsets,
 					transactions, tree, inferenceAlgorithm);
-			System.out.printf(" Average cost: %.2f\n", averageCost);
+			logger.finer(String.format(" Average cost: %.2f\n", averageCost));
 
 			// Optimize parameters of new structure
-			if (iteration % OPTIMIZE_PARAMS_EVERY == 0)
+			if (iteration % OPTIMIZE_PARAMS_EVERY == 0) {
+				logger.fine("\n***** Parameter Optimization at Step "
+						+ iteration + "\n");
 				averageCost = expectationMaximizationStep(itemsets,
 						transactions, inferenceAlgorithm);
+			}
 
 		}
 
@@ -186,8 +214,7 @@ public class ItemsetMining {
 			final List<Transaction> transactions,
 			final InferenceAlgorithm inferenceAlgorithm) {
 
-		System.out.println("\n***** Parameter Optimization Step");
-		System.out.println(" Structure Optimal Itemsets: " + itemsets);
+		logger.fine(" Structure Optimal Itemsets: " + itemsets + "\n");
 
 		double averageCost = 0;
 		LinkedHashMap<Itemset, Double> prevItemsets = itemsets;
@@ -237,8 +264,8 @@ public class ItemsetMining {
 
 		itemsets.clear();
 		itemsets.putAll(prevItemsets);
-		System.out.println(" Parameter Optimal Itemsets: " + itemsets);
-		System.out.printf(" Average cost: %.2f\n", averageCost);
+		logger.fine(" Parameter Optimal Itemsets: " + itemsets + "\n");
+		logger.fine(String.format(" Average cost: %.2f\n", averageCost));
 		assert !Double.isNaN(averageCost);
 		assert !Double.isInfinite(averageCost);
 		return averageCost;
@@ -251,19 +278,19 @@ public class ItemsetMining {
 
 		// Try and find better itemset to add
 		final double n = transactions.size();
-		System.out.print(" Structural candidate itemsets: ");
+		logger.finer(" Structural candidate itemsets: ");
 
 		int iteration;
 		for (iteration = 0; iteration < MAX_RANDOM_WALKS; iteration++) {
 
 			// Candidate itemset
 			final Itemset set = tree.randomWalk();
-			System.out.print(set + ", ");
+			logger.finer(set + ", ");
 
 			// Skip empty candidates and candidates already present
 			if (!set.isEmpty() && !itemsets.keySet().contains(set)) {
 
-				System.out.print("\n potential candidate: " + set);
+				logger.finer("\n potential candidate: " + set);
 				// Estimate itemset probability (M-step assuming always
 				// included)
 				double p = 0;
@@ -295,10 +322,10 @@ public class ItemsetMining {
 
 				}
 				curCost = curCost / n;
-				System.out.printf(", cost: %.2f", curCost);
+				logger.finer(String.format(", cost: %.2f", curCost));
 
 				if (curCost < averageCost) { // found better set of itemsets
-					System.out.print("\n Candidate Accepted.\n");
+					logger.finer("\n Candidate Accepted.\n");
 					return curCost;
 				} // otherwise keep trying
 				itemsets.remove(set);
@@ -309,11 +336,11 @@ public class ItemsetMining {
 					}
 				}
 
-				System.out.print("\n Structural candidate itemsets: ");
+				logger.finer("\n Structural candidate itemsets: ");
 			}
 
 		}
-		System.out.println();
+		logger.finer("\n");
 
 		return averageCost;
 	}
@@ -429,6 +456,13 @@ public class ItemsetMining {
 			recursiveGenRules(rules, newAntecedent, newConsequent, prob);
 		}
 
+	}
+
+	public static class Handler extends ConsoleHandler {
+		protected void setOutputStream(OutputStream out)
+				throws SecurityException {
+			super.setOutputStream(System.out);
+		}
 	}
 
 }

@@ -20,8 +20,7 @@ import com.google.common.primitives.Doubles;
 public class ItemsetEvaluation {
 
 	private static final String name = "caviar";
-	private static final File dbFile = new File(
-			"/disk/data2/jfowkes/Transactions/caviar.txt");
+	private static final File dbFile = new File("/home/jari/caviar.txt");
 
 	public static void main(final String[] args) throws IOException {
 
@@ -58,6 +57,7 @@ public class ItemsetEvaluation {
 
 		// Display precision and recall
 		for (int i = 0; i < steps.size(); i++) {
+			System.out.println("\n=========");
 			System.out.println("no. Transactions: " + steps.get(i));
 			System.out.println("Precision: " + precision.get(i));
 			System.out.println("Recall: " + recall.get(i));
