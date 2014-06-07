@@ -1,6 +1,8 @@
 package itemsetmining.main;
 
 import itemsetmining.itemset.Itemset;
+import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
+import itemsetmining.main.InferenceAlgorithms.inferGreedy;
 import itemsetmining.transaction.TransactionGenerator;
 
 import java.awt.Color;
@@ -19,13 +21,17 @@ public class ItemsetEvaluation {
 	private static final String name = "caviar";
 	private static final File dbFile = new File(
 			"/disk/data2/jfowkes/Transactions/caviar.txt");
+	private static final InferenceAlgorithm inferenceAlg = new inferGreedy();
 
 	private static final int noSamples = 10;
 	private static final int difficultyLevels = 10;
 
 	private static final int noTransactions = 1000;
-	private static final int noExtraSets = 10;
+	private static final int noExtraSets = 5;
 	private static final int maxSetSize = 3;
+
+	private static final int maxRandomWalks = 1000;
+	private static final int maxStructureIterations = 100;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -50,9 +56,10 @@ public class ItemsetEvaluation {
 				// Mine itemsets
 				final long startTime = System.currentTimeMillis();
 				final HashMap<Itemset, Double> minedItemsets = ItemsetMining
-						.mineItemsets(dbFile);
+						.mineItemsets(dbFile, inferenceAlg, maxRandomWalks,
+								maxStructureIterations);
 				final long endTime = System.currentTimeMillis();
-				time[level] += (endTime - startTime);
+				time[level] += (endTime - startTime) / (double) 1000;
 
 				// Calculate precision and recall
 				final double noInBoth = Sets.intersection(
@@ -76,7 +83,7 @@ public class ItemsetEvaluation {
 			System.out.println("\n========= Difficulty Level: " + i);
 			System.out.println("Average Precision: " + precision[i]);
 			System.out.println("Average Precision: " + precision[i]);
-			System.out.println("Average Time: " + time[i]);
+			System.out.println("Average Time: (s)" + time[i]);
 		}
 
 		// Plot precision and recall
@@ -95,8 +102,8 @@ public class ItemsetEvaluation {
 
 		// Plot time
 		final Plot2DPanel plot2 = new Plot2DPanel();
-		plot.addScatterPlot("", Color.blue, levels, time);
-		plot.setAxisLabels("recall", "precision");
+		plot2.addScatterPlot("", Color.blue, levels, time);
+		plot2.setAxisLabels("levels", "time (s)");
 
 		// Display
 		final JFrame frame2 = new JFrame("Results");

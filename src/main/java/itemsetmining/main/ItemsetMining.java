@@ -43,21 +43,7 @@ import com.google.common.io.Files;
 
 public class ItemsetMining {
 
-	// Main function parameters
-	private static final String dataset = "caviar.txt";
-	private static final boolean associationRules = false;
-	private static final InferenceAlgorithm inferenceAlg = new inferGreedy();
-
-	private static final boolean fpGrowth = false;
-	private static final double fpGrowthSupport = 0.25; // relative support
-	private static final double fpGrowthMinConf = 0;
-	private static final double fpGrowthMinLift = 0;
-
-	// Global Constants
 	private static final double SINGLETON_PRIOR_PROB = 0.5;
-	private static final int MAX_RANDOM_WALKS = 100;
-	private static final int MAX_STRUCTURE_ITERATIONS = 10;
-
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
 	private static final double OPTIMIZE_TOL = 1e-10;
 
@@ -67,6 +53,21 @@ public class ItemsetMining {
 
 	public static void main(final String[] args) throws IOException {
 
+		// Main function parameters
+		final String dataset = "caviar.txt";
+		final boolean associationRules = false;
+		final InferenceAlgorithm inferenceAlg = new inferGreedy();
+
+		// Max iterations
+		final int maxRandomWalks = 100;
+		final int maxStructureIterations = 10;
+
+		// FPGrowth parameters
+		final boolean fpGrowth = false;
+		final double fpGrowthSupport = 0.25; // relative support
+		final double fpGrowthMinConf = 0;
+		final double fpGrowthMinLift = 0;
+
 		// Find transaction database
 		final URL url = ItemsetMining.class.getClassLoader().getResource(
 				dataset);
@@ -74,7 +75,8 @@ public class ItemsetMining {
 		final File inputFile = new File(input);
 
 		// Mine interesting itemsets
-		final HashMap<Itemset, Double> itemsets = mineItemsets(inputFile);
+		final HashMap<Itemset, Double> itemsets = mineItemsets(inputFile,
+				inferenceAlg, maxRandomWalks, maxStructureIterations);
 
 		// Generate Association rules from the interesting itemsets
 		if (associationRules) {
@@ -108,7 +110,9 @@ public class ItemsetMining {
 	}
 
 	/** Mine interesting itemsets */
-	public static HashMap<Itemset, Double> mineItemsets(final File inputFile)
+	public static HashMap<Itemset, Double> mineItemsets(final File inputFile,
+			final InferenceAlgorithm inferenceAlgorithm,
+			final int maxRandomWalks, final int maxStructureIterations)
 			throws IOException {
 
 		// Set up logging
@@ -144,7 +148,8 @@ public class ItemsetMining {
 		// Run inference to find interesting itemsets
 		logger.fine("\n============= ITEMSET INFERENCE =============\n");
 		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
-				singletons.elementSet(), tree, inferenceAlg);
+				singletons.elementSet(), tree, inferenceAlgorithm,
+				maxRandomWalks, maxStructureIterations);
 		if (LOGLEVEL.equals(Level.FINEST))
 			logger.finest("\n======= Transaction Database =======\n"
 					+ Files.toString(inputFile, Charsets.UTF_8) + "\n");
@@ -165,7 +170,8 @@ public class ItemsetMining {
 	public static HashMap<Itemset, Double> structuralEM(
 			final List<Transaction> transactions,
 			final Set<Integer> singletons, final ItemsetTree tree,
-			final InferenceAlgorithm inferenceAlgorithm) {
+			final InferenceAlgorithm inferenceAlgorithm,
+			final int maxRandomWalks, final int maxStructureIterations) {
 
 		// Intialize with equiprobable singleton sets
 		final LinkedHashMap<Itemset, Double> itemsets = Maps.newLinkedHashMap();
@@ -180,13 +186,13 @@ public class ItemsetMining {
 				inferenceAlgorithm);
 
 		// Structural EM
-		for (int iteration = 1; iteration <= MAX_STRUCTURE_ITERATIONS; iteration++) {
+		for (int iteration = 1; iteration <= maxStructureIterations; iteration++) {
 
 			// Learn structure
 			logger.finer("\n+++++ Structural Optimization Step " + iteration
 					+ "\n");
 			averageCost = learnStructureStep(averageCost, itemsets,
-					transactions, tree, inferenceAlgorithm);
+					transactions, tree, inferenceAlgorithm, maxRandomWalks);
 			logger.finer(String.format(" Average cost: %.2f\n", averageCost));
 
 			// Optimize parameters of new structure
@@ -274,14 +280,15 @@ public class ItemsetMining {
 	public static double learnStructureStep(final double averageCost,
 			final LinkedHashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions, final ItemsetTree tree,
-			final InferenceAlgorithm inferenceAlgorithm) {
+			final InferenceAlgorithm inferenceAlgorithm,
+			final int maxRandomWalks) {
 
 		// Try and find better itemset to add
 		final double n = transactions.size();
 		logger.finer(" Structural candidate itemsets: ");
 
 		int iteration;
-		for (iteration = 0; iteration < MAX_RANDOM_WALKS; iteration++) {
+		for (iteration = 0; iteration < maxRandomWalks; iteration++) {
 
 			// Candidate itemset
 			final Itemset set = tree.randomWalk();
