@@ -1,6 +1,7 @@
 package itemsetmining.itemset;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.HashSet;
 
 import com.google.common.collect.Sets;
@@ -12,6 +13,7 @@ public class Itemset implements Serializable {
 	private final HashSet<Integer> itemset = Sets.newHashSet();
 
 	/** the support of this itemset */
+	// TODO remove support from Itemset class?
 	private int support = -1;
 
 	/**
@@ -21,6 +23,16 @@ public class Itemset implements Serializable {
 	 */
 	public HashSet<Integer> getItems() {
 		return itemset;
+	}
+
+	/**
+	 * Constructor
+	 * 
+	 * @param items
+	 *            a collection of items that should be added to the new itemset
+	 */
+	public Itemset(final Collection<Integer> items) {
+		itemset.addAll(items);
 	}
 
 	/**

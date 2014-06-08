@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -38,18 +39,21 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
+import com.google.common.primitives.Ints;
 
 public class ItemsetMining {
 
 	private static final double SINGLETON_PRIOR_PROB = 0.5;
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
+	private static final int SIMPLIFY_ITEMSETS_EVERY = 5;
 	private static final double OPTIMIZE_TOL = 1e-10;
 
 	private static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
-	private static final Level LOGLEVEL = Level.FINE;
+	private static final Level LOGLEVEL = Level.INFO;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -167,7 +171,7 @@ public class ItemsetMining {
 	 * Learn itemsets model using structural EM
 	 * 
 	 */
-	public static HashMap<Itemset, Double> structuralEM(
+	private static HashMap<Itemset, Double> structuralEM(
 			final List<Transaction> transactions,
 			final Set<Integer> singletons, final ItemsetTree tree,
 			final InferenceAlgorithm inferenceAlgorithm,
@@ -189,10 +193,19 @@ public class ItemsetMining {
 		for (int iteration = 1; iteration <= maxStructureIterations; iteration++) {
 
 			// Learn structure
-			logger.finer("\n+++++ Structural Optimization Step " + iteration
-					+ "\n");
-			averageCost = learnStructureStep(averageCost, itemsets,
-					transactions, tree, inferenceAlgorithm, maxRandomWalks);
+			if (iteration % SIMPLIFY_ITEMSETS_EVERY == 0) {
+				logger.finer("\n+++++ Itemset Simplification at Step "
+						+ iteration + "\n"); // TODO use dedicated maxSteps
+												// parameter
+				averageCost = simplifyItemsetsStep(averageCost, itemsets,
+						transactions, tree, inferenceAlgorithm, maxRandomWalks);
+
+			} else {
+				logger.finer("\n+++++ Structural Optimization at Step "
+						+ iteration + "\n");
+				averageCost = learnStructureStep(averageCost, itemsets,
+						transactions, tree, inferenceAlgorithm, maxRandomWalks);
+			}
 			logger.finer(String.format(" Average cost: %.2f\n", averageCost));
 
 			// Optimize parameters of new structure
@@ -215,7 +228,7 @@ public class ItemsetMining {
 	 *         <p>
 	 *         NB. zero probability itemsets are dropped
 	 */
-	public static double expectationMaximizationStep(
+	private static double expectationMaximizationStep(
 			final LinkedHashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions,
 			final InferenceAlgorithm inferenceAlgorithm) {
@@ -277,82 +290,141 @@ public class ItemsetMining {
 		return averageCost;
 	}
 
-	public static double learnStructureStep(final double averageCost,
+	/** Generate candidate itemsets from Itemset tree */
+	private static double learnStructureStep(final double averageCost,
 			final LinkedHashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions, final ItemsetTree tree,
 			final InferenceAlgorithm inferenceAlgorithm,
 			final int maxRandomWalks) {
 
 		// Try and find better itemset to add
-		final double n = transactions.size();
 		logger.finer(" Structural candidate itemsets: ");
 
 		int iteration;
 		for (iteration = 0; iteration < maxRandomWalks; iteration++) {
 
-			// Candidate itemset
-			final Itemset set = tree.randomWalk();
-			logger.finer(set + ", ");
+			// Generate candidate itemset
+			final Itemset candidate = tree.randomWalk();
+			logger.finer(candidate + ", ");
 
-			// Skip empty candidates and candidates already present
-			if (!set.isEmpty() && !itemsets.keySet().contains(set)) {
-
-				logger.finer("\n potential candidate: " + set);
-				// Estimate itemset probability (M-step assuming always
-				// included)
-				double p = 0;
-
-				for (final Transaction transaction : transactions) {
-					if (transaction.getItems().containsAll(set.getItems())) {
-						p++;
-					}
-				}
-				p = p / n;
-
-				// Adjust probabilities for subsets of itemset
-				for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-					if (set.getItems().containsAll(entry.getKey().getItems())) {
-						itemsets.put(entry.getKey(), entry.getValue() - p);
-					}
-				}
-				// Add itemset
-				itemsets.put(set, p);
-
-				// Find cost in parallel
-				double curCost = 0;
-				for (final Transaction transaction : transactions) {
-
-					final Set<Itemset> covering = Sets.newHashSet();
-					final double cost = inferenceAlgorithm.infer(covering,
-							itemsets, transaction);
-					curCost += cost;
-
-				}
-				curCost = curCost / n;
-				logger.finer(String.format(", cost: %.2f", curCost));
-
-				if (curCost < averageCost) { // found better set of itemsets
-					logger.finer("\n Candidate Accepted.\n");
-					return curCost;
-				} // otherwise keep trying
-				itemsets.remove(set);
-				// and restore original probabilities
-				for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-					if (set.getItems().containsAll(entry.getKey().getItems())) {
-						itemsets.put(entry.getKey(), entry.getValue() + p);
-					}
-				}
-
-				logger.finer("\n Structural candidate itemsets: ");
-			}
+			// Evaluate candidate itemset
+			final Double betterCost = evaluateCandidate(averageCost, itemsets,
+					transactions, inferenceAlgorithm, candidate);
+			if (betterCost != null) // Better itemset found
+				return betterCost;
 
 		}
-		logger.finer("\n");
 
+		// No better itemset found
+		logger.finer("\n No better candidate found.\n");
 		return averageCost;
 	}
 
-	public static List<Transaction> readTransactions(final File inputFile)
+	/** Generate candidate itemsets from power set */
+	private static double simplifyItemsetsStep(final double averageCost,
+			final LinkedHashMap<Itemset, Double> itemsets,
+			final List<Transaction> transactions, final ItemsetTree tree,
+			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
+
+		// Try and find better itemset to add
+		logger.finer(" Structural candidate itemsets: ");
+
+		// Sort itemsets from largest to smallest // TODO skip sorting?
+		final List<Itemset> sortedItemsets = Lists.newArrayList(itemsets
+				.keySet());
+		Collections.sort(sortedItemsets,
+				new orderBySize().reverse()
+						.compound((Ordering.usingToString())));
+
+		// Suggest powersets for all itemsets
+		int iteration = 0;
+		for (final Itemset set : sortedItemsets) {
+
+			final Set<Set<Integer>> powerset = Sets.powerSet(set.getItems());
+			for (final Set<Integer> subset : powerset) {
+
+				// Evaluate candidate itemset
+				final Double betterCost = evaluateCandidate(averageCost,
+						itemsets, transactions, inferenceAlgorithm,
+						new Itemset(subset));
+				if (betterCost != null) // Better itemset found
+					return betterCost;
+
+				iteration++;
+				if (iteration > maxSteps) // Iteration limit exceeded
+					return averageCost; // No better itemset found
+
+			}
+		}
+
+		// No better itemset found
+		logger.finer("\n No better candidate found.\n");
+		return averageCost;
+	}
+
+	/** Evaluate a candidate itemset to see if it should be included */
+	private static Double evaluateCandidate(final double averageCost,
+			final LinkedHashMap<Itemset, Double> itemsets,
+			final List<Transaction> transactions,
+			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
+
+		// Skip empty candidates and candidates already present
+		if (!candidate.isEmpty() && !itemsets.keySet().contains(candidate)) {
+
+			logger.finer("\n potential candidate: " + candidate);
+			final double n = transactions.size();
+			// Estimate itemset probability (M-step assuming always
+			// included)
+			double p = 0;
+
+			for (final Transaction transaction : transactions) {
+				if (transaction.getItems().containsAll(candidate.getItems())) {
+					p++;
+				}
+			}
+			p = p / n;
+
+			// Adjust probabilities for subsets of itemset
+			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+				if (candidate.getItems().containsAll(entry.getKey().getItems())) {
+					itemsets.put(entry.getKey(), entry.getValue() - p);
+				}
+			}
+			// Add itemset
+			itemsets.put(candidate, p);
+
+			// Find cost in parallel
+			double curCost = 0;
+			for (final Transaction transaction : transactions) {
+
+				final Set<Itemset> covering = Sets.newHashSet();
+				final double cost = inferenceAlgorithm.infer(covering,
+						itemsets, transaction);
+				curCost += cost;
+
+			}
+			curCost = curCost / n;
+			logger.finer(String.format(", cost: %.2f", curCost));
+
+			if (curCost < averageCost) { // found better set of itemsets
+				logger.finer("\n Candidate Accepted.\n");
+				return curCost;
+			} // otherwise keep trying
+			itemsets.remove(candidate);
+			// and restore original probabilities
+			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+				if (candidate.getItems().containsAll(entry.getKey().getItems())) {
+					itemsets.put(entry.getKey(), entry.getValue() + p);
+				}
+			}
+
+			logger.finer("\n Structural candidate itemsets: ");
+		}
+		// No better candidate found
+		return null;
+	}
+
+	private static List<Transaction> readTransactions(final File inputFile)
 			throws IOException {
 
 		final List<Transaction> transactions = Lists.newArrayList();
@@ -464,6 +536,13 @@ public class ItemsetMining {
 		}
 
 	}
+
+	private static class orderBySize extends Ordering<Itemset> {
+		@Override
+		public int compare(final Itemset set1, final Itemset set2) {
+			return Ints.compare(set1.getItems().size(), set2.getItems().size());
+		}
+	};
 
 	public static class Handler extends ConsoleHandler {
 		@Override

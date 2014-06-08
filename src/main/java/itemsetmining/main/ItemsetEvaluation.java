@@ -35,15 +35,15 @@ public class ItemsetEvaluation {
 
 	public static void main(final String[] args) throws IOException {
 
-		final double[] levels = new double[difficultyLevels];
-		final double[] time = new double[difficultyLevels];
-		final double[] precision = new double[difficultyLevels];
-		final double[] recall = new double[difficultyLevels];
+		final double[] levels = new double[difficultyLevels + 1];
+		final double[] time = new double[difficultyLevels + 1];
+		final double[] precision = new double[difficultyLevels + 1];
+		final double[] recall = new double[difficultyLevels + 1];
 
 		for (int sample = 0; sample < noSamples; sample++) {
 			System.out.println("\n========= Sample: " + (sample + 1) + " of "
 					+ noSamples);
-			for (int level = 0; level < difficultyLevels; level++) {
+			for (int level = 0; level <= difficultyLevels; level++) {
 
 				// Generate real itemsets
 				final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
@@ -71,7 +71,7 @@ public class ItemsetEvaluation {
 			}
 		}
 
-		for (int i = 0; i < difficultyLevels; i++) {
+		for (int i = 0; i <= difficultyLevels; i++) {
 
 			// Average over samples
 			precision[i] /= noSamples;
@@ -83,7 +83,7 @@ public class ItemsetEvaluation {
 			System.out.println("\n========= Difficulty Level: " + i);
 			System.out.println("Average Precision: " + precision[i]);
 			System.out.println("Average Precision: " + precision[i]);
-			System.out.println("Average Time: (s)" + time[i]);
+			System.out.println("Average Time (s):" + time[i]);
 		}
 
 		// Plot precision and recall
