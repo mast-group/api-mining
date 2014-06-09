@@ -32,7 +32,7 @@ public class Itemset implements Serializable {
 	 *            a collection of items that should be added to the new itemset
 	 */
 	public Itemset(final Collection<Integer> items) {
-		itemset.addAll(items);
+		add(items);
 	}
 
 	/**
@@ -43,6 +43,16 @@ public class Itemset implements Serializable {
 	 */
 	public Itemset(final int... items) {
 		add(items);
+	}
+
+	/**
+	 * Add items to this itemset
+	 * 
+	 * @param items
+	 *            a collection of items that should be added to this itemset
+	 */
+	public void add(final Collection<Integer> items) {
+		itemset.addAll(items);
 	}
 
 	/**

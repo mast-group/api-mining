@@ -9,6 +9,7 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map.Entry;
 
 import javax.swing.JFrame;
 
@@ -18,20 +19,20 @@ import com.google.common.collect.Sets;
 
 public class ItemsetEvaluation {
 
-	private static final String name = "caviar";
+	private static final String name = "freerider";
 	private static final File dbFile = new File(
-			"/disk/data2/jfowkes/Transactions/caviar.txt");
+			"/disk/data2/jfowkes/Transactions/freerider.txt");
 	private static final InferenceAlgorithm inferenceAlg = new inferGreedy();
 
-	private static final int noSamples = 10;
+	private static final int noSamples = 5;
 	private static final int difficultyLevels = 10;
 
-	private static final int noTransactions = 1000;
+	private static final int noTransactions = 100;
 	private static final int noExtraSets = 5;
 	private static final int maxSetSize = 3;
 
-	private static final int maxRandomWalks = 1000;
-	private static final int maxStructureIterations = 100;
+	private static final int maxRandomWalks = 500;
+	private static final int maxStructureIterations = 20;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -40,18 +41,27 @@ public class ItemsetEvaluation {
 		final double[] precision = new double[difficultyLevels + 1];
 		final double[] recall = new double[difficultyLevels + 1];
 
-		for (int sample = 0; sample < noSamples; sample++) {
-			System.out.println("\n========= Sample: " + (sample + 1) + " of "
-					+ noSamples);
-			for (int level = 0; level <= difficultyLevels; level++) {
+		for (int level = 0; level <= difficultyLevels; level++) {
+			System.out.println("\n========= Level " + level + " of "
+					+ difficultyLevels);
 
-				// Generate real itemsets
-				final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
-						.generateItemsets(name, level, noExtraSets, maxSetSize);
+			// Generate real itemsets
+			final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
+					.generateItemsets(name, level, noExtraSets, maxSetSize);
+			System.out.print("\n============= ACTUAL ITEMSETS =============\n");
+			for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
+				System.out.print(String.format("%s\tprob: %1.5f %n",
+						entry.getKey(), entry.getValue()));
+			}
+			System.out.print("\n");
 
-				// Generate transaction database
-				TransactionGenerator.generateTransactionDatabase(
-						actualItemsets, noTransactions, dbFile);
+			// Generate transaction database
+			TransactionGenerator.generateTransactionDatabase(actualItemsets,
+					noTransactions, dbFile);
+
+			for (int sample = 0; sample < noSamples; sample++) {
+				System.out.println("\n========= Sample " + (sample + 1)
+						+ " of " + noSamples);
 
 				// Mine itemsets
 				final long startTime = System.currentTimeMillis();
@@ -59,7 +69,8 @@ public class ItemsetEvaluation {
 						.mineItemsets(dbFile, inferenceAlg, maxRandomWalks,
 								maxStructureIterations);
 				final long endTime = System.currentTimeMillis();
-				time[level] += (endTime - startTime) / (double) 1000;
+				final double tim = (endTime - startTime) / (double) 1000;
+				time[level] += tim;
 
 				// Calculate precision and recall
 				final double noInBoth = Sets.intersection(
@@ -68,6 +79,11 @@ public class ItemsetEvaluation {
 				final double rec = noInBoth / (double) actualItemsets.size();
 				precision[level] += pr;
 				recall[level] += rec;
+
+				// Display precision and recall
+				System.out.printf("Precision: %.2f\n", pr);
+				System.out.printf("Recall: %.2f\n", rec);
+				System.out.printf("Time (s): %.2f\n", tim);
 			}
 		}
 
@@ -79,12 +95,18 @@ public class ItemsetEvaluation {
 			time[i] /= noSamples;
 			levels[i] = i;
 
-			// Display precision and recall
+			// Display average precision and recall
 			System.out.println("\n========= Difficulty Level: " + i);
-			System.out.println("Average Precision: " + precision[i]);
-			System.out.println("Average Precision: " + precision[i]);
-			System.out.println("Average Time (s):" + time[i]);
+			System.out.printf("Average Precision: %.2f\n", precision[i]);
+			System.out.printf("Average Recall: %.2f\n", recall[i]);
+			System.out.printf("Average Time (s): %.2f\n", time[i]);
 		}
+
+		double avgAvgTime = 0;
+		for (int i = 0; i <= difficultyLevels; i++)
+			avgAvgTime += time[i];
+		avgAvgTime /= difficultyLevels;
+		System.out.printf("\nAverage Average Time (s): %.2f\n", avgAvgTime);
 
 		// Plot precision and recall
 		final Plot2DPanel plot = new Plot2DPanel();
