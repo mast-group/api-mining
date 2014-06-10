@@ -49,12 +49,13 @@ public class ItemsetMining {
 	private static final double SINGLETON_PRIOR_PROB = 0.5;
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
 	private static final int SIMPLIFY_ITEMSETS_EVERY = 2;
+	private static final int COMBINE_ITEMSETS_EVERY = 4;
 	private static final double OPTIMIZE_TOL = 1e-10;
 
-	private static boolean APRIORI_CANDIDATE_GENERATION = true;
+	private static boolean APRIORI_CANDIDATE_GENERATION = false;
 	private static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
-	private static final Level LOGLEVEL = Level.INFO;
+	private static final Level LOGLEVEL = Level.ALL;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -64,8 +65,8 @@ public class ItemsetMining {
 		final InferenceAlgorithm inferenceAlg = new inferGreedy();
 
 		// Max iterations
-		final int maxRandomWalks = 100;
-		final int maxStructureIterations = 10;
+		final int maxStructureSteps = 1000;
+		final int maxEMIterations = 10;
 
 		// FPGrowth parameters
 		final boolean fpGrowth = false;
@@ -81,7 +82,7 @@ public class ItemsetMining {
 
 		// Mine interesting itemsets
 		final HashMap<Itemset, Double> itemsets = mineItemsets(inputFile,
-				inferenceAlg, maxRandomWalks, maxStructureIterations);
+				inferenceAlg, maxStructureSteps, maxEMIterations);
 
 		// Generate Association rules from the interesting itemsets
 		if (associationRules) {
@@ -117,7 +118,7 @@ public class ItemsetMining {
 	/** Mine interesting itemsets */
 	public static HashMap<Itemset, Double> mineItemsets(final File inputFile,
 			final InferenceAlgorithm inferenceAlgorithm,
-			final int maxRandomWalks, final int maxStructureIterations)
+			final int maxStructureSteps, final int maxEMIterations)
 			throws IOException {
 
 		// Set up logging
@@ -154,7 +155,7 @@ public class ItemsetMining {
 		logger.fine("\n============= ITEMSET INFERENCE =============\n");
 		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
 				singletons.elementSet(), tree, inferenceAlgorithm,
-				maxRandomWalks, maxStructureIterations);
+				maxStructureSteps, maxEMIterations);
 		if (LOGLEVEL.equals(Level.FINEST))
 			logger.finest("\n======= Transaction Database =======\n"
 					+ Files.toString(inputFile, Charsets.UTF_8) + "\n");
@@ -176,7 +177,7 @@ public class ItemsetMining {
 			final List<Transaction> transactions,
 			final Set<Integer> singletons, final ItemsetTree tree,
 			final InferenceAlgorithm inferenceAlgorithm,
-			final int maxRandomWalks, final int maxStructureIterations) {
+			final int maxStructureSteps, final int maxEMIterations) {
 
 		// Intialize with equiprobable singleton sets
 		final LinkedHashMap<Itemset, Double> itemsets = Maps.newLinkedHashMap();
@@ -193,12 +194,15 @@ public class ItemsetMining {
 				candidates.add(new Itemset(singleton));
 		}
 
+		// Initialize list of rejected sets
+		final Set<Itemset> rejected_sets = Sets.newHashSet();
+
 		// Initial parameter optimization step
 		averageCost = expectationMaximizationStep(itemsets, transactions,
 				inferenceAlgorithm);
 
 		// Structural EM
-		for (int iteration = 1; iteration <= maxStructureIterations; iteration++) {
+		for (int iteration = 1; iteration <= maxEMIterations; iteration++) {
 
 			// Learn structure
 			if (APRIORI_CANDIDATE_GENERATION) {
@@ -206,21 +210,32 @@ public class ItemsetMining {
 						+ iteration + "\n");
 				averageCost = learnStructureAprioriStep(averageCost, itemsets,
 						transactions, candidates, inferenceAlgorithm,
-						maxRandomWalks);
+						maxStructureSteps);
 				if (averageCost == -1) // apriori finished
 					break;
+			} else if (iteration % COMBINE_ITEMSETS_EVERY == 0) {
+				logger.finer("\n----- Itemset Combination at Step " + iteration
+						+ "\n");
+				averageCost = combineItemsetsStep(averageCost, itemsets,
+						transactions, rejected_sets, inferenceAlgorithm,
+						maxStructureSteps);
+
 			} else if (iteration % SIMPLIFY_ITEMSETS_EVERY == 0) {
 				logger.finer("\n----- Itemset Simplification at Step "
 						+ iteration + "\n"); // TODO use dedicated maxSteps
 												// parameter
 				averageCost = simplifyItemsetsStep(averageCost, itemsets,
-						transactions, inferenceAlgorithm, maxRandomWalks);
+						transactions, rejected_sets, inferenceAlgorithm,
+						maxStructureSteps);
 
 			} else {
 				logger.finer("\n+++++ Tree Structural Optimization at Step "
 						+ iteration + "\n");
 				averageCost = learnStructureStep(averageCost, itemsets,
-						transactions, tree, inferenceAlgorithm, maxRandomWalks);
+						transactions, tree, rejected_sets, inferenceAlgorithm,
+						maxStructureSteps);
+				if (averageCost == -1) // structure iteration limit exceeded
+					break;
 			}
 			logger.finer(String.format(" Average cost: %.2f\n", averageCost));
 
@@ -234,6 +249,8 @@ public class ItemsetMining {
 
 		}
 
+		if (averageCost != -1)
+			logger.warning("\nEM iteration limit exceeded.\n");
 		return itemsets;
 	}
 
@@ -311,36 +328,41 @@ public class ItemsetMining {
 	private static double learnStructureStep(final double averageCost,
 			final LinkedHashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions, final ItemsetTree tree,
-			final InferenceAlgorithm inferenceAlgorithm,
-			final int maxRandomWalks) {
+			final Set<Itemset> rejected_sets,
+			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
 
 		// Try and find better itemset to add
 		logger.finer(" Structural candidate itemsets: ");
 
 		int iteration;
-		for (iteration = 0; iteration < maxRandomWalks; iteration++) {
+		for (iteration = 0; iteration < maxSteps; iteration++) {
 
 			// Generate candidate itemset
 			final Itemset candidate = tree.randomWalk();
 			logger.finer(candidate + ", ");
 
 			// Evaluate candidate itemset
-			final Double betterCost = evaluateCandidate(averageCost, itemsets,
-					transactions, inferenceAlgorithm, candidate);
-			if (betterCost != null) // Better itemset found
-				return betterCost;
+			if (!rejected_sets.contains(candidate)) {
+				final Double betterCost = evaluateCandidate(averageCost,
+						itemsets, transactions, inferenceAlgorithm, candidate);
+				if (betterCost != null) // Better itemset found
+					return betterCost;
+				else
+					rejected_sets.add(candidate); // otherwise add to rejected
+			}
 
 		}
 
 		// No better itemset found
-		logger.finer("\n No better candidate found.\n");
-		return averageCost;
+		logger.warning("\n\n Structure iteration limit exceeded. No better candidate found.\n");
+		return -1;
 	}
 
 	/** Generate candidate itemsets from power set */
 	private static double simplifyItemsetsStep(final double averageCost,
 			final LinkedHashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions,
+			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
 
 		// Try and find better itemset to add
@@ -361,15 +383,76 @@ public class ItemsetMining {
 			for (final Set<Integer> subset : powerset) {
 
 				// Evaluate candidate itemset
-				final Double betterCost = evaluateCandidate(averageCost,
-						itemsets, transactions, inferenceAlgorithm,
-						new Itemset(subset));
-				if (betterCost != null) // Better itemset found
-					return betterCost;
+				final Itemset candidate = new Itemset(subset);
+				if (!rejected_sets.contains(candidate)) {
+					final Double betterCost = evaluateCandidate(averageCost,
+							itemsets, transactions, inferenceAlgorithm,
+							candidate);
+					if (betterCost != null) // Better itemset found
+						return betterCost;
+					else
+						rejected_sets.add(candidate); // otherwise add to
+														// rejected
+				}
 
 				iteration++;
 				if (iteration > maxSteps) { // Iteration limit exceeded
-					logger.warning("\n Iteration limit exceeded.\n");
+					logger.warning("\n Simplify iteration limit exceeded.\n");
+					return averageCost; // No better itemset found
+				}
+
+			}
+		}
+
+		// No better itemset found
+		logger.finer("\n No better candidate found.\n");
+		return averageCost;
+	}
+
+	/** Generate candidate itemsets by combining existing sets */
+	private static double combineItemsetsStep(final double averageCost,
+			final LinkedHashMap<Itemset, Double> itemsets,
+			final List<Transaction> transactions,
+			final Set<Itemset> rejected_sets,
+			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
+
+		// Try and find better itemset to add
+		logger.finer(" Structural candidate itemsets: ");
+
+		// Sort itemsets from smallest to largest // TODO skip sorting?
+		final List<Itemset> sortedItemsets = Lists.newArrayList(itemsets
+				.keySet());
+		Collections.sort(sortedItemsets,
+				new orderBySize().compound((Ordering.usingToString())));
+
+		// Suggest supersets for all itemsets
+		int iteration = 0;
+		for (int i = 0; i < sortedItemsets.size(); i++) {
+			final HashSet<Integer> itemset1 = sortedItemsets.get(i).getItems();
+			for (int j = i + 1; j < sortedItemsets.size(); j++) {
+				final HashSet<Integer> itemset2 = sortedItemsets.get(j)
+						.getItems();
+
+				// Create a new candidate by combining itemsets
+				// TODO store itemset as sorted list to prevent duplicates?
+				final Itemset candidate = new Itemset(itemset1);
+				candidate.add(itemset2);
+
+				// Evaluate candidate itemset
+				if (!rejected_sets.contains(candidate)) {
+					final Double betterCost = evaluateCandidate(averageCost,
+							itemsets, transactions, inferenceAlgorithm,
+							candidate);
+					if (betterCost != null) // Better itemset found
+						return betterCost;
+					else
+						rejected_sets.add(candidate); // otherwise add to
+														// rejected
+				}
+
+				iteration++;
+				if (iteration > maxSteps) { // Iteration limit exceeded
+					logger.warning("\n Combine iteration limit exceeded.\n");
 					return averageCost; // No better itemset found
 				}
 
@@ -431,7 +514,7 @@ public class ItemsetMining {
 
 					iteration++;
 					if (iteration > maxSteps) { // Iteration limit exceeded
-						logger.warning("\n Iteration limit exceeded.\n");
+						logger.warning("\n Structure iteration limit exceeded. No better candidate found.\n");
 						return -1; // No better itemset found
 					}
 
@@ -453,6 +536,7 @@ public class ItemsetMining {
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
 		// Skip empty candidates and candidates already present
+		// TODO can probs skip itemset.contains now that we use reject list
 		if (!candidate.isEmpty() && !itemsets.keySet().contains(candidate)) {
 
 			logger.finer("\n potential candidate: " + candidate);

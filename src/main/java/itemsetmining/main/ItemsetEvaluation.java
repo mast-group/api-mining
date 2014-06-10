@@ -5,34 +5,28 @@ import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.main.InferenceAlgorithms.inferGreedy;
 import itemsetmining.transaction.TransactionGenerator;
 
-import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import javax.swing.JFrame;
-
-import org.math.plot.Plot2DPanel;
-
 import com.google.common.collect.Sets;
 
 public class ItemsetEvaluation {
 
-	private static final String name = "freerider";
-	private static final File dbFile = new File(
-			"/disk/data2/jfowkes/Transactions/freerider.txt");
+	private static final String name = "caviar";
+	private static final File dbFile = new File("/tmp/itemset.txt");
 	private static final InferenceAlgorithm inferenceAlg = new inferGreedy();
 
-	private static final int noSamples = 5;
-	private static final int difficultyLevels = 10;
+	private static final int noSamples = 1;
+	private static final int difficultyLevels = 0;
 
 	private static final int noTransactions = 100;
 	private static final int noExtraSets = 5;
 	private static final int maxSetSize = 3;
 
-	private static final int maxRandomWalks = 500;
-	private static final int maxStructureIterations = 20;
+	private static final int maxStructureSteps = 500;
+	private static final int maxEMIterations = 20;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -66,8 +60,8 @@ public class ItemsetEvaluation {
 				// Mine itemsets
 				final long startTime = System.currentTimeMillis();
 				final HashMap<Itemset, Double> minedItemsets = ItemsetMining
-						.mineItemsets(dbFile, inferenceAlg, maxRandomWalks,
-								maxStructureIterations);
+						.mineItemsets(dbFile, inferenceAlg, maxStructureSteps,
+								maxEMIterations);
 				final long endTime = System.currentTimeMillis();
 				final double tim = (endTime - startTime) / (double) 1000;
 				time[level] += tim;
@@ -108,31 +102,31 @@ public class ItemsetEvaluation {
 		avgAvgTime /= difficultyLevels;
 		System.out.printf("\nAverage Average Time (s): %.2f\n", avgAvgTime);
 
-		// Plot precision and recall
-		final Plot2DPanel plot = new Plot2DPanel();
-		plot.addScatterPlot("", Color.red, recall, precision);
-		plot.setAxisLabels("recall", "precision");
-		plot.setFixedBounds(0, 0, 1);
-		plot.setFixedBounds(1, 0, 1);
-
-		// Display
-		final JFrame frame = new JFrame("Results");
-		frame.setSize(800, 800);
-		frame.setContentPane(plot);
-		frame.setVisible(true);
-		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
-		// Plot time
-		final Plot2DPanel plot2 = new Plot2DPanel();
-		plot2.addScatterPlot("", Color.blue, levels, time);
-		plot2.setAxisLabels("levels", "time (s)");
-
-		// Display
-		final JFrame frame2 = new JFrame("Results");
-		frame2.setSize(800, 800);
-		frame2.setContentPane(plot2);
-		frame2.setVisible(true);
-		frame2.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		// // Plot precision and recall
+		// final Plot2DPanel plot = new Plot2DPanel();
+		// plot.addScatterPlot("", Color.red, recall, precision);
+		// plot.setAxisLabels("recall", "precision");
+		// plot.setFixedBounds(0, 0, 1);
+		// plot.setFixedBounds(1, 0, 1);
+		//
+		// // Display
+		// final JFrame frame = new JFrame("Results");
+		// frame.setSize(800, 800);
+		// frame.setContentPane(plot);
+		// frame.setVisible(true);
+		// frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		//
+		// // Plot time
+		// final Plot2DPanel plot2 = new Plot2DPanel();
+		// plot2.addScatterPlot("", Color.blue, levels, time);
+		// plot2.setAxisLabels("levels", "time (s)");
+		//
+		// // Display
+		// final JFrame frame2 = new JFrame("Results");
+		// frame2.setSize(800, 800);
+		// frame2.setContentPane(plot2);
+		// frame2.setVisible(true);
+		// frame2.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
 	}
 }
