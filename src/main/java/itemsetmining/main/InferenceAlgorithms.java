@@ -89,10 +89,10 @@ public class InferenceAlgorithms {
 			}
 
 			// Add on cost of uncovered itemsets
-			for (final Itemset set : Sets.difference(itemsets.keySet(),
-					covering)) {
-				totalCost += -Math.log(1 - itemsets.get(set));
-			}
+			// for (final Itemset set : Sets.difference(itemsets.keySet(),
+			// covering)) {
+			// totalCost += -Math.log(1 - itemsets.get(set));
+			// }
 
 			return totalCost;
 		}
@@ -170,10 +170,10 @@ public class InferenceAlgorithms {
 			}
 
 			// Add on cost of uncovered itemsets
-			for (final Itemset set : Sets.difference(itemsets.keySet(),
-					covering)) {
-				totalCost += -Math.log(1 - itemsets.get(set));
-			}
+			// for (final Itemset set : Sets.difference(itemsets.keySet(),
+			// covering)) {
+			// totalCost += -Math.log(1 - itemsets.get(set));
+			// }
 
 			return totalCost;
 		}
@@ -214,7 +214,8 @@ public class InferenceAlgorithms {
 			int i = 0;
 			final double[] costs = new double[probSize];
 			for (final double p : filteredItemsets.values()) {
-				costs[i] = -Math.log(p / (1 - p));
+				// costs[i] = -Math.log(p / (1 - p));
+				costs[i] = -Math.log(p);
 				i++;
 			}
 
@@ -261,7 +262,8 @@ public class InferenceAlgorithms {
 					final Itemset set = entry.getKey();
 					final double p = entry.getValue();
 					covering.add(set);
-					totalCost += costs[i] * sol[i] - Math.log(1 - p);
+					totalCost += costs[i] * sol[i];
+					// - Math.log(1 - p);
 				}
 				i++;
 			}

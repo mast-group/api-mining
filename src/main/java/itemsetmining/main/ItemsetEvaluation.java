@@ -14,7 +14,7 @@ import com.google.common.collect.Sets;
 
 public class ItemsetEvaluation {
 
-	private static final String name = "caviar";
+	private static final String name = "freerider";
 	private static final File dbFile = new File("/tmp/itemset.txt");
 	private static final InferenceAlgorithm inferenceAlg = new inferGreedy();
 

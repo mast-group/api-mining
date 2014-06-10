@@ -48,7 +48,8 @@ public class ItemsetMining {
 
 	private static final double SINGLETON_PRIOR_PROB = 0.5;
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
-	private static final int SIMPLIFY_COMBINE_ITEMSETS_EVERY = 2;
+	private static final int SIMPLIFY_ITEMSETS_EVERY = 2;
+	private static final int COMBINE_ITEMSETS_EVERY = 4;
 	private static final double OPTIMIZE_TOL = 1e-10;
 
 	private static boolean APRIORI_CANDIDATE_GENERATION = false;
@@ -212,17 +213,17 @@ public class ItemsetMining {
 						maxStructureSteps);
 				if (averageCost == -1) // apriori finished
 					break;
-			} else if (iteration % SIMPLIFY_COMBINE_ITEMSETS_EVERY == 0) {
+			} else if (iteration % COMBINE_ITEMSETS_EVERY == 0) {
+				logger.finer("\n----- Itemset Combination at Step " + iteration
+						+ "\n");
+				averageCost = combineItemsetsStep(averageCost, itemsets,
+						transactions, rejected_sets, inferenceAlgorithm,
+						maxStructureSteps);
+			} else if (iteration % SIMPLIFY_ITEMSETS_EVERY == 0) {
 				logger.finer("\n----- Itemset Simplification at Step "
 						+ iteration + "\n"); // TODO use dedicated maxSteps
 												// parameter
 				averageCost = simplifyItemsetsStep(averageCost, itemsets,
-						transactions, rejected_sets, inferenceAlgorithm,
-						maxStructureSteps);
-
-				logger.finer("\n----- Itemset Combination at Step " + iteration
-						+ "\n");
-				averageCost = combineItemsetsStep(averageCost, itemsets,
 						transactions, rejected_sets, inferenceAlgorithm,
 						maxStructureSteps);
 			} else {
@@ -246,19 +247,7 @@ public class ItemsetMining {
 
 		}
 
-		if (averageCost == -1) {
-			logger.finer("\n----- Final Itemset Simplification\n");
-			averageCost = simplifyItemsetsStep(averageCost, itemsets,
-					transactions, rejected_sets, inferenceAlgorithm,
-					maxStructureSteps);
-			logger.finer("\n----- Final Itemset Combination\n");
-			averageCost = combineItemsetsStep(averageCost, itemsets,
-					transactions, rejected_sets, inferenceAlgorithm,
-					maxStructureSteps);
-			logger.fine("\n***** Final parameter Optimization\n");
-			averageCost = expectationMaximizationStep(itemsets, transactions,
-					inferenceAlgorithm);
-		} else
+		if (averageCost != -1)
 			logger.warning("\nEM iteration limit exceeded.\n");
 		return itemsets;
 	}
