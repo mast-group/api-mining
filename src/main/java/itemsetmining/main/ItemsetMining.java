@@ -246,7 +246,19 @@ public class ItemsetMining {
 
 		}
 
-		if (averageCost != -1)
+		if (averageCost == -1) {
+			logger.finer("\n----- Final Itemset Simplification\n");
+			averageCost = simplifyItemsetsStep(averageCost, itemsets,
+					transactions, rejected_sets, inferenceAlgorithm,
+					maxStructureSteps);
+			logger.finer("\n----- Final Itemset Combination\n");
+			averageCost = combineItemsetsStep(averageCost, itemsets,
+					transactions, rejected_sets, inferenceAlgorithm,
+					maxStructureSteps);
+			logger.fine("\n***** Final parameter Optimization\n");
+			averageCost = expectationMaximizationStep(itemsets, transactions,
+					inferenceAlgorithm);
+		} else
 			logger.warning("\nEM iteration limit exceeded.\n");
 		return itemsets;
 	}
