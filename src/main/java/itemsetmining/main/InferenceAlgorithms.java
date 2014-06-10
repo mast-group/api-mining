@@ -89,10 +89,10 @@ public class InferenceAlgorithms {
 			}
 
 			// Add on cost of uncovered itemsets
-			// for (final Itemset set : Sets.difference(itemsets.keySet(),
-			// covering)) {
-			// totalCost += -Math.log(1 - itemsets.get(set));
-			// }
+			for (final Itemset set : Sets.difference(itemsets.keySet(),
+					covering)) {
+				totalCost += -Math.log(1 - itemsets.get(set));
+			}
 
 			return totalCost;
 		}
