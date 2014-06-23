@@ -46,20 +46,19 @@ public class InferenceAlgorithms {
 				final LinkedHashMap<Itemset, Double> itemsets,
 				final Transaction transaction) {
 
+			double totalCost = 0;
+			final Set<Integer> coveredItems = Sets.newHashSet();
+			final List<Integer> transactionItems = transaction.getItems();
+
 			// Filter out sets containing items not in transaction and items
 			// with nonzero cost
 			final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
 					.newLinkedHashMap();
 			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
-				if (transaction.getItems().containsAll(
-						entry.getKey().getItems())
+				if (transactionItems.containsAll(entry.getKey().getItems())
 						&& entry.getValue() > 0.0)
 					filteredItemsets.put(entry.getKey(), entry.getValue());
 			}
-
-			double totalCost = 0;
-			final Set<Integer> coveredItems = Sets.newHashSet();
-			final List<Integer> transactionItems = transaction.getItems();
 
 			while (!coveredItems.containsAll(transactionItems)) {
 
@@ -80,9 +79,7 @@ public class InferenceAlgorithms {
 					final double cost = -Math.log(entry.getValue());
 					final double costPerItem = cost / notCovered;
 
-					if (costPerItem < minCostPerItem
-							&& transactionItems.containsAll(entry.getKey()
-									.getItems())) { // Don't over-cover
+					if (costPerItem < minCostPerItem) {
 						minCostPerItem = costPerItem;
 						bestSet = entry.getKey();
 						bestCost = cost;
@@ -164,10 +161,7 @@ public class InferenceAlgorithms {
 					if (entry.getKey().getItems().contains(element)) {
 
 						final double cost = entry.getValue();
-						if (cost < minCost
-								&& transaction.getItems().containsAll(
-										entry.getKey().getItems())) { // don't
-																		// over-cover
+						if (cost < minCost) {
 							minCost = cost;
 							bestSet = entry.getKey();
 						}
