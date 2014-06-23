@@ -46,6 +46,17 @@ public class InferenceAlgorithms {
 				final LinkedHashMap<Itemset, Double> itemsets,
 				final Transaction transaction) {
 
+			// Filter out sets containing items not in transaction and items
+			// with nonzero cost
+			final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
+					.newLinkedHashMap();
+			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
+				if (transaction.getItems().containsAll(
+						entry.getKey().getItems())
+						&& entry.getValue() > 0.0)
+					filteredItemsets.put(entry.getKey(), entry.getValue());
+			}
+
 			double totalCost = 0;
 			final Set<Integer> coveredItems = Sets.newHashSet();
 			final List<Integer> transactionItems = transaction.getItems();
@@ -56,7 +67,8 @@ public class InferenceAlgorithms {
 				Itemset bestSet = null;
 				double bestCost = -1;
 
-				for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+				for (final Entry<Itemset, Double> entry : filteredItemsets
+						.entrySet()) {
 
 					int notCovered = 0;
 					for (final Integer item : entry.getKey().getItems()) {
@@ -89,10 +101,10 @@ public class InferenceAlgorithms {
 			}
 
 			// Add on cost of uncovered itemsets
-			// for (final Itemset set : Sets.difference(itemsets.keySet(),
-			// covering)) {
-			// totalCost += -Math.log(1 - itemsets.get(set));
-			// }
+			for (final Itemset set : Sets.difference(filteredItemsets.keySet(),
+					covering)) {
+				totalCost += -Math.log(1 - filteredItemsets.get(set));
+			}
 
 			return totalCost;
 		}
@@ -114,6 +126,17 @@ public class InferenceAlgorithms {
 				final LinkedHashMap<Itemset, Double> itemsets,
 				final Transaction transaction) {
 
+			// Filter out sets containing items not in transaction and items
+			// with nonzero cost
+			final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
+					.newLinkedHashMap();
+			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
+				if (transaction.getItems().containsAll(
+						entry.getKey().getItems())
+						&& entry.getValue() > 0.0)
+					filteredItemsets.put(entry.getKey(), entry.getValue());
+			}
+
 			double totalCost = 0;
 			final Random rand = new Random();
 			final List<Integer> notCoveredItems = Lists
@@ -121,7 +144,8 @@ public class InferenceAlgorithms {
 
 			// Calculate costs
 			final HashMap<Itemset, Double> costs = Maps.newHashMap();
-			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+			for (final Entry<Itemset, Double> entry : filteredItemsets
+					.entrySet()) {
 				costs.put(entry.getKey(), -Math.log(entry.getValue()));
 			}
 
@@ -170,10 +194,10 @@ public class InferenceAlgorithms {
 			}
 
 			// Add on cost of uncovered itemsets
-			// for (final Itemset set : Sets.difference(itemsets.keySet(),
-			// covering)) {
-			// totalCost += -Math.log(1 - itemsets.get(set));
-			// }
+			for (final Itemset set : Sets.difference(filteredItemsets.keySet(),
+					covering)) {
+				totalCost += -Math.log(1 - filteredItemsets.get(set));
+			}
 
 			return totalCost;
 		}
@@ -197,8 +221,8 @@ public class InferenceAlgorithms {
 			final LinearProgramSolver solver = SolverFactory.getSolver("CPLEX");
 			solver.printToScreen(false);
 
-			// Filter out sets containing items not in transaction (and with
-			// zero cost)
+			// Filter out sets containing items not in transaction and items
+			// with nonzero cost
 			final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
 					.newLinkedHashMap();
 			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
@@ -214,8 +238,7 @@ public class InferenceAlgorithms {
 			int i = 0;
 			final double[] costs = new double[probSize];
 			for (final double p : filteredItemsets.values()) {
-				// costs[i] = -Math.log(p / (1 - p));
-				costs[i] = -Math.log(p);
+				costs[i] = -Math.log(p / (1 - p));
 				i++;
 			}
 
@@ -262,8 +285,7 @@ public class InferenceAlgorithms {
 					final Itemset set = entry.getKey();
 					final double p = entry.getValue();
 					covering.add(set);
-					totalCost += costs[i] * sol[i];
-					// - Math.log(1 - p);
+					totalCost += costs[i] * sol[i] - Math.log(1 - p);
 				}
 				i++;
 			}
