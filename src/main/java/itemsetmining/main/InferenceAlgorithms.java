@@ -277,10 +277,10 @@ public class InferenceAlgorithms {
 					.entrySet()) {
 				if (doubleToBoolean(sol[i])) {
 					final Itemset set = entry.getKey();
-					final double p = entry.getValue();
 					covering.add(set);
-					totalCost += costs[i] * sol[i] - Math.log(1 - p);
+					totalCost += costs[i] * sol[i];
 				}
+				totalCost += -Math.log(1 - entry.getValue());
 				i++;
 			}
 

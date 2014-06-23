@@ -24,7 +24,8 @@ public class ItemsetMiningTests {
 
 		final LinkedHashMap<Itemset, Double> itemsets = Maps.newLinkedHashMap();
 
-		itemsets.put(new Itemset(1), 0.2);
+		final Itemset s1 = new Itemset(1);
+		itemsets.put(s1, 0.2);
 		itemsets.put(new Itemset(2), 0.2);
 		itemsets.put(new Itemset(3), 0.4);
 		final Itemset s4 = new Itemset(4);
@@ -38,7 +39,7 @@ public class ItemsetMiningTests {
 		final double p12 = 0.4;
 		final double p23 = 0.3;
 		final double p24 = 0.2;
-		final double p34 = 0.2;
+		final double p34 = 0.4;
 		itemsets.put(s12, p12);
 		itemsets.put(s23, p23);
 		itemsets.put(s24, p24);
@@ -52,15 +53,24 @@ public class ItemsetMiningTests {
 		final Transaction transaction1234 = new Transaction(1, 2, 3, 4);
 
 		// Expected solution #1
-		final double expectedCost1234 = -Math.log(p12) - Math.log(p34);
+		double expectedCost1234 = -Math.log(p12) - Math.log(p34);
 		final Set<Itemset> expected1234 = Sets.newHashSet(s12, s34);
+		for (final Itemset set : Sets.difference(itemsets.keySet(),
+				expected1234)) {
+			expectedCost1234 += -Math.log(1 - itemsets.get(set));
+		}
 
 		// Transaction #2
 		final Transaction transaction234 = new Transaction(2, 3, 4);
 
 		// Expected solution #2
-		final double expectedCost234 = -1 * Math.log(p23) - Math.log(p4);
-		final Set<Itemset> expected234 = Sets.newHashSet(s23, s4);
+		double expectedCost234 = -1 * Math.log(p23) - Math.log(p34);
+		final Set<Itemset> expected234 = Sets.newHashSet(s23, s34);
+		for (final Itemset set : Sets
+				.difference(itemsets.keySet(), expected234)) {
+			if (!(set.equals(s1) || set.equals(s12)))
+				expectedCost234 += -Math.log(1 - itemsets.get(set));
+		}
 
 		// Test greedy
 		final InferenceAlgorithm inferGreedy = new inferGreedy();
