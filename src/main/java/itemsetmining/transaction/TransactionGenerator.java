@@ -9,12 +9,10 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Random;
-import java.util.Set;
 
 import org.apache.commons.io.LineIterator;
 
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 public class TransactionGenerator {
 
@@ -156,8 +154,8 @@ public class TransactionGenerator {
 		for (int i = 0; i < noTransactions; i++) {
 
 			// Generate transaction from distribution
-			final Set<Integer> transaction = sampleFromDistribution(itemsets);
-			for (final int item : transaction) {
+			final Transaction transaction = sampleFromDistribution(itemsets);
+			for (final int item : transaction.getItems()) {
 				out.print(item + " ");
 			}
 			if (!transaction.isEmpty())
@@ -178,13 +176,13 @@ public class TransactionGenerator {
 	}
 
 	/** Randomly generate itemset with its probability */
-	private static Set<Integer> sampleFromDistribution(
+	private static Transaction sampleFromDistribution(
 			final HashMap<Itemset, Double> itemsets) {
 
-		final Set<Integer> transaction = Sets.newHashSet();
+		final Transaction transaction = new Transaction();
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 			if (Math.random() < entry.getValue()) {
-				transaction.addAll(entry.getKey().getItems());
+				transaction.add(entry.getKey());
 			}
 		}
 

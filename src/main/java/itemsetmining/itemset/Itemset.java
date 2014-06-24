@@ -1,8 +1,9 @@
 package itemsetmining.itemset;
 
 import java.io.Serializable;
+import java.util.BitSet;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Set;
 
 import com.google.common.collect.Sets;
 
@@ -10,15 +11,37 @@ public class Itemset implements Serializable {
 	private static final long serialVersionUID = 4667217256957834826L;
 
 	/** the set of items **/
-	private final HashSet<Integer> itemset = Sets.newHashSet();
+	private final BitSet itemset;
 
 	/**
-	 * Get the items as array
+	 * Get the items as a Set
+	 * 
+	 * @return the items
+	 * @deprecated slow
+	 */
+	@Deprecated
+	public Set<Integer> getItems() {
+		final Set<Integer> listItems = Sets.newHashSet();
+		for (int i = itemset.nextSetBit(0); i >= 0; i = itemset
+				.nextSetBit(i + 1))
+			listItems.add(i);
+		return listItems;
+	}
+
+	/**
+	 * Get the items as a BitSet
 	 * 
 	 * @return the items
 	 */
-	public HashSet<Integer> getItems() {
+	public BitSet getBitSet() {
 		return itemset;
+	}
+
+	/**
+	 * Constructor
+	 */
+	public Itemset() {
+		itemset = new BitSet();
 	}
 
 	/**
@@ -28,6 +51,7 @@ public class Itemset implements Serializable {
 	 *            a collection of items that should be added to the new itemset
 	 */
 	public Itemset(final Collection<Integer> items) {
+		itemset = new BitSet(items.size());
 		add(items);
 	}
 
@@ -38,7 +62,20 @@ public class Itemset implements Serializable {
 	 *            an array of items that should be added to the new itemset
 	 */
 	public Itemset(final int... items) {
+		itemset = new BitSet(items.length);
 		add(items);
+	}
+
+	/**
+	 * Add given itemset to this itemset
+	 * 
+	 * @param itemset
+	 *            an itemset that should be added to this itemset
+	 */
+	public void add(final Itemset set) {
+		final BitSet bs = set.getBitSet();
+		for (int i = bs.nextSetBit(0); i >= 0; i = bs.nextSetBit(i + 1))
+			this.itemset.set(i);
 	}
 
 	/**
@@ -48,7 +85,8 @@ public class Itemset implements Serializable {
 	 *            a collection of items that should be added to this itemset
 	 */
 	public void add(final Collection<Integer> items) {
-		itemset.addAll(items);
+		for (final int item : items)
+			itemset.set(item);
 	}
 
 	/**
@@ -59,11 +97,41 @@ public class Itemset implements Serializable {
 	 */
 	public void add(final int... items) {
 		for (final int item : items)
-			itemset.add(item);
+			itemset.set(item);
+	}
+
+	/**
+	 * Check if item is contained in this itemset
+	 */
+	public boolean contains(final int item) {
+		return itemset.get(item);
+	}
+
+	/**
+	 * Check if this itemset contains given itemset
+	 * 
+	 * @param itemset
+	 */
+	public boolean contains(final Itemset set) {
+		final BitSet setItems = set.getBitSet();
+		final BitSet copy = (BitSet) setItems.clone();
+		copy.and(itemset);
+		return copy.equals(setItems);
+	}
+
+	/**
+	 * Number of items in this transaction
+	 */
+	public int size() {
+		return itemset.cardinality();
 	}
 
 	public boolean isEmpty() {
 		return itemset.isEmpty();
+	}
+
+	public boolean intersects(final Itemset set) {
+		return itemset.intersects(set.itemset);
 	}
 
 	@Override

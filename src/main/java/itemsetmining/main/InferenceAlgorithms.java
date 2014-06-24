@@ -47,8 +47,8 @@ public class InferenceAlgorithms {
 				final Transaction transaction) {
 
 			double totalCost = 0;
-			final Set<Integer> coveredItems = Sets.newHashSet();
-			final List<Integer> transactionItems = transaction.getItems();
+			final int transactionSize = transaction.size();
+			final Transaction coveredItems = new Transaction();
 
 			// Filter out sets containing items not in transaction and items
 			// with nonzero cost
@@ -56,12 +56,11 @@ public class InferenceAlgorithms {
 					.newLinkedHashMap();
 			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
 				if (entry.getValue() > 0.0
-						&& transactionItems.containsAll(entry.getKey()
-								.getItems()))
+						&& transaction.contains(entry.getKey()))
 					filteredItemsets.put(entry.getKey(), entry.getValue());
 			}
 
-			while (!coveredItems.containsAll(transactionItems)) {
+			while (coveredItems.size() != transactionSize) {
 
 				double minCostPerItem = Double.POSITIVE_INFINITY;
 				Itemset bestSet = null;
@@ -70,12 +69,8 @@ public class InferenceAlgorithms {
 				for (final Entry<Itemset, Double> entry : filteredItemsets
 						.entrySet()) {
 
-					int notCovered = 0;
-					for (final Integer item : entry.getKey().getItems()) {
-						if (!coveredItems.contains(item)) {
-							notCovered++;
-						}
-					}
+					final int notCovered = coveredItems.countUnion(entry
+							.getKey()) - coveredItems.size();
 
 					final double cost = -Math.log(entry.getValue());
 					final double costPerItem = cost / notCovered;
@@ -90,7 +85,7 @@ public class InferenceAlgorithms {
 
 				if (bestSet != null) {
 					covering.add(bestSet);
-					coveredItems.addAll(bestSet.getItems());
+					coveredItems.add(bestSet);
 					totalCost += bestCost;
 				} else { // Allow incomplete coverings
 					break;
@@ -130,8 +125,7 @@ public class InferenceAlgorithms {
 					.newLinkedHashMap();
 			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
 				if (entry.getValue() > 0.0
-						&& transaction.getItems().containsAll(
-								entry.getKey().getItems()))
+						&& transaction.contains(entry.getKey()))
 					filteredItemsets.put(entry.getKey(), entry.getValue());
 			}
 
@@ -159,7 +153,7 @@ public class InferenceAlgorithms {
 				// Increase dual of element as much as possible
 				for (final Entry<Itemset, Double> entry : costs.entrySet()) {
 
-					if (entry.getKey().getItems().contains(element)) {
+					if (entry.getKey().contains(element)) {
 
 						final double cost = entry.getValue();
 						if (cost < minCost) {
@@ -180,7 +174,7 @@ public class InferenceAlgorithms {
 
 				// Make dual of element binding
 				for (final Itemset set : costs.keySet()) {
-					if (set.getItems().contains(element)) {
+					if (set.contains(element)) {
 						final double cost = costs.get(set);
 						costs.put(set, cost - minCost);
 					}
@@ -222,8 +216,7 @@ public class InferenceAlgorithms {
 					.newLinkedHashMap();
 			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
 				if (entry.getValue() > 0.0
-						&& transaction.getItems().containsAll(
-								entry.getKey().getItems()))
+						&& transaction.contains(entry.getKey()))
 					filteredItemsets.put(entry.getKey(), entry.getValue());
 			}
 
@@ -248,7 +241,7 @@ public class InferenceAlgorithms {
 				for (final Itemset set : filteredItemsets.keySet()) {
 
 					// at least one set covers item
-					if (set.getItems().contains(item)) {
+					if (set.contains(item)) {
 						cover[i] = 1;
 					}
 					i++;

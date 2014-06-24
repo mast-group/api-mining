@@ -426,14 +426,14 @@ public class ItemsetMining {
 		// Suggest supersets for all itemsets
 		int iteration = 0;
 		for (int i = 0; i < sortedItemsets.size(); i++) {
-			final HashSet<Integer> itemset1 = sortedItemsets.get(i).getItems();
+			final Itemset itemset1 = sortedItemsets.get(i);
 			for (int j = i + 1; j < sortedItemsets.size(); j++) {
-				final HashSet<Integer> itemset2 = sortedItemsets.get(j)
-						.getItems();
+				final Itemset itemset2 = sortedItemsets.get(j);
 
 				// Create a new candidate by combining itemsets
 				// TODO store itemset as sorted list to prevent duplicates?
-				final Itemset candidate = new Itemset(itemset1);
+				final Itemset candidate = new Itemset();
+				candidate.add(itemset1);
 				candidate.add(itemset2);
 
 				// Evaluate candidate itemset
@@ -480,15 +480,14 @@ public class ItemsetMining {
 			// For each pair of itemsets of size k-1
 			final List<Itemset> newCandidates = Lists.newArrayList();
 			for (int i = 0; i < prevCandidates.size(); i++) {
-				final HashSet<Integer> itemset1 = prevCandidates.get(i)
-						.getItems();
+				final Itemset itemset1 = prevCandidates.get(i);
 				for (int j = i + 1; j < prevCandidates.size(); j++) {
-					final HashSet<Integer> itemset2 = prevCandidates.get(j)
-							.getItems();
+					final Itemset itemset2 = prevCandidates.get(j);
 
 					// Create a new candidate by combining itemsets
 					// TODO store itemset as sorted list to prevent duplicates?
-					final Itemset candidate = new Itemset(itemset1);
+					final Itemset candidate = new Itemset();
+					candidate.add(itemset1);
 					candidate.add(itemset2);
 
 					if (!newCandidates.contains(candidate)) {
@@ -544,7 +543,7 @@ public class ItemsetMining {
 			double p = 0;
 
 			for (final Transaction transaction : transactions) {
-				if (transaction.getItems().containsAll(candidate.getItems())) {
+				if (transaction.contains(candidate)) {
 					p++;
 				}
 			}
@@ -552,7 +551,7 @@ public class ItemsetMining {
 
 			// Adjust probabilities for subsets of itemset
 			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-				if (candidate.getItems().containsAll(entry.getKey().getItems())) {
+				if (candidate.contains(entry.getKey())) {
 					itemsets.put(entry.getKey(), entry.getValue() - p);
 				}
 			}
@@ -579,7 +578,7 @@ public class ItemsetMining {
 			itemsets.remove(candidate);
 			// and restore original probabilities
 			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-				if (candidate.getItems().containsAll(entry.getKey().getItems())) {
+				if (candidate.contains(entry.getKey())) {
 					itemsets.put(entry.getKey(), entry.getValue() + p);
 				}
 			}
@@ -706,7 +705,7 @@ public class ItemsetMining {
 	private static class orderBySize extends Ordering<Itemset> {
 		@Override
 		public int compare(final Itemset set1, final Itemset set2) {
-			return Ints.compare(set1.getItems().size(), set2.getItems().size());
+			return Ints.compare(set1.size(), set2.size());
 		}
 	};
 
