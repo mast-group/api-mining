@@ -55,8 +55,9 @@ public class InferenceAlgorithms {
 			final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
 					.newLinkedHashMap();
 			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
-				if (transactionItems.containsAll(entry.getKey().getItems())
-						&& entry.getValue() > 0.0)
+				if (entry.getValue() > 0.0
+						&& transactionItems.containsAll(entry.getKey()
+								.getItems()))
 					filteredItemsets.put(entry.getKey(), entry.getValue());
 			}
 
@@ -128,9 +129,9 @@ public class InferenceAlgorithms {
 			final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
 					.newLinkedHashMap();
 			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
-				if (transaction.getItems().containsAll(
-						entry.getKey().getItems())
-						&& entry.getValue() > 0.0)
+				if (entry.getValue() > 0.0
+						&& transaction.getItems().containsAll(
+								entry.getKey().getItems()))
 					filteredItemsets.put(entry.getKey(), entry.getValue());
 			}
 
@@ -220,9 +221,9 @@ public class InferenceAlgorithms {
 			final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
 					.newLinkedHashMap();
 			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
-				if (transaction.getItems().containsAll(
-						entry.getKey().getItems())
-						&& entry.getValue() > 0.0)
+				if (entry.getValue() > 0.0
+						&& transaction.getItems().containsAll(
+								entry.getKey().getItems()))
 					filteredItemsets.put(entry.getKey(), entry.getValue());
 			}
 

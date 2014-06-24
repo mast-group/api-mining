@@ -12,10 +12,6 @@ public class Itemset implements Serializable {
 	/** the set of items **/
 	private final HashSet<Integer> itemset = Sets.newHashSet();
 
-	/** the support of this itemset */
-	// TODO remove support from Itemset class?
-	private int support = -1;
-
 	/**
 	 * Get the items as array
 	 * 
@@ -70,23 +66,6 @@ public class Itemset implements Serializable {
 		return itemset.isEmpty();
 	}
 
-	/**
-	 * Get the support of this itemset
-	 */
-	public int getSupport() {
-		return support;
-	}
-
-	/**
-	 * Set the support of this itemset
-	 * 
-	 * @param support
-	 *            the support
-	 */
-	public void setSupport(final int support) {
-		this.support = support;
-	}
-
 	@Override
 	public String toString() {
 		return itemset.toString();
@@ -94,30 +73,17 @@ public class Itemset implements Serializable {
 
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((itemset == null) ? 0 : itemset.hashCode());
-		result = prime * result + support;
-		return result;
+		return itemset.hashCode();
 	}
 
 	@Override
 	public boolean equals(final Object obj) {
 		if (this == obj)
 			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
+		if (!(obj instanceof Itemset))
 			return false;
 		final Itemset other = (Itemset) obj;
-		if (itemset == null) {
-			if (other.itemset != null)
-				return false;
-		} else if (!itemset.equals(other.itemset))
-			return false;
-		if (support != other.support)
-			return false;
-		return true;
+		return itemset.equals(other.itemset);
 	}
 
 }

@@ -17,7 +17,7 @@ import org.junit.Test;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-public class ItemsetMiningTests {
+public class ItemsetMiningTest {
 
 	@Test
 	public void testDoInference() {

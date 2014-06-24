@@ -33,27 +33,17 @@ public class Transaction {
 
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((items == null) ? 0 : items.hashCode());
-		return result;
+		return items.hashCode();
 	}
 
 	@Override
 	public boolean equals(final Object obj) {
 		if (this == obj)
 			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
+		if (!(obj instanceof Transaction))
 			return false;
 		final Transaction other = (Transaction) obj;
-		if (items == null) {
-			if (other.items != null)
-				return false;
-		} else if (!items.equals(other.items))
-			return false;
-		return true;
+		return items.equals(other.items);
 	}
 
 }
