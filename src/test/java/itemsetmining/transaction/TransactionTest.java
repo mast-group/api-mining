@@ -10,7 +10,7 @@ import org.junit.Test;
 
 import com.google.common.collect.Sets;
 
-public class TransactionTests {
+public class TransactionTest {
 
 	@Test
 	public void testNoisyItemsets() {
