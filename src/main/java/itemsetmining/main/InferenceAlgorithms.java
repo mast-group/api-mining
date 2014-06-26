@@ -27,7 +27,7 @@ public class InferenceAlgorithms {
 	public interface InferenceAlgorithm {
 
 		public double infer(final Set<Itemset> covering,
-				final LinkedHashMap<Itemset, Double> parItemsets,
+				final HashMap<Itemset, Double> parItemsets,
 				final Transaction transaction);
 
 	}
@@ -43,7 +43,7 @@ public class InferenceAlgorithms {
 
 		@Override
 		public double infer(final Set<Itemset> covering,
-				final LinkedHashMap<Itemset, Double> itemsets,
+				final HashMap<Itemset, Double> itemsets,
 				final Transaction transaction) {
 
 			double totalCost = 0;
@@ -52,8 +52,7 @@ public class InferenceAlgorithms {
 
 			// Filter out sets containing items not in transaction and items
 			// with nonzero cost
-			final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
-					.newLinkedHashMap();
+			final HashMap<Itemset, Double> filteredItemsets = Maps.newHashMap();
 			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
 				if (entry.getValue() > 0.0
 						&& transaction.contains(entry.getKey()))
@@ -116,13 +115,12 @@ public class InferenceAlgorithms {
 
 		@Override
 		public double infer(final Set<Itemset> covering,
-				final LinkedHashMap<Itemset, Double> itemsets,
+				final HashMap<Itemset, Double> itemsets,
 				final Transaction transaction) {
 
 			// Filter out sets containing items not in transaction and items
 			// with nonzero cost
-			final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
-					.newLinkedHashMap();
+			final HashMap<Itemset, Double> filteredItemsets = Maps.newHashMap();
 			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
 				if (entry.getValue() > 0.0
 						&& transaction.contains(entry.getKey()))
@@ -203,7 +201,7 @@ public class InferenceAlgorithms {
 
 		@Override
 		public double infer(final Set<Itemset> covering,
-				final LinkedHashMap<Itemset, Double> itemsets,
+				final HashMap<Itemset, Double> itemsets,
 				final Transaction transaction) {
 
 			// Load solver if necessary

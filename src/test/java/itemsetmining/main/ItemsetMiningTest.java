@@ -8,7 +8,7 @@ import itemsetmining.main.InferenceAlgorithms.inferGreedy;
 import itemsetmining.main.InferenceAlgorithms.inferPrimalDual;
 import itemsetmining.transaction.Transaction;
 
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.Set;
 
 import org.junit.Test;
@@ -21,7 +21,7 @@ public class ItemsetMiningTest {
 	@Test
 	public void testDoInference() {
 
-		final LinkedHashMap<Itemset, Double> itemsets = Maps.newLinkedHashMap();
+		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
 
 		final Itemset s1 = new Itemset(1);
 		itemsets.put(s1, 0.2);

@@ -14,7 +14,6 @@ import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -180,7 +179,7 @@ public class ItemsetMining {
 			final int maxStructureSteps, final int maxEMIterations) {
 
 		// Intialize with equiprobable singleton sets
-		final LinkedHashMap<Itemset, Double> itemsets = Maps.newLinkedHashMap();
+		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
 		for (final int singleton : singletons) {
 			itemsets.put(new Itemset(singleton), SINGLETON_PRIOR_PROB);
 		}
@@ -260,22 +259,21 @@ public class ItemsetMining {
 	 *         NB. zero probability itemsets are dropped
 	 */
 	private static double expectationMaximizationStep(
-			final LinkedHashMap<Itemset, Double> itemsets,
+			final HashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions,
 			final InferenceAlgorithm inferenceAlgorithm) {
 
 		logger.fine(" Structure Optimal Itemsets: " + itemsets + "\n");
 
 		double averageCost = 0;
-		LinkedHashMap<Itemset, Double> prevItemsets = itemsets;
+		HashMap<Itemset, Double> prevItemsets = itemsets;
 		final double n = transactions.size();
 
 		double norm = 1;
 		while (norm > OPTIMIZE_TOL) {
 
 			// Set up storage
-			final LinkedHashMap<Itemset, Double> newItemsets = Maps
-					.newLinkedHashMap();
+			final HashMap<Itemset, Double> newItemsets = Maps.newHashMap();
 			final Multiset<Itemset> allCoverings = ConcurrentHashMultiset
 					.create();
 
@@ -283,7 +281,7 @@ public class ItemsetMining {
 			averageCost = 0;
 			for (final Transaction transaction : transactions) {
 
-				// final LinkedHashMap<Itemset, Double> parItemsets =
+				// final HashMap<Itemset, Double> parItemsets =
 				// prevItemsets;
 
 				final Set<Itemset> covering = Sets.newHashSet();
@@ -324,7 +322,7 @@ public class ItemsetMining {
 
 	/** Generate candidate itemsets from Itemset tree */
 	private static double learnStructureStep(final double averageCost,
-			final LinkedHashMap<Itemset, Double> itemsets,
+			final HashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions, final ItemsetTree tree,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
@@ -358,7 +356,7 @@ public class ItemsetMining {
 
 	/** Generate candidate itemsets from power set */
 	private static double simplifyItemsetsStep(final double averageCost,
-			final LinkedHashMap<Itemset, Double> itemsets,
+			final HashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
@@ -409,7 +407,7 @@ public class ItemsetMining {
 
 	/** Generate candidate itemsets by combining existing sets */
 	private static double combineItemsetsStep(final double averageCost,
-			final LinkedHashMap<Itemset, Double> itemsets,
+			final HashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
@@ -464,7 +462,7 @@ public class ItemsetMining {
 
 	/** Generate candidate itemsets Apriori style from singletons */
 	private static double learnStructureAprioriStep(final double averageCost,
-			final LinkedHashMap<Itemset, Double> itemsets,
+			final HashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions,
 			final List<Itemset> candidates,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
@@ -528,7 +526,7 @@ public class ItemsetMining {
 
 	/** Evaluate a candidate itemset to see if it should be included */
 	private static Double evaluateCandidate(final double averageCost,
-			final LinkedHashMap<Itemset, Double> itemsets,
+			final HashMap<Itemset, Double> itemsets,
 			final List<Transaction> transactions,
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
