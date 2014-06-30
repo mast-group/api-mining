@@ -103,11 +103,11 @@ public class TransactionGenerator {
 		else if (name.equals("overlap")) {
 
 			final Itemset s1 = new Itemset(1, 2, 3);
-			final double p1 = 0.1;
+			final double p1 = 0.1 * scaling;
 			itemsets.put(s1, p1);
 
 			final Itemset s2 = new Itemset(2, 3);
-			final double p2 = 0.2;
+			final double p2 = 0.2 * scaling;
 			itemsets.put(s2, p2);
 
 		} else
