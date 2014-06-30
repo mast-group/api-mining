@@ -39,7 +39,7 @@ public class InferenceAlgorithms {
 	 * This is an O(log(n))-approximation algorithm where n is the number of
 	 * elements in the transaction.
 	 */
-	public static class inferGreedy implements InferenceAlgorithm {
+	public static class InferGreedy implements InferenceAlgorithm {
 
 		@Override
 		public double infer(final Set<Itemset> covering,
@@ -111,7 +111,7 @@ public class InferenceAlgorithms {
 	 * elements to cover, n is the number of sets and f is the frequency of the
 	 * most frequent element in the sets.
 	 */
-	public static class inferPrimalDual implements InferenceAlgorithm {
+	public static class InferPrimalDual implements InferenceAlgorithm {
 
 		@Override
 		public double infer(final Set<Itemset> covering,
@@ -171,9 +171,10 @@ public class InferenceAlgorithms {
 				}
 
 				// Make dual of element binding
-				for (final Itemset set : costs.keySet()) {
+				for (final Entry<Itemset, Double> entry : costs.entrySet()) {
+					final Itemset set = entry.getKey();
 					if (set.contains(element)) {
-						final double cost = costs.get(set);
+						final double cost = entry.getValue();
 						costs.put(set, cost - minCost);
 					}
 				}
@@ -197,7 +198,7 @@ public class InferenceAlgorithms {
 	 * <p>
 	 * This is an NP-hard problem.
 	 */
-	public static class inferILP implements InferenceAlgorithm {
+	public static class InferILP implements InferenceAlgorithm {
 
 		@Override
 		public double infer(final Set<Itemset> covering,

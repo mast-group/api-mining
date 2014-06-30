@@ -98,16 +98,16 @@ public class TransactionGenerator {
 			itemsets.put(s2, p2);
 
 		}
-		// This one probably doesn't make sense
-		// (structure probability adjustment favours [2 5],[3])
+		// Here [1 2 3] and [2 3] overlap
+		// (without noise our mining favours singletons)
 		else if (name.equals("overlap")) {
 
-			final Itemset s1 = new Itemset(2, 3, 5);
-			final double p1 = 0.5;
+			final Itemset s1 = new Itemset(1, 2, 3);
+			final double p1 = 0.1;
 			itemsets.put(s1, p1);
 
-			final Itemset s2 = new Itemset(2, 5);
-			final double p2 = 0.5;
+			final Itemset s2 = new Itemset(2, 3);
+			final double p2 = 0.2;
 			itemsets.put(s2, p2);
 
 		} else

@@ -127,7 +127,7 @@ public class SparkItemsetMining {
 					+ iteration);
 			averageCost = learnStructureStep(averageCost, itemsets,
 					transactions, noTransactions, tree);
-			System.out.printf(" Average cost: %.2f\n", averageCost);
+			System.out.printf(" Average cost: %.2f%n", averageCost);
 
 			// Optimize parameters of new structure
 			if (iteration % OPTIMIZE_PARAMS_EVERY == 0)
@@ -205,7 +205,7 @@ public class SparkItemsetMining {
 		itemsets.clear();
 		itemsets.putAll(prevItemsets);
 		System.out.println(" Parameter Optimal Itemsets: " + itemsets);
-		System.out.printf(" Average cost: %.2f\n", averageCost);
+		System.out.printf(" Average cost: %.2f%n", averageCost);
 		return averageCost;
 	}
 

@@ -4,8 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import itemsetmining.itemset.Itemset;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
-import itemsetmining.main.InferenceAlgorithms.inferGreedy;
-import itemsetmining.main.InferenceAlgorithms.inferPrimalDual;
+import itemsetmining.main.InferenceAlgorithms.InferGreedy;
+import itemsetmining.main.InferenceAlgorithms.InferPrimalDual;
 import itemsetmining.transaction.Transaction;
 
 import java.util.HashMap;
@@ -72,7 +72,7 @@ public class ItemsetMiningTest {
 		}
 
 		// Test greedy
-		final InferenceAlgorithm inferGreedy = new inferGreedy();
+		final InferenceAlgorithm inferGreedy = new InferGreedy();
 		actual.clear();
 		actualCost = inferGreedy.infer(actual, itemsets, transaction1234);
 		assertEquals(expected1234, actual);
@@ -84,7 +84,7 @@ public class ItemsetMiningTest {
 		assertEquals(expectedCost234, actualCost, 1e-15);
 
 		// Test primal-dual (only gives rough approximation)
-		final InferenceAlgorithm inferPrimalDual = new inferPrimalDual();
+		final InferenceAlgorithm inferPrimalDual = new InferPrimalDual();
 		actual.clear();
 		actualCost = inferPrimalDual.infer(actual, itemsets, transaction1234);
 		actualItems.clear();

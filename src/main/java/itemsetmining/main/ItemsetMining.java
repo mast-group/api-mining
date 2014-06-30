@@ -3,15 +3,16 @@ package itemsetmining.main;
 import itemsetmining.itemset.Itemset;
 import itemsetmining.itemset.ItemsetTree;
 import itemsetmining.itemset.Rule;
+import itemsetmining.main.InferenceAlgorithms.InferGreedy;
+import itemsetmining.main.InferenceAlgorithms.InferILP;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
-import itemsetmining.main.InferenceAlgorithms.inferGreedy;
-import itemsetmining.main.InferenceAlgorithms.inferILP;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.util.FutureThreadPool;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
@@ -57,14 +58,14 @@ public class ItemsetMining {
 	private static boolean APRIORI_CANDIDATE_GENERATION = false;
 	private static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
-	private static final Level LOGLEVEL = Level.ALL;
+	private static final Level LOGLEVEL = Level.INFO;
 
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
 		final String dataset = "caviar.txt";
 		final boolean associationRules = false;
-		final InferenceAlgorithm inferenceAlg = new inferGreedy();
+		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
 		// Max iterations
 		final int maxStructureSteps = 1000;
@@ -225,7 +226,7 @@ public class ItemsetMining {
 				if (averageCost == -1) // structure iteration limit exceeded
 					break;
 			}
-			logger.finer(String.format(" Average cost: %.2f\n", averageCost));
+			logger.finer(String.format(" Average cost: %.2f%n", averageCost));
 
 			// Optimize parameters of new structure
 			if (iteration % OPTIMIZE_PARAMS_EVERY == 0) {
@@ -270,7 +271,7 @@ public class ItemsetMining {
 
 			// Parallel E-step and M-step combined
 			// TODO enable ILP to be used in parallel
-			if (inferenceAlgorithm instanceof inferILP) {
+			if (inferenceAlgorithm instanceof InferILP) {
 				logger.warning(" Reverting to Serial for ILP...");
 				averageCost = serialEMStep(transactions, inferenceAlgorithm,
 						prevItemsets, n, allCoverings);
@@ -300,7 +301,7 @@ public class ItemsetMining {
 		itemsets.clear();
 		itemsets.putAll(prevItemsets);
 		logger.fine(" Parameter Optimal Itemsets: " + itemsets + "\n");
-		logger.fine(String.format(" Average cost: %.2f\n", averageCost));
+		logger.fine(String.format(" Average cost: %.2f%n", averageCost));
 		assert !Double.isNaN(averageCost);
 		assert !Double.isInfinite(averageCost);
 		return averageCost;
@@ -627,7 +628,7 @@ public class ItemsetMining {
 
 			// Find cost in parallel
 			double curCost = 0;
-			if (inferenceAlgorithm instanceof inferILP) {
+			if (inferenceAlgorithm instanceof InferILP) {
 				logger.warning(" Reverting to Serial for ILP...");
 				curCost = serialEMStep(transactions, inferenceAlgorithm,
 						itemsets, n);
@@ -768,7 +769,10 @@ public class ItemsetMining {
 
 	}
 
-	private static class orderBySize extends Ordering<Itemset> {
+	private static class orderBySize extends Ordering<Itemset> implements
+			Serializable {
+		private static final long serialVersionUID = -5940108461179194842L;
+
 		@Override
 		public int compare(final Itemset set1, final Itemset set2) {
 			return Ints.compare(set1.size(), set2.size());
