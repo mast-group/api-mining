@@ -7,6 +7,7 @@ import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.main.InferenceAlgorithms.inferGreedy;
 import itemsetmining.main.InferenceAlgorithms.inferILP;
 import itemsetmining.transaction.Transaction;
+import itemsetmining.util.FutureThreadPool;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,8 +34,6 @@ import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.AlgoA
 import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.Rules;
 import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPGrowth;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
-import codemining.util.StatsUtil;
-import codemining.util.parallel.FutureThreadPool;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ConcurrentHashMultiset;
@@ -366,7 +365,7 @@ public class ItemsetMining {
 				}
 			});
 		}
-		return StatsUtil.sum(ftp.getCompletedTasks()) / n;
+		return sum(ftp.getCompletedTasks()) / n;
 	}
 
 	/** Parallel E-step and M-step combined (without covering, just cost) */
@@ -387,7 +386,7 @@ public class ItemsetMining {
 				}
 			});
 		}
-		return StatsUtil.sum(ftp.getCompletedTasks()) / n;
+		return sum(ftp.getCompletedTasks()) / n;
 	}
 
 	/** Generate candidate itemsets from Itemset tree */
@@ -798,6 +797,15 @@ public class ItemsetMining {
 				throws SecurityException {
 			super.setOutputStream(System.out);
 		}
+	}
+
+	/** Calculates the sum of a Collection */
+	private static double sum(final Iterable<Double> values) {
+		double sum = 0;
+		for (final Double element : values) {
+			sum += element;
+		}
+		return sum;
 	}
 
 }
