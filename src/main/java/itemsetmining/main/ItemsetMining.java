@@ -7,6 +7,8 @@ import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.InferenceAlgorithms.InferILP;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
+import itemsetmining.transaction.TransactionDatabase;
+import itemsetmining.transaction.TransactionList;
 import itemsetmining.util.FutureThreadPool;
 
 import java.io.File;
@@ -128,7 +130,7 @@ public class ItemsetMining {
 		setUpLogger();
 
 		// Read in transaction database
-		final List<Transaction> transactions = readTransactions(inputFile);
+		final TransactionList transactions = readTransactions(inputFile);
 
 		// Determine most frequent singletons
 		final Multiset<Integer> singletons = scanDatabaseToDetermineFrequencyOfSingleItems(inputFile);
@@ -165,7 +167,7 @@ public class ItemsetMining {
 	 * Learn itemsets model using structural EM
 	 */
 	private static HashMap<Itemset, Double> structuralEM(
-			final List<Transaction> transactions,
+			final TransactionDatabase transactions,
 			final Set<Integer> singletons, final ItemsetTree tree,
 			final InferenceAlgorithm inferenceAlgorithm,
 			final int maxStructureSteps, final int maxEMIterations) {
@@ -252,7 +254,7 @@ public class ItemsetMining {
 	 */
 	private static double expectationMaximizationStep(
 			final HashMap<Itemset, Double> itemsets,
-			final List<Transaction> transactions,
+			final TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm) {
 
 		logger.fine(" Structure Optimal Itemsets: " + itemsets + "\n");
@@ -273,11 +275,11 @@ public class ItemsetMining {
 			// TODO enable ILP to be used in parallel
 			if (inferenceAlgorithm instanceof InferILP) {
 				logger.warning(" Reverting to Serial for ILP...");
-				averageCost = serialEMStep(transactions, inferenceAlgorithm,
-						prevItemsets, n, allCoverings);
+				averageCost = serialEMStep(transactions.getTransactionList(),
+						inferenceAlgorithm, prevItemsets, n, allCoverings);
 			} else {
-				averageCost = parallelEMStep(transactions, inferenceAlgorithm,
-						prevItemsets, n, allCoverings);
+				averageCost = parallelEMStep(transactions.getTransactionList(),
+						inferenceAlgorithm, prevItemsets, n, allCoverings);
 			}
 
 			// Normalise probabilities
@@ -393,7 +395,7 @@ public class ItemsetMining {
 	/** Generate candidate itemsets from Itemset tree */
 	private static double learnStructureStep(final double averageCost,
 			final HashMap<Itemset, Double> itemsets,
-			final List<Transaction> transactions, final ItemsetTree tree,
+			final TransactionDatabase transactions, final ItemsetTree tree,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
 
@@ -427,7 +429,7 @@ public class ItemsetMining {
 	/** Generate candidate itemsets from power set */
 	private static double simplifyItemsetsStep(final double averageCost,
 			final HashMap<Itemset, Double> itemsets,
-			final List<Transaction> transactions,
+			final TransactionDatabase transactions,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
 
@@ -478,7 +480,7 @@ public class ItemsetMining {
 	/** Generate candidate itemsets by combining existing sets */
 	private static double combineItemsetsStep(final double averageCost,
 			final HashMap<Itemset, Double> itemsets,
-			final List<Transaction> transactions,
+			final TransactionDatabase transactions,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
 
@@ -533,7 +535,7 @@ public class ItemsetMining {
 	/** Generate candidate itemsets Apriori style from singletons */
 	private static double learnStructureAprioriStep(final double averageCost,
 			final HashMap<Itemset, Double> itemsets,
-			final List<Transaction> transactions,
+			final TransactionDatabase transactions,
 			final List<Itemset> candidates,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
 
@@ -597,7 +599,7 @@ public class ItemsetMining {
 	/** Evaluate a candidate itemset to see if it should be included */
 	private static Double evaluateCandidate(final double averageCost,
 			final HashMap<Itemset, Double> itemsets,
-			final List<Transaction> transactions,
+			final TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
 		// Skip empty candidates and candidates already present
@@ -608,14 +610,8 @@ public class ItemsetMining {
 			final double n = transactions.size();
 			// Estimate itemset probability (M-step assuming always
 			// included)
-			double p = 0;
-
-			for (final Transaction transaction : transactions) {
-				if (transaction.contains(candidate)) {
-					p++;
-				}
-			}
-			p = p / n;
+			final double p = parallelCandidateProbability(
+					transactions.getTransactionList(), candidate, n);
 
 			// Adjust probabilities for subsets of itemset
 			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
@@ -630,11 +626,11 @@ public class ItemsetMining {
 			double curCost = 0;
 			if (inferenceAlgorithm instanceof InferILP) {
 				logger.warning(" Reverting to Serial for ILP...");
-				curCost = serialEMStep(transactions, inferenceAlgorithm,
-						itemsets, n);
+				curCost = serialEMStep(transactions.getTransactionList(),
+						inferenceAlgorithm, itemsets, n);
 			} else {
-				curCost = parallelEMStep(transactions, inferenceAlgorithm,
-						itemsets, n);
+				curCost = parallelEMStep(transactions.getTransactionList(),
+						inferenceAlgorithm, itemsets, n);
 			}
 			logger.finer(String.format(", cost: %.2f", curCost));
 
@@ -656,7 +652,45 @@ public class ItemsetMining {
 		return null;
 	}
 
-	private static List<Transaction> readTransactions(final File inputFile)
+	/** Parallel candidate probability estimation */
+	private static double parallelCandidateProbability(
+			final List<Transaction> transactions, final Itemset candidate,
+			final double n) {
+
+		final FutureThreadPool<Double> ftp = new FutureThreadPool<Double>();
+		for (final Transaction transaction : transactions) {
+
+			ftp.pushTask(new Callable<Double>() {
+				@Override
+				public Double call() {
+					if (transaction.contains(candidate)) {
+						return 1.0;
+					}
+					return 0.0;
+				}
+			});
+		}
+		return sum(ftp.getCompletedTasks()) / n;
+	}
+
+	/** Serial candidate probability estimation */
+	@SuppressWarnings("unused")
+	private static double serialCandidateProbability(
+			final List<Transaction> transactions, final Itemset candidate,
+			final double n) {
+
+		double p = 0;
+		for (final Transaction transaction : transactions) {
+			if (transaction.contains(candidate)) {
+				p++;
+			}
+		}
+		p = p / n;
+
+		return p;
+	}
+
+	private static TransactionList readTransactions(final File inputFile)
 			throws IOException {
 
 		final List<Transaction> transactions = Lists.newArrayList();
@@ -689,7 +723,7 @@ public class ItemsetMining {
 		// close the input file
 		LineIterator.closeQuietly(it);
 
-		return transactions;
+		return new TransactionList(transactions);
 	}
 
 	/**
