@@ -14,6 +14,6 @@ public abstract class TransactionDatabase {
 	public abstract JavaRDD<Transaction> getTransactionRDD();
 
 	/** Get the number of transactions in this database */
-	public abstract int size();
+	public abstract long size();
 
 }

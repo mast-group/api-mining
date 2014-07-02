@@ -8,10 +8,10 @@ import org.apache.spark.api.java.JavaRDD;
 public class TransactionRDD extends TransactionDatabase {
 
 	private final JavaRDD<Transaction> transactions;
-	private final int noTransactions;
+	private final long noTransactions;
 
 	public TransactionRDD(final JavaRDD<Transaction> transactions,
-			final int noTransactions) {
+			final long noTransactions) {
 		this.transactions = transactions;
 		this.noTransactions = noTransactions;
 	}
@@ -27,7 +27,7 @@ public class TransactionRDD extends TransactionDatabase {
 	}
 
 	@Override
-	public int size() {
+	public long size() {
 		return noTransactions;
 	}
 

@@ -24,7 +24,7 @@ public class TransactionList extends TransactionDatabase {
 	}
 
 	@Override
-	public int size() {
+	public long size() {
 		return transactions.size();
 	}
 
