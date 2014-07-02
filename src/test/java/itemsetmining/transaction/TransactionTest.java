@@ -5,6 +5,7 @@ import itemsetmining.itemset.Itemset;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import org.junit.Test;
 
@@ -28,8 +29,10 @@ public class TransactionTest {
 
 		// Check that disjoint
 		for (final Itemset set1 : itemsets.keySet()) {
+			final HashSet<Itemset> setItemset = new HashSet<Itemset>();
+			setItemset.add(set1);
 			for (final Itemset set2 : Sets.difference(itemsets.keySet(),
-					Sets.newHashSet(set1))) {
+					setItemset)) {
 				assertTrue(Collections.disjoint(set1.getItems(),
 						set2.getItems()));
 			}

@@ -130,7 +130,7 @@ public class InferenceAlgorithms {
 			double totalCost = 0;
 			final Random rand = new Random();
 			final List<Integer> notCoveredItems = Lists
-					.newArrayList(transaction.getItems());
+					.newArrayList(transaction);
 
 			// Calculate costs
 			final HashMap<Itemset, Double> costs = Maps.newHashMap();

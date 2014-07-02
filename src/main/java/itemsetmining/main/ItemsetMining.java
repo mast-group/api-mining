@@ -772,7 +772,7 @@ public class ItemsetMining {
 
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 			final HashSet<Integer> setForRecursion = Sets.newHashSet(entry
-					.getKey().getItems());
+					.getKey());
 			recursiveGenRules(rules, setForRecursion, new HashSet<Integer>(),
 					entry.getValue());
 		}
