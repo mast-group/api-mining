@@ -21,7 +21,7 @@ public class TransactionTest {
 
 		// Check that all items >= 10
 		for (final Itemset set : itemsets.keySet()) {
-			for (final int item : set.getItems()) {
+			for (final int item : set) {
 				assertTrue(item >= 10);
 			}
 		}

@@ -233,7 +233,7 @@ public class InferenceAlgorithms {
 			final LinearProgram lp = new LinearProgram(costs);
 
 			// Add covering constraint
-			for (final Integer item : transaction.getItems()) {
+			for (final Integer item : transaction) {
 
 				i = 0;
 				final double[] cover = new double[probSize];

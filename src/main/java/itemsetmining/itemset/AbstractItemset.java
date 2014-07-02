@@ -2,8 +2,9 @@ package itemsetmining.itemset;
 
 import java.util.BitSet;
 import java.util.Collection;
+import java.util.Iterator;
 
-public abstract class AbstractItemset {
+public abstract class AbstractItemset implements Iterable<Integer> {
 
 	/** the set of items **/
 	protected BitSet items;
@@ -106,6 +107,11 @@ public abstract class AbstractItemset {
 			return false;
 		final AbstractItemset other = (AbstractItemset) obj;
 		return items.equals(other.items);
+	}
+
+	@Override
+	public Iterator<Integer> iterator() {
+		return new BitSetIterator(items);
 	}
 
 }

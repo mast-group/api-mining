@@ -166,7 +166,7 @@ public class ItemsetMining {
 	/**
 	 * Learn itemsets model using structural EM
 	 */
-	private static HashMap<Itemset, Double> structuralEM(
+	protected static HashMap<Itemset, Double> structuralEM(
 			final TransactionDatabase transactions,
 			final Set<Integer> singletons, final ItemsetTree tree,
 			final InferenceAlgorithm inferenceAlgorithm,
@@ -814,7 +814,7 @@ public class ItemsetMining {
 	};
 
 	/** Set up logging */
-	private static void setUpLogger() {
+	protected static void setUpLogger() {
 		LogManager.getLogManager().reset();
 		logger.setLevel(LOGLEVEL);
 		final ConsoleHandler handler = new Handler();

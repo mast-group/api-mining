@@ -155,7 +155,7 @@ public class TransactionGenerator {
 
 			// Generate transaction from distribution
 			final Transaction transaction = sampleFromDistribution(itemsets);
-			for (final int item : transaction.getItems()) {
+			for (final int item : transaction) {
 				out.print(item + " ");
 			}
 			if (!transaction.isEmpty())
