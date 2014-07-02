@@ -1,7 +1,9 @@
 package itemsetmining.itemset;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -11,6 +13,9 @@ import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 import ca.pfv.spmf.tools.MemoryLogger;
 
@@ -188,6 +193,79 @@ public class ItemsetTree {
 		}
 		// close the input file
 		LineIterator.closeQuietly(it);
+
+		// check the memory usage
+		MemoryLogger.getInstance().checkMemory();
+		// close the file
+		endTimestamp = System.currentTimeMillis();
+	}
+
+	/**
+	 * Build the itemset-tree based on an HDFS input file containing
+	 * transactions
+	 * 
+	 * @param input
+	 *            HDFS input file string
+	 * @return
+	 */
+	public void buildTree(final String hdfsFile,
+			final Map<Integer, Integer> support) throws IOException {
+		// record start time
+		startTimestamp = System.currentTimeMillis();
+
+		// reset memory usage statistics
+		MemoryLogger.getInstance().reset();
+
+		// create an empty root for the tree
+		root = new ItemsetTreeNode(null, 0);
+
+		// Scan the database to read the transactions
+		final Path path = new Path(hdfsFile);
+		final FileSystem fs = FileSystem.get(new Configuration());
+		final BufferedReader reader = new BufferedReader(new InputStreamReader(
+				fs.open(path)));
+		String line;
+		while ((line = reader.readLine()) != null) {
+
+			// if the line is a comment, is empty or is a
+			// kind of metadata
+			if (line.isEmpty() == true || line.charAt(0) == '#'
+					|| line.charAt(0) == '%' || line.charAt(0) == '@') {
+				continue;
+			}
+
+			// split the transaction into items
+			final String[] lineSplited = line.split(" ");
+			// create a structure for storing the transaction
+			final List<Integer> itemset = new ArrayList<Integer>();
+			// for each item in the transaction
+			for (int i = 0; i < lineSplited.length; i++) {
+				// convert the item to integer and add it to the structure
+				itemset.add(Integer.parseInt(lineSplited[i]));
+
+			}
+
+			// sort items in the itemset by descending order of support
+			Collections.sort(itemset, new Comparator<Integer>() {
+				@Override
+				public int compare(final Integer item1, final Integer item2) {
+					// compare the frequency
+					final int compare = support.get(item2) - support.get(item1);
+					// if the same frequency, we check the lexical ordering!
+					if (compare == 0) {
+						return (item1 - item2);
+					}
+					// otherwise, just use the frequency
+					return compare;
+				}
+			});
+
+			// call the method "construct" to add the transaction to the tree
+			construct(null, root, Ints.toArray(itemset), null);
+
+		}
+		// close the input file
+		reader.close();
 
 		// check the memory usage
 		MemoryLogger.getInstance().checkMemory();

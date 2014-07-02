@@ -9,7 +9,7 @@ import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionDatabase;
 import itemsetmining.transaction.TransactionList;
-import itemsetmining.util.FutureThreadPool;
+import itemsetmining.transaction.TransactionRDD;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,7 +22,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
@@ -39,7 +38,6 @@ import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPGrowth;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -57,8 +55,8 @@ public class ItemsetMining {
 	private static final int COMBINE_ITEMSETS_EVERY = 4;
 	private static final double OPTIMIZE_TOL = 1e-10;
 
-	private static boolean APRIORI_CANDIDATE_GENERATION = false;
-	private static final Logger logger = Logger.getLogger(ItemsetMining.class
+	private static final boolean APRIORI_CANDIDATE_GENERATION = false;
+	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
 	private static final Level LOGLEVEL = Level.INFO;
 
@@ -261,7 +259,7 @@ public class ItemsetMining {
 
 		double averageCost = 0;
 		HashMap<Itemset, Double> prevItemsets = itemsets;
-		final double n = transactions.size();
+		final double noTransactions = transactions.size();
 
 		double norm = 1;
 		while (norm > OPTIMIZE_TOL) {
@@ -270,14 +268,20 @@ public class ItemsetMining {
 			final HashMap<Itemset, Double> newItemsets = Maps.newHashMap();
 
 			// Parallel E-step and M-step combined
-			// TODO enable ILP to be used in parallel
-			if (inferenceAlgorithm instanceof InferILP) {
+			if (transactions instanceof TransactionRDD) {
+				averageCost = SparkEMStep.parallelEMStep(
+						transactions.getTransactionRDD(), inferenceAlgorithm,
+						prevItemsets, noTransactions, newItemsets);
+			} // TODO enable ILP to be used in parallel
+			else if (inferenceAlgorithm instanceof InferILP) {
 				logger.warning(" Reverting to Serial for ILP...");
-				averageCost = serialEMStep(transactions.getTransactionList(),
-						inferenceAlgorithm, prevItemsets, n, newItemsets);
+				averageCost = EMStep.serialEMStep(
+						transactions.getTransactionList(), inferenceAlgorithm,
+						prevItemsets, noTransactions, newItemsets);
 			} else {
-				averageCost = parallelEMStep(transactions.getTransactionList(),
-						inferenceAlgorithm, prevItemsets, n, newItemsets);
+				averageCost = EMStep.parallelEMStep(
+						transactions.getTransactionList(), inferenceAlgorithm,
+						prevItemsets, noTransactions, newItemsets);
 			}
 
 			// If set has stabilised calculate norm(p_prev - p_new)
@@ -300,107 +304,6 @@ public class ItemsetMining {
 		assert !Double.isNaN(averageCost);
 		assert !Double.isInfinite(averageCost);
 		return averageCost;
-	}
-
-	/** Serial E-step and M-step combined */
-	private static double serialEMStep(final List<Transaction> transactions,
-			final InferenceAlgorithm inferenceAlgorithm,
-			final HashMap<Itemset, Double> itemsets, final double n,
-			final HashMap<Itemset, Double> newItemsets) {
-
-		final Multiset<Itemset> allCoverings = ConcurrentHashMultiset.create();
-
-		double averageCost = 0;
-		for (final Transaction transaction : transactions) {
-
-			final Set<Itemset> covering = Sets.newHashSet();
-			final double cost = inferenceAlgorithm.infer(covering, itemsets,
-					transaction);
-			averageCost += cost;
-			allCoverings.addAll(covering);
-
-		}
-		averageCost = averageCost / n;
-
-		// Normalise probabilities
-		for (final Itemset set : allCoverings.elementSet()) {
-			newItemsets.put(set, allCoverings.count(set) / n);
-		}
-
-		return averageCost;
-	}
-
-	/** Serial E-step and M-step combined (without covering, just cost) */
-	private static double serialEMStep(final List<Transaction> transactions,
-			final InferenceAlgorithm inferenceAlgorithm,
-			final HashMap<Itemset, Double> itemsets, final double n) {
-
-		double averageCost = 0;
-		for (final Transaction transaction : transactions) {
-
-			final Set<Itemset> covering = Sets.newHashSet();
-			final double cost = inferenceAlgorithm.infer(covering, itemsets,
-					transaction);
-			averageCost += cost;
-
-		}
-		averageCost = averageCost / n;
-		return averageCost;
-	}
-
-	/** Parallel E-step and M-step combined */
-	private static double parallelEMStep(final List<Transaction> transactions,
-			final InferenceAlgorithm inferenceAlgorithm,
-			final HashMap<Itemset, Double> itemsets, final double n,
-			final HashMap<Itemset, Double> newItemsets) {
-
-		final Multiset<Itemset> allCoverings = ConcurrentHashMultiset.create();
-
-		// Parallel E-step and M-step combined
-		final FutureThreadPool<Double> ftp = new FutureThreadPool<Double>();
-		for (final Transaction transaction : transactions) {
-
-			ftp.pushTask(new Callable<Double>() {
-				@Override
-				public Double call() {
-					final Set<Itemset> covering = Sets.newHashSet();
-					final double cost = inferenceAlgorithm.infer(covering,
-							itemsets, transaction);
-					allCoverings.addAll(covering);
-					return cost;
-				}
-			});
-		}
-		// Wait for tasks to finish
-		final List<Double> costs = ftp.getCompletedTasks();
-
-		// Normalise probabilities
-		for (final Itemset set : allCoverings.elementSet()) {
-			newItemsets.put(set, allCoverings.count(set) / n);
-		}
-
-		return sum(costs) / n;
-	}
-
-	/** Parallel E-step and M-step combined (without covering, just cost) */
-	private static double parallelEMStep(final List<Transaction> transactions,
-			final InferenceAlgorithm inferenceAlgorithm,
-			final HashMap<Itemset, Double> itemsets, final double n) {
-
-		// Parallel E-step and M-step combined
-		final FutureThreadPool<Double> ftp = new FutureThreadPool<Double>();
-		for (final Transaction transaction : transactions) {
-
-			ftp.pushTask(new Callable<Double>() {
-				@Override
-				public Double call() {
-					final Set<Itemset> covering = Sets.newHashSet();
-					return inferenceAlgorithm.infer(covering, itemsets,
-							transaction);
-				}
-			});
-		}
-		return sum(ftp.getCompletedTasks()) / n;
 	}
 
 	/** Generate candidate itemsets from Itemset tree */
@@ -618,11 +521,20 @@ public class ItemsetMining {
 		if (!candidate.isEmpty() && !itemsets.keySet().contains(candidate)) {
 
 			logger.finer("\n potential candidate: " + candidate);
-			final double n = transactions.size();
+			final double noTransactions = transactions.size();
+
 			// Estimate itemset probability (M-step assuming always
 			// included)
-			final double p = parallelCandidateProbability(
-					transactions.getTransactionList(), candidate, n);
+			double p = 0;
+			if (transactions instanceof TransactionRDD) {
+				p = SparkEMStep.parallelCandidateProbability(
+						transactions.getTransactionRDD(), candidate,
+						noTransactions);
+			} else {
+				p = EMStep.parallelCandidateProbability(
+						transactions.getTransactionList(), candidate,
+						noTransactions);
+			}
 
 			// Adjust probabilities for subsets of itemset
 			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
@@ -635,13 +547,19 @@ public class ItemsetMining {
 
 			// Find cost in parallel
 			double curCost = 0;
-			if (inferenceAlgorithm instanceof InferILP) {
+			if (transactions instanceof TransactionRDD) {
+				curCost = SparkEMStep.parallelEMStep(
+						transactions.getTransactionRDD(), inferenceAlgorithm,
+						itemsets, transactions.size());
+			} else if (inferenceAlgorithm instanceof InferILP) {
 				logger.warning(" Reverting to Serial for ILP...");
-				curCost = serialEMStep(transactions.getTransactionList(),
-						inferenceAlgorithm, itemsets, n);
+				curCost = EMStep.serialEMStep(
+						transactions.getTransactionList(), inferenceAlgorithm,
+						itemsets, noTransactions);
 			} else {
-				curCost = parallelEMStep(transactions.getTransactionList(),
-						inferenceAlgorithm, itemsets, n);
+				curCost = EMStep.parallelEMStep(
+						transactions.getTransactionList(), inferenceAlgorithm,
+						itemsets, noTransactions);
 			}
 			logger.finer(String.format(", cost: %.2f", curCost));
 
@@ -661,44 +579,6 @@ public class ItemsetMining {
 		}
 		// No better candidate found
 		return null;
-	}
-
-	/** Parallel candidate probability estimation */
-	private static double parallelCandidateProbability(
-			final List<Transaction> transactions, final Itemset candidate,
-			final double n) {
-
-		final FutureThreadPool<Double> ftp = new FutureThreadPool<Double>();
-		for (final Transaction transaction : transactions) {
-
-			ftp.pushTask(new Callable<Double>() {
-				@Override
-				public Double call() {
-					if (transaction.contains(candidate)) {
-						return 1.0;
-					}
-					return 0.0;
-				}
-			});
-		}
-		return sum(ftp.getCompletedTasks()) / n;
-	}
-
-	/** Serial candidate probability estimation */
-	@SuppressWarnings("unused")
-	private static double serialCandidateProbability(
-			final List<Transaction> transactions, final Itemset candidate,
-			final double n) {
-
-		double p = 0;
-		for (final Transaction transaction : transactions) {
-			if (transaction.contains(candidate)) {
-				p++;
-			}
-		}
-		p = p / n;
-
-		return p;
 	}
 
 	private static TransactionList readTransactions(final File inputFile)
@@ -846,15 +726,6 @@ public class ItemsetMining {
 				throws SecurityException {
 			super.setOutputStream(System.out);
 		}
-	}
-
-	/** Calculates the sum of a Collection */
-	private static double sum(final Iterable<Double> values) {
-		double sum = 0;
-		for (final Double element : values) {
-			sum += element;
-		}
-		return sum;
 	}
 
 }
