@@ -268,23 +268,16 @@ public class ItemsetMining {
 
 			// Set up storage
 			final HashMap<Itemset, Double> newItemsets = Maps.newHashMap();
-			final Multiset<Itemset> allCoverings = ConcurrentHashMultiset
-					.create();
 
 			// Parallel E-step and M-step combined
 			// TODO enable ILP to be used in parallel
 			if (inferenceAlgorithm instanceof InferILP) {
 				logger.warning(" Reverting to Serial for ILP...");
 				averageCost = serialEMStep(transactions.getTransactionList(),
-						inferenceAlgorithm, prevItemsets, n, allCoverings);
+						inferenceAlgorithm, prevItemsets, n, newItemsets);
 			} else {
 				averageCost = parallelEMStep(transactions.getTransactionList(),
-						inferenceAlgorithm, prevItemsets, n, allCoverings);
-			}
-
-			// Normalise probabilities
-			for (final Itemset set : allCoverings.elementSet()) {
-				newItemsets.put(set, allCoverings.count(set) / n);
+						inferenceAlgorithm, prevItemsets, n, newItemsets);
 			}
 
 			// If set has stabilised calculate norm(p_prev - p_new)
@@ -313,7 +306,9 @@ public class ItemsetMining {
 	private static double serialEMStep(final List<Transaction> transactions,
 			final InferenceAlgorithm inferenceAlgorithm,
 			final HashMap<Itemset, Double> itemsets, final double n,
-			final Multiset<Itemset> allCoverings) {
+			final HashMap<Itemset, Double> newItemsets) {
+
+		final Multiset<Itemset> allCoverings = ConcurrentHashMultiset.create();
 
 		double averageCost = 0;
 		for (final Transaction transaction : transactions) {
@@ -326,6 +321,12 @@ public class ItemsetMining {
 
 		}
 		averageCost = averageCost / n;
+
+		// Normalise probabilities
+		for (final Itemset set : allCoverings.elementSet()) {
+			newItemsets.put(set, allCoverings.count(set) / n);
+		}
+
 		return averageCost;
 	}
 
@@ -351,7 +352,9 @@ public class ItemsetMining {
 	private static double parallelEMStep(final List<Transaction> transactions,
 			final InferenceAlgorithm inferenceAlgorithm,
 			final HashMap<Itemset, Double> itemsets, final double n,
-			final Multiset<Itemset> allCoverings) {
+			final HashMap<Itemset, Double> newItemsets) {
+
+		final Multiset<Itemset> allCoverings = ConcurrentHashMultiset.create();
 
 		// Parallel E-step and M-step combined
 		final FutureThreadPool<Double> ftp = new FutureThreadPool<Double>();
@@ -368,7 +371,15 @@ public class ItemsetMining {
 				}
 			});
 		}
-		return sum(ftp.getCompletedTasks()) / n;
+		// Wait for tasks to finish
+		final List<Double> costs = ftp.getCompletedTasks();
+
+		// Normalise probabilities
+		for (final Itemset set : allCoverings.elementSet()) {
+			newItemsets.put(set, allCoverings.count(set) / n);
+		}
+
+		return sum(costs) / n;
 	}
 
 	/** Parallel E-step and M-step combined (without covering, just cost) */
