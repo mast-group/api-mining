@@ -125,7 +125,7 @@ public class ItemsetMining {
 			throws IOException {
 
 		// Set up logging
-		setUpLogger();
+		setUpConsoleLogger();
 
 		// Read in transaction database
 		final TransactionList transactions = readTransactions(inputFile);
@@ -137,7 +137,7 @@ public class ItemsetMining {
 		final ItemsetTree tree = new ItemsetTree();
 		tree.buildTree(inputFile, singletons);
 		if (LOGLEVEL.equals(Level.FINE))
-			tree.printStatistics();
+			tree.printStatistics(logger);
 		if (LOGLEVEL.equals(Level.FINEST)) {
 			logger.finest("THIS IS THE TREE:\n");
 			logger.finest(tree.toString());
@@ -704,8 +704,8 @@ public class ItemsetMining {
 		}
 	};
 
-	/** Set up logging */
-	protected static void setUpLogger() {
+	/** Set up logging to console */
+	protected static void setUpConsoleLogger() {
 		LogManager.getLogManager().reset();
 		logger.setLevel(LOGLEVEL);
 		final ConsoleHandler handler = new Handler();
@@ -720,6 +720,7 @@ public class ItemsetMining {
 		logger.addHandler(handler);
 	}
 
+	/** Handler for the console logger */
 	public static class Handler extends ConsoleHandler {
 		@Override
 		protected void setOutputStream(final OutputStream out)

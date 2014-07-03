@@ -10,6 +10,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
@@ -208,7 +209,7 @@ public class ItemsetTree {
 	 *            HDFS input file string
 	 * @return
 	 */
-	public void buildTree(final String hdfsFile,
+	public void buildTree(final String hdfsFile, final String hdfsConfFile,
 			final Map<Integer, Integer> support) throws IOException {
 		// record start time
 		startTimestamp = System.currentTimeMillis();
@@ -221,7 +222,9 @@ public class ItemsetTree {
 
 		// Scan the database to read the transactions
 		final Path path = new Path(hdfsFile);
-		final FileSystem fs = FileSystem.get(new Configuration());
+		final Configuration conf = new Configuration();
+		conf.addResource(new Path(hdfsConfFile));
+		final FileSystem fs = FileSystem.get(conf);
 		final BufferedReader reader = new BufferedReader(new InputStreamReader(
 				fs.open(path)));
 		String line;
@@ -761,24 +764,23 @@ public class ItemsetTree {
 	 * Print statistics about the time and maximum memory usage for the
 	 * construction of the itemset tree.
 	 */
-	public void printStatistics() {
+	public void printStatistics(final Logger logger) {
 		System.gc();
-		System.out
-				.println("========== MEMORY EFFICIENT ITEMSET TREE CONSTRUCTION - STATS ============");
-		System.out.println(" Tree construction time ~: "
+		logger.info("========== MEMORY EFFICIENT ITEMSET TREE CONSTRUCTION - STATS ============");
+		logger.info(" Tree construction time ~: "
 				+ (endTimestamp - startTimestamp) + " ms");
-		System.out.println(" Max memory: "
-				+ MemoryLogger.getInstance().getMaxMemory() + " Mb");
+		logger.info(" Max memory: " + MemoryLogger.getInstance().getMaxMemory()
+				+ " Mb");
 		nodeCount = 0;
 		totalItemCountInNodes = 0;
 		sumBranchesLength = 0;
 		totalNumberOfBranches = 0;
 		recursiveStats(root, 1);
-		System.out.println(" Node count: " + nodeCount);
-		System.out.println(" No. items: " + totalItemCountInNodes
+		logger.info(" Node count: " + nodeCount);
+		logger.info(" No. items: " + totalItemCountInNodes
 				+ ", avg items per node: " + totalItemCountInNodes
 				/ ((double) nodeCount));
-		System.out.println("=====================================");
+		logger.info("=====================================");
 	}
 
 	/**

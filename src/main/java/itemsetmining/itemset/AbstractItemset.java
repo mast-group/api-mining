@@ -1,10 +1,13 @@
 package itemsetmining.itemset;
 
+import java.io.Serializable;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Iterator;
 
-public abstract class AbstractItemset implements Iterable<Integer> {
+public abstract class AbstractItemset implements Iterable<Integer>,
+		Serializable {
+	private static final long serialVersionUID = -6482941473374203517L;
 
 	/** the set of items **/
 	protected BitSet items;

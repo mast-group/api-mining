@@ -3,6 +3,7 @@ package itemsetmining.main;
 import itemsetmining.itemset.Itemset;
 import itemsetmining.transaction.Transaction;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,7 +40,8 @@ public class InferenceAlgorithms {
 	 * This is an O(log(n))-approximation algorithm where n is the number of
 	 * elements in the transaction.
 	 */
-	public static class InferGreedy implements InferenceAlgorithm {
+	public static class InferGreedy implements InferenceAlgorithm, Serializable {
+		private static final long serialVersionUID = 9173178089235828142L;
 
 		@Override
 		public double infer(final Set<Itemset> covering,

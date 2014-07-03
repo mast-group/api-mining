@@ -37,6 +37,8 @@ public class SparkItemsetMining extends ItemsetMining {
 
 		// Main function parameters
 		final String dataset = "hdfs://cup04.inf.ed.ac.uk:54310/itemset.txt";
+		// TODO use classloader for this?
+		final String hdfsConfFile = "/disk/data1/jfowkes/hadoop-1.0.4/conf/core-site.xml";
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
 		// Max iterations
@@ -59,19 +61,19 @@ public class SparkItemsetMining extends ItemsetMining {
 		// "itemsetmining.util.ClassRegistrator");
 		final JavaSparkContext sc = new JavaSparkContext(conf);
 
-		mineItemsets(sc, dataset, inferenceAlg, maxStructureSteps,
-				maxEMIterations);
+		mineItemsets(sc, dataset, hdfsConfFile, inferenceAlg,
+				maxStructureSteps, maxEMIterations);
 
 	}
 
 	public static HashMap<Itemset, Double> mineItemsets(
 			final JavaSparkContext sc, final String dataset,
-			final InferenceAlgorithm inferenceAlg, final int maxStructureSteps,
-			final int maxEMIterations) throws UnsupportedEncodingException,
-			IOException {
+			final String hdfsConfFile, final InferenceAlgorithm inferenceAlg,
+			final int maxStructureSteps, final int maxEMIterations)
+			throws UnsupportedEncodingException, IOException {
 
 		// Set up logging
-		setUpLogger();
+		setUpConsoleLogger();
 
 		// Read in transaction database
 		final JavaRDD<Transaction> db = sc.textFile(dataset, 96)
@@ -85,8 +87,9 @@ public class SparkItemsetMining extends ItemsetMining {
 
 		// Apply the algorithm to build the itemset tree
 		final ItemsetTree tree = new ItemsetTree();
-		tree.buildTree(dataset, singletons);
-		tree.printStatistics();
+		tree.buildTree(dataset, hdfsConfFile, singletons);
+		if (LOGLEVEL.equals(Level.FINE))
+			tree.printStatistics(logger);
 
 		// Run inference to find interesting itemsets
 		final TransactionRDD transactions = new TransactionRDD(db, db.count());
@@ -96,8 +99,8 @@ public class SparkItemsetMining extends ItemsetMining {
 				maxEMIterations);
 		logger.info("\n============= INTERESTING ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-			System.out.printf("%s\tprob: %1.5f %n", entry.getKey(),
-					entry.getValue());
+			logger.info(String.format("%s\tprob: %1.5f %n", entry.getKey(),
+					entry.getValue()));
 		}
 		logger.info("\n");
 
@@ -160,7 +163,7 @@ public class SparkItemsetMining extends ItemsetMining {
 	}
 
 	/** Set up logging to file */
-	protected static void setUpLogger() {
+	protected static void setUpFileLogger() {
 		LogManager.getLogManager().reset();
 		logger.setLevel(LOGLEVEL);
 		FileHandler handler = null;
