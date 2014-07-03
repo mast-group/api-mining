@@ -16,6 +16,8 @@ import java.util.Map.Entry;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.math.plot.Plot2DPanel;
 
 import com.google.common.collect.Sets;
@@ -27,6 +29,7 @@ public class ItemsetEvaluation {
 	private static final File plotDir = new File(
 			"/afs/inf.ed.ac.uk/user/j/jfowkes");
 	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
+	private static final boolean useSpark = false;
 
 	private static final int noSamples = 10;
 	private static final int difficultyLevels = 10;
@@ -44,6 +47,13 @@ public class ItemsetEvaluation {
 		final double[] time = new double[difficultyLevels + 1];
 		final double[] precision = new double[difficultyLevels + 1];
 		final double[] recall = new double[difficultyLevels + 1];
+
+		FileSystem hdfs = null;
+		JavaSparkContext sc = null;
+		if (useSpark) {
+			sc = SparkItemsetMining.setUpSpark(dbFile.getName());
+			hdfs = SparkItemsetMining.setUpHDFS();
+		}
 
 		for (int level = 0; level <= difficultyLevels; level++) {
 			System.out.println("\n========= Level " + level + " of "
@@ -68,10 +78,15 @@ public class ItemsetEvaluation {
 						+ " of " + noSamples);
 
 				// Mine itemsets
+				HashMap<Itemset, Double> minedItemsets = null;
 				final long startTime = System.currentTimeMillis();
-				final HashMap<Itemset, Double> minedItemsets = ItemsetMining
-						.mineItemsets(dbFile, inferenceAlg, maxStructureSteps,
-								maxEMIterations);
+				if (useSpark)
+					minedItemsets = SparkItemsetMining.mineItemsets(dbFile,
+							hdfs, sc, inferenceAlg, maxStructureSteps,
+							maxEMIterations);
+				else
+					minedItemsets = ItemsetMining.mineItemsets(dbFile,
+							inferenceAlg, maxStructureSteps, maxEMIterations);
 				final long endTime = System.currentTimeMillis();
 				final double tim = (endTime - startTime) / (double) 1000;
 				time[level] += tim;
@@ -123,7 +138,7 @@ public class ItemsetEvaluation {
 
 		// Display
 		final JFrame frame = new JFrame("Results");
-		frame.setSize(800, 800);
+		frame.setSize(1600, 1600);
 		frame.setContentPane(plot);
 		frame.setVisible(true);
 		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -142,7 +157,7 @@ public class ItemsetEvaluation {
 		//
 		// // Display
 		// final JFrame frame2 = new JFrame("Results");
-		// frame2.setSize(800, 800);
+		// frame2.setSize(1600, 1600);
 		// frame2.setContentPane(plot2);
 		// frame2.setVisible(true);
 		// frame2.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);

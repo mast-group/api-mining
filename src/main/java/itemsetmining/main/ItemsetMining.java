@@ -58,7 +58,7 @@ public class ItemsetMining {
 	private static final boolean APRIORI_CANDIDATE_GENERATION = false;
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
-	protected static final Level LOGLEVEL = Level.ALL;
+	protected static final Level LOGLEVEL = Level.INFO;
 
 	public static void main(final String[] args) throws IOException {
 

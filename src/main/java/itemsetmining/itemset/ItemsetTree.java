@@ -14,7 +14,6 @@ import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -209,7 +208,7 @@ public class ItemsetTree {
 	 *            HDFS input file string
 	 * @return
 	 */
-	public void buildTree(final String hdfsFile, final String hdfsConfFile,
+	public void buildTree(final String hdfsPath, final FileSystem hdfs,
 			final Map<Integer, Integer> support) throws IOException {
 		// record start time
 		startTimestamp = System.currentTimeMillis();
@@ -221,12 +220,8 @@ public class ItemsetTree {
 		root = new ItemsetTreeNode(null, 0);
 
 		// Scan the database to read the transactions
-		final Path path = new Path(hdfsFile);
-		final Configuration conf = new Configuration();
-		conf.addResource(new Path(hdfsConfFile));
-		final FileSystem fs = FileSystem.get(conf);
 		final BufferedReader reader = new BufferedReader(new InputStreamReader(
-				fs.open(path)));
+				hdfs.open(new Path(hdfsPath))));
 		String line;
 		while ((line = reader.readLine()) != null) {
 

@@ -7,8 +7,8 @@ import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionRDD;
 
+import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -18,6 +18,9 @@ import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.LogRecord;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -35,48 +38,40 @@ public class SparkItemsetMining extends ItemsetMining {
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
-		final String dataset = "itemset.txt";
-		final String path = "hdfs://cup04.inf.ed.ac.uk:54310/" + dataset;
-		// TODO use classloader for this?
-		final String hdfsConfFile = "/disk/data1/jfowkes/hadoop-1.0.4/conf/core-site.xml";
+		final File dataset = new File("/tmp/itemset.txt");
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
 		// Max iterations
 		final int maxStructureSteps = 1000;
 		final int maxEMIterations = 10;
 
-		// Set up Spark
-		final SparkConf conf = new SparkConf();
-		conf.setMaster("spark://cup04.inf.ed.ac.uk:7077")
-				.setAppName("Itemset Mining: " + dataset)
-				.setSparkHome("/disk/data1/jfowkes/spark-1.0.0-bin-hadoop1")
-				.setJars(
-						new String[] { "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/target/itemset-mining-1.1-SNAPSHOT.jar" });
-		conf.set("spark.executor.memory", "10g");
-		conf.set("spark.default.parallelism", "8");
-		// TODO fix Kryo issue
-		// conf.set("spark.serializer",
-		// "org.apache.spark.serializer.KryoSerializer");
-		// conf.set("spark.kryo.registrator",
-		// "itemsetmining.util.ClassRegistrator");
-		final JavaSparkContext sc = new JavaSparkContext(conf);
+		// Set up spark
+		final JavaSparkContext sc = setUpSpark(dataset.getName());
 
-		mineItemsets(sc, path, hdfsConfFile, inferenceAlg, maxStructureSteps,
+		// Set up HDFS
+		final FileSystem hdfs = setUpHDFS();
+
+		mineItemsets(dataset, hdfs, sc, inferenceAlg, maxStructureSteps,
 				maxEMIterations);
 
 	}
 
-	public static HashMap<Itemset, Double> mineItemsets(
-			final JavaSparkContext sc, final String dataset,
-			final String hdfsConfFile, final InferenceAlgorithm inferenceAlg,
-			final int maxStructureSteps, final int maxEMIterations)
-			throws UnsupportedEncodingException, IOException {
+	public static HashMap<Itemset, Double> mineItemsets(final File inputFile,
+			final FileSystem hdfs, final JavaSparkContext sc,
+			final InferenceAlgorithm inferenceAlg, final int maxStructureSteps,
+			final int maxEMIterations) throws IOException {
 
 		// Set up logging
 		setUpConsoleLogger();
 
+		// Copy transaction database to hdfs
+		final String datasetPath = "hdfs://cup04.inf.ed.ac.uk:54310/"
+				+ inputFile.getName();
+		hdfs.copyFromLocalFile(new Path(inputFile.getAbsolutePath()), new Path(
+				datasetPath));
+
 		// Read in transaction database
-		final JavaRDD<Transaction> db = sc.textFile(dataset, 96)
+		final JavaRDD<Transaction> db = sc.textFile(datasetPath, 96)
 				.map(new ParseTransaction()).cache();
 
 		// Determine most frequent singletons
@@ -87,9 +82,9 @@ public class SparkItemsetMining extends ItemsetMining {
 
 		// Apply the algorithm to build the itemset tree
 		final ItemsetTree tree = new ItemsetTree();
-		tree.buildTree(dataset, hdfsConfFile, singletons);
-		// if (LOGLEVEL.equals(Level.FINE))
-		tree.printStatistics(logger);
+		tree.buildTree(datasetPath, hdfs, singletons);
+		if (LOGLEVEL.equals(Level.FINE))
+			tree.printStatistics(logger);
 
 		// Run inference to find interesting itemsets
 		final TransactionRDD transactions = new TransactionRDD(db, db.count());
@@ -105,6 +100,34 @@ public class SparkItemsetMining extends ItemsetMining {
 		logger.info("\n");
 
 		return itemsets;
+	}
+
+	/** Set up Spark */
+	public static JavaSparkContext setUpSpark(final String dataset) {
+
+		final SparkConf conf = new SparkConf();
+		conf.setMaster("spark://cup04.inf.ed.ac.uk:7077")
+				.setAppName("Itemset Mining: " + dataset)
+				.setSparkHome("/disk/data1/jfowkes/spark-1.0.0-bin-hadoop1")
+				.setJars(
+						new String[] { "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/target/itemset-mining-1.1-SNAPSHOT.jar" });
+		conf.set("spark.executor.memory", "10g");
+		conf.set("spark.default.parallelism", "8");
+		// TODO fix Kryo issue
+		// conf.set("spark.serializer",
+		// "org.apache.spark.serializer.KryoSerializer");
+		// conf.set("spark.kryo.registrator",
+		// "itemsetmining.util.ClassRegistrator");
+		return new JavaSparkContext(conf);
+	}
+
+	/** Set up HDFS */
+	public static FileSystem setUpHDFS() throws IOException {
+		// TODO use classloader for conf file?
+		final String hdfsConfFile = "/disk/data1/jfowkes/hadoop-1.0.4/conf/core-site.xml";
+		final Configuration conf = new Configuration();
+		conf.addResource(new Path(hdfsConfFile));
+		return FileSystem.get(conf);
 	}
 
 	/** Add together itemset costs */
