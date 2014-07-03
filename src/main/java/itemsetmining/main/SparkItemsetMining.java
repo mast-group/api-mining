@@ -31,12 +31,12 @@ import scala.Tuple2;
 public class SparkItemsetMining extends ItemsetMining {
 
 	private static final String LOG_FILE = "%t/spark_mining.log";
-	private static final Level LOGLEVEL = Level.INFO;
 
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
-		final String dataset = "hdfs://cup04.inf.ed.ac.uk:54310/itemset.txt";
+		final String dataset = "itemset.txt";
+		final String path = "hdfs://cup04.inf.ed.ac.uk:54310/" + dataset;
 		// TODO use classloader for this?
 		final String hdfsConfFile = "/disk/data1/jfowkes/hadoop-1.0.4/conf/core-site.xml";
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
@@ -48,7 +48,7 @@ public class SparkItemsetMining extends ItemsetMining {
 		// Set up Spark
 		final SparkConf conf = new SparkConf();
 		conf.setMaster("spark://cup04.inf.ed.ac.uk:7077")
-				.setAppName("itemsets")
+				.setAppName("Itemset Mining: " + dataset)
 				.setSparkHome("/disk/data1/jfowkes/spark-1.0.0-bin-hadoop1")
 				.setJars(
 						new String[] { "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/target/itemset-mining-1.1-SNAPSHOT.jar" });
@@ -61,8 +61,8 @@ public class SparkItemsetMining extends ItemsetMining {
 		// "itemsetmining.util.ClassRegistrator");
 		final JavaSparkContext sc = new JavaSparkContext(conf);
 
-		mineItemsets(sc, dataset, hdfsConfFile, inferenceAlg,
-				maxStructureSteps, maxEMIterations);
+		mineItemsets(sc, path, hdfsConfFile, inferenceAlg, maxStructureSteps,
+				maxEMIterations);
 
 	}
 
@@ -88,8 +88,8 @@ public class SparkItemsetMining extends ItemsetMining {
 		// Apply the algorithm to build the itemset tree
 		final ItemsetTree tree = new ItemsetTree();
 		tree.buildTree(dataset, hdfsConfFile, singletons);
-		if (LOGLEVEL.equals(Level.FINE))
-			tree.printStatistics(logger);
+		// if (LOGLEVEL.equals(Level.FINE))
+		tree.printStatistics(logger);
 
 		// Run inference to find interesting itemsets
 		final TransactionRDD transactions = new TransactionRDD(db, db.count());

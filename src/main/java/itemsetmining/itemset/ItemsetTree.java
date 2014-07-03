@@ -766,21 +766,21 @@ public class ItemsetTree {
 	 */
 	public void printStatistics(final Logger logger) {
 		System.gc();
-		logger.info("========== MEMORY EFFICIENT ITEMSET TREE CONSTRUCTION - STATS ============");
+		logger.info("========== MEMORY EFFICIENT ITEMSET TREE CONSTRUCTION - STATS ============\n");
 		logger.info(" Tree construction time ~: "
-				+ (endTimestamp - startTimestamp) + " ms");
+				+ (endTimestamp - startTimestamp) + " ms\n");
 		logger.info(" Max memory: " + MemoryLogger.getInstance().getMaxMemory()
-				+ " Mb");
+				+ " MB\n");
 		nodeCount = 0;
 		totalItemCountInNodes = 0;
 		sumBranchesLength = 0;
 		totalNumberOfBranches = 0;
 		recursiveStats(root, 1);
-		logger.info(" Node count: " + nodeCount);
+		logger.info(" Node count: " + nodeCount + "\n");
 		logger.info(" No. items: " + totalItemCountInNodes
 				+ ", avg items per node: " + totalItemCountInNodes
-				/ ((double) nodeCount));
-		logger.info("=====================================");
+				/ ((double) nodeCount) + "\n");
+		logger.info("=====================================\n");
 	}
 
 	/**
