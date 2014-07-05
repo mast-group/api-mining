@@ -49,13 +49,6 @@
 	  <scope>system</scope>
 	  <systemPath>${project.basedir}/../../dependencies/spmf/spmf.jar</systemPath>
     </dependency> 
-     <dependency>
-	<groupId>jmathplot</groupId>
-	  <artifactId>jmathplot</artifactId>
-	  <version>UNKNOWN</version>
-	  <scope>system</scope>
-	  <systemPath>${project.basedir}/../../dependencies/jmathplot.jar</systemPath>
-    </dependency> 
      <dependency> <!-- Spark dependency -->
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-core_2.10</artifactId>
