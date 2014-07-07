@@ -21,7 +21,7 @@ public class ItemsetScaling {
 	private static final File dbFile = new File("/tmp/itemset.txt");
 	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
-	private static final int noSamples = 10;
+	private static final int noSamples = 1;
 
 	private static final int noTransactions = 1000;
 	private static final int noExtraSets = 5;
@@ -36,11 +36,11 @@ public class ItemsetScaling {
 		// scalingTransactions(false, 6);
 		// scalingTransactions(true, 8);
 
-		// scalingItemsets(false, 2);
-		// scalingItemsets(true, 3);
+		// scalingItemsets(false, 4);
+		// scalingItemsets(true, 4);
 
-		scalingItems(false, 20);
-		scalingItems(true, 20);
+		scalingItems(false, 7);
+		// scalingItems(true, 7);
 
 	}
 
@@ -112,7 +112,7 @@ public class ItemsetScaling {
 		String name = InetAddress.getLocalHost().getHostName();
 		if (useSpark)
 			name = "Spark";
-		System.out.println("========" + name + "========");
+		System.out.println("\n========" + name + "========");
 		System.out.println("Transactions:" + Arrays.toString(trans));
 		System.out.println("Time: " + Arrays.toString(time));
 	}
@@ -123,10 +123,10 @@ public class ItemsetScaling {
 		scalingItemsOrItemsets(useSpark, noLogSets, true);
 	}
 
-	public static void scalingItems(final boolean useSpark, final int maxSetSize)
-			throws IOException {
+	public static void scalingItems(final boolean useSpark,
+			final int logMaxSetSize) throws IOException {
 
-		scalingItemsOrItemsets(useSpark, maxSetSize, false);
+		scalingItemsOrItemsets(useSpark, logMaxSetSize, false);
 	}
 
 	public static void scalingItemsOrItemsets(final boolean useSpark,
@@ -148,12 +148,12 @@ public class ItemsetScaling {
 			int noSets;
 			int maxSets;
 			if (scaleItemsets) {
-				noSets = (int) Math.pow(10, i + 1);
+				noSets = (int) ((5 * (i + 1)) / 100. * noTransactions);
 				maxSets = maxSetSize;
-				System.out.println("\n========= ~ 10^" + (i + 1) + " Itemsets");
+				System.out.println("\n========= " + noSets + " Itemsets");
 			} else {
 				noSets = noExtraSets;
-				maxSets = i + 1;
+				maxSets = 10 * (i + 1);
 				System.out.println("\n========= Max Itemset size: " + maxSets);
 			}
 
@@ -196,9 +196,9 @@ public class ItemsetScaling {
 			// Average over samples
 			time[i] /= noSamples;
 			if (scaleItemsets)
-				itemsets[i] = (int) Math.pow(10, i + 1);
+				itemsets[i] = (int) ((5 * (i + 1)) / 100. * noTransactions);
 			else
-				itemsets[i] = i + 1;
+				itemsets[i] = 10 * (i + 1);
 
 			// Display
 			if (scaleItemsets)
@@ -211,7 +211,7 @@ public class ItemsetScaling {
 		String name = InetAddress.getLocalHost().getHostName();
 		if (useSpark)
 			name = "Spark";
-		System.out.println("========" + name + "========");
+		System.out.println("\n========" + name + "========");
 		if (scaleItemsets)
 			System.out.println("Itemsets: " + Arrays.toString(itemsets));
 		else
