@@ -18,12 +18,10 @@ import cern.colt.Arrays;
 
 public class ItemsetScaling {
 
-	private static final String name = "overlap";
 	private static final File dbFile = new File("/tmp/itemset.txt");
 	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
 	private static final int noSamples = 10;
-	private static final int difficultyLevel = 0;
 
 	private static final int noTransactions = 1000;
 	private static final int noExtraSets = 5;
@@ -61,8 +59,7 @@ public class ItemsetScaling {
 
 		// Generate real itemsets
 		final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
-				.generateItemsets(name, difficultyLevel, noExtraSets,
-						maxSetSize);
+				.getNoisyItemsets(noExtraSets, maxSetSize);
 		System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
 			System.out.print(String.format("%s\tprob: %1.5f %n",
@@ -123,80 +120,20 @@ public class ItemsetScaling {
 	public static void scalingItemsets(final boolean useSpark,
 			final int noLogSets) throws IOException {
 
-		final double[] itemsets = new double[noLogSets];
-		final double[] time = new double[noLogSets];
-
-		FileSystem hdfs = null;
-		JavaSparkContext sc = null;
-		if (useSpark) {
-			sc = SparkItemsetMining.setUpSpark(dbFile.getName());
-			hdfs = SparkItemsetMining.setUpHDFS();
-		}
-
-		// Generate real itemsets
-		for (int i = 0; i < noLogSets; i++) {
-
-			final int noSets = (int) Math.pow(10, i + 1);
-			System.out.println("\n========= ~ 10^" + (i + 1) + " Itemsets");
-
-			final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
-					.generateItemsets(name, difficultyLevel, noSets, maxSetSize);
-			System.out.print("\n============= ACTUAL ITEMSETS =============\n");
-			for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
-				System.out.print(String.format("%s\tprob: %1.5f %n",
-						entry.getKey(), entry.getValue()));
-			}
-			System.out.print("\n");
-
-			// Generate transaction database
-			TransactionGenerator.generateTransactionDatabase(actualItemsets,
-					noTransactions, dbFile);
-
-			for (int sample = 0; sample < noSamples; sample++) {
-				System.out.println("\n========= Sample " + (sample + 1)
-						+ " of " + noSamples);
-
-				// Mine itemsets
-				final long startTime = System.currentTimeMillis();
-				if (useSpark)
-					SparkItemsetMining.mineItemsets(dbFile, hdfs, sc,
-							inferenceAlg, maxStructureSteps, maxEMIterations);
-				else
-					ItemsetMining.mineItemsets(dbFile, inferenceAlg,
-							maxStructureSteps, maxEMIterations);
-
-				final long endTime = System.currentTimeMillis();
-				final double tim = (endTime - startTime) / (double) 1000;
-				time[i] += tim;
-
-				System.out.printf("Time (s): %.2f%n", tim);
-			}
-		}
-
-		for (int i = 0; i < noLogSets; i++) {
-
-			// Average over samples
-			time[i] /= noSamples;
-			itemsets[i] = (int) Math.pow(10, i + 1);
-
-			// Display average precision and recall
-			System.out.println("\n========= No Itemsets: " + itemsets[i]);
-			System.out.printf("Average Time (s): %.2f%n", time[i]);
-		}
-
-		String name = InetAddress.getLocalHost().getHostName();
-		if (useSpark)
-			name = "Spark";
-		System.out.println("========" + name + "========");
-		System.out.println("Itemsets: " + Arrays.toString(itemsets));
-		System.out.println("Time: " + Arrays.toString(time));
+		scalingItemsOrItemsets(useSpark, noLogSets, true);
 	}
 
 	public static void scalingItems(final boolean useSpark, final int maxSetSize)
 			throws IOException {
 
-		final double[] maxsets = new double[maxSetSize];
-		final double[] time = new double[maxSetSize];
+		scalingItemsOrItemsets(useSpark, maxSetSize, false);
+	}
+
+	public static void scalingItemsOrItemsets(final boolean useSpark,
+			final int param, final boolean scaleItemsets) throws IOException {
+
+		final double[] itemsets = new double[param];
+		final double[] time = new double[param];
 
 		FileSystem hdfs = null;
 		JavaSparkContext sc = null;
@@ -206,14 +143,22 @@ public class ItemsetScaling {
 		}
 
 		// Generate real itemsets
-		for (int i = 0; i < maxSetSize; i++) {
+		for (int i = 0; i < param; i++) {
 
-			final int maxSets = i + 1;
-			System.out.println("\n========= Max Itemset size: " + maxSets);
+			int noSets;
+			int maxSets;
+			if (scaleItemsets) {
+				noSets = (int) Math.pow(10, i + 1);
+				maxSets = maxSetSize;
+				System.out.println("\n========= ~ 10^" + (i + 1) + " Itemsets");
+			} else {
+				noSets = noExtraSets;
+				maxSets = i + 1;
+				System.out.println("\n========= Max Itemset size: " + maxSets);
+			}
 
 			final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
-					.generateItemsets(name, difficultyLevel, noExtraSets,
-							maxSets);
+					.getNoisyItemsets(noSets, maxSets);
 			System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 			for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
 				System.out.print(String.format("%s\tprob: %1.5f %n",
@@ -246,14 +191,20 @@ public class ItemsetScaling {
 			}
 		}
 
-		for (int i = 0; i < maxSetSize; i++) {
+		for (int i = 0; i < param; i++) {
 
 			// Average over samples
 			time[i] /= noSamples;
-			maxsets[i] = (int) Math.pow(10, i + 1);
+			if (scaleItemsets)
+				itemsets[i] = (int) Math.pow(10, i + 1);
+			else
+				itemsets[i] = i + 1;
 
-			// Display average precision and recall
-			System.out.println("\n========= No Itemsets: " + maxsets[i]);
+			// Display
+			if (scaleItemsets)
+				System.out.println("\n========= No Itemsets: " + itemsets[i]);
+			else
+				System.out.println("\n========= Max Sets: " + itemsets[i]);
 			System.out.printf("Average Time (s): %.2f%n", time[i]);
 		}
 
@@ -261,8 +212,11 @@ public class ItemsetScaling {
 		if (useSpark)
 			name = "Spark";
 		System.out.println("========" + name + "========");
-		System.out.println("Maxsets: " + Arrays.toString(maxsets));
-		System.out.println("Time:" + Arrays.toString(time));
+		if (scaleItemsets)
+			System.out.println("Itemsets: " + Arrays.toString(itemsets));
+		else
+			System.out.println("Max Sets: " + Arrays.toString(itemsets));
+		System.out.println("Time: " + Arrays.toString(time));
 	}
 
 }

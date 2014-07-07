@@ -10,10 +10,12 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.api.java.JavaSparkContext;
 
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class ItemsetPrecisionRecall {
@@ -35,7 +37,7 @@ public class ItemsetPrecisionRecall {
 
 	public static void main(final String[] args) throws IOException {
 
-		precisionRecall("difficulty", difficultyLevels);
+		// precisionRecall("difficulty", difficultyLevels);
 		precisionRecall("robustness", 20);
 
 	}
@@ -72,9 +74,18 @@ public class ItemsetPrecisionRecall {
 				throw new RuntimeException("Incorrect argument.");
 
 			// Generate real itemsets
-			final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
-					.generateItemsets(name, difficultyLevel, extraSets,
-							maxSetSize);
+			final HashMap<Itemset, Double> exampleItemsets = TransactionGenerator
+					.generateExampleItemsets(name, difficultyLevel);
+
+			// Generate some noise
+			final HashMap<Itemset, Double> noisyItemsets = TransactionGenerator
+					.getNoisyItemsets(extraSets, maxSetSize);
+
+			// Combine the two
+			final HashMap<Itemset, Double> actualItemsets = Maps
+					.newHashMap(exampleItemsets);
+			actualItemsets.putAll(noisyItemsets);
+
 			System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 			for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
 				System.out.print(String.format("%s\tprob: %1.5f %n",
@@ -104,11 +115,14 @@ public class ItemsetPrecisionRecall {
 				final double tim = (endTime - startTime) / (double) 1000;
 				time[level] += tim;
 
-				// Calculate precision and recall
+				// Calculate precision and recall for example sets
+				final Set<Itemset> minedLessNoise = Sets.difference(
+						minedItemsets.keySet(), noisyItemsets.keySet());
 				final double noInBoth = Sets.intersection(
-						actualItemsets.keySet(), minedItemsets.keySet()).size();
-				final double pr = noInBoth / (double) minedItemsets.size();
-				final double rec = noInBoth / (double) actualItemsets.size();
+						exampleItemsets.keySet(), minedItemsets.keySet())
+						.size();
+				final double pr = noInBoth / (double) minedLessNoise.size();
+				final double rec = noInBoth / (double) exampleItemsets.size();
 				precision[level] += pr;
 				recall[level] += rec;
 
@@ -131,7 +145,7 @@ public class ItemsetPrecisionRecall {
 			if (type.equals("difficulty"))
 				System.out.println("\n========= Difficulty Level: " + i);
 			if (type.equals("robustness"))
-				System.out.println("\n========= Extra Sets: " + i + 1);
+				System.out.println("\n========= Extra Sets: " + (i + 1));
 			System.out.printf("Average Precision: %.2f%n", precision[i]);
 			System.out.printf("Average Recall: %.2f%n", recall[i]);
 			System.out.printf("Average Time (s): %.2f%n", time[i]);
@@ -146,5 +160,4 @@ public class ItemsetPrecisionRecall {
 		System.out.println("Precision: " + Arrays.toString(precision));
 		System.out.println("Recall : " + Arrays.toString(recall));
 	}
-
 }

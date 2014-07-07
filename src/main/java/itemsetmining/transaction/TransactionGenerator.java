@@ -31,8 +31,12 @@ public class TransactionGenerator {
 		final int noExtraSets = Integer.parseInt(args[3]);
 		final int maxSetSize = Integer.parseInt(args[3]);
 
-		final HashMap<Itemset, Double> itemsets = generateItemsets(args[0],
-				difficultyLevel, noExtraSets, maxSetSize);
+		// Generate example itemsets
+		final HashMap<Itemset, Double> itemsets = generateExampleItemsets(
+				args[0], difficultyLevel);
+
+		// Add more noisy itemsets
+		itemsets.putAll(getNoisyItemsets(noExtraSets, maxSetSize));
 
 		final File outFile = new File("src/main/resources/" + args[0] + ".txt");
 		generateTransactionDatabase(itemsets, noTransactions, outFile);
@@ -45,9 +49,8 @@ public class TransactionGenerator {
 	 * @param difficultyLevel
 	 *            An integer between 0 and 10
 	 */
-	public static HashMap<Itemset, Double> generateItemsets(final String name,
-			final int difficultyLevel, final int noExtraSets,
-			final int maxSetSize) {
+	public static HashMap<Itemset, Double> generateExampleItemsets(
+			final String name, final int difficultyLevel) {
 
 		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
 
@@ -112,9 +115,6 @@ public class TransactionGenerator {
 
 		} else
 			throw new IllegalArgumentException("Incorrect problem name.");
-
-		// Add more itemsets if large scale
-		itemsets.putAll(getNoisyItemsets(noExtraSets, maxSetSize));
 
 		return itemsets;
 	}
