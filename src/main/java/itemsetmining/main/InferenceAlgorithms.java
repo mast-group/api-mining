@@ -166,7 +166,7 @@ public class InferenceAlgorithms {
 
 				if (bestSet != null) {
 					covering.add(bestSet);
-					notCoveredItems.removeAll(bestSet.getItems());
+					notCoveredItems.removeAll(bestSet);
 					totalCost += minCost;
 				} else { // Allow incomplete coverings
 					break;

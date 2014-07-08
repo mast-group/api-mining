@@ -38,12 +38,13 @@ public class SparkItemsetMining extends ItemsetMining {
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
-		final File dataset = new File("/tmp/itemset.txt");
+		final File dataset = new File(
+				"/afs/inf.ed.ac.uk/user/j/jfowkes/Articles/ItemSets/DataSets/Succintly/plants.dat");
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
 		// Max iterations
-		final int maxStructureSteps = 1000;
-		final int maxEMIterations = 10;
+		final int maxStructureSteps = 100000;
+		final int maxEMIterations = 1000;
 
 		// Set up spark
 		final JavaSparkContext sc = setUpSpark(dataset.getName());
@@ -62,7 +63,8 @@ public class SparkItemsetMining extends ItemsetMining {
 			final int maxEMIterations) throws IOException {
 
 		// Set up logging
-		setUpConsoleLogger();
+		// setUpConsoleLogger();
+		setUpFileLogger();
 
 		// Copy transaction database to hdfs
 		final String datasetPath = "hdfs://cup04.inf.ed.ac.uk:54310/"
@@ -190,8 +192,8 @@ public class SparkItemsetMining extends ItemsetMining {
 		LogManager.getLogManager().reset();
 		logger.setLevel(LOGLEVEL);
 		FileHandler handler = null;
-		try {
-			handler = new FileHandler(LOG_FILE);
+		try { // Limit log file to 1MB
+			handler = new FileHandler(LOG_FILE, 1048576, 1);
 		} catch (final IOException e) {
 			e.printStackTrace();
 		}

@@ -33,8 +33,7 @@ public class TransactionTest {
 			setItemset.add(set1);
 			for (final Itemset set2 : Sets.difference(itemsets.keySet(),
 					setItemset)) {
-				assertTrue(Collections.disjoint(set1.getItems(),
-						set2.getItems()));
+				assertTrue(Collections.disjoint(set1, set2));
 			}
 		}
 

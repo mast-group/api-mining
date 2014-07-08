@@ -3,9 +3,9 @@ package itemsetmining.main;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import itemsetmining.itemset.Itemset;
-import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.InferenceAlgorithms.InferPrimalDual;
+import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 
 import java.util.HashMap;
@@ -89,15 +89,15 @@ public class ItemsetMiningTest {
 		actualCost = inferPrimalDual.infer(actual, itemsets, transaction1234);
 		actualItems.clear();
 		for (final Itemset set : actual)
-			actualItems.addAll(set.getItems());
-		assertTrue(actualItems.containsAll(transaction1234.getItems()));
+			actualItems.addAll(set);
+		assertTrue(actualItems.containsAll(transaction1234));
 
 		actual.clear();
 		actualCost = inferPrimalDual.infer(actual, itemsets, transaction234);
 		actualItems.clear();
 		for (final Itemset set : actual)
-			actualItems.addAll(set.getItems());
-		assertTrue(actualItems.containsAll(transaction234.getItems()));
+			actualItems.addAll(set);
+		assertTrue(actualItems.containsAll(transaction234));
 
 		// Test ILP // TODO mavenize so libcplex is found
 		// final InferenceAlgorithm inferILP = new inferILP();

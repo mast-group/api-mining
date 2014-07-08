@@ -16,11 +16,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.URL;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Set;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Formatter;
@@ -58,7 +61,7 @@ public class ItemsetMining {
 	private static final boolean APRIORI_CANDIDATE_GENERATION = false;
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
-	protected static final Level LOGLEVEL = Level.INFO;
+	protected static final Level LOGLEVEL = Level.FINEST;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -361,7 +364,14 @@ public class ItemsetMining {
 		int iteration = 0;
 		for (final Itemset set : sortedItemsets) {
 
-			final Set<Set<Integer>> powerset = Sets.powerSet(set.getItems());
+			// Subsample if |items| > 30 TODO better heuristic?
+			Set<Integer> setItems;
+			if (set.size() > 30)
+				setItems = subSample(set, 30);
+			else
+				setItems = set.getItems();
+
+			final Set<Set<Integer>> powerset = Sets.powerSet(setItems);
 			for (final Set<Integer> subset : powerset) {
 
 				// Evaluate candidate itemset
@@ -727,6 +737,33 @@ public class ItemsetMining {
 				throws SecurityException {
 			super.setOutputStream(System.out);
 		}
+	}
+
+	/**
+	 * Algorithm to randomly subsample a set
+	 * 
+	 * @param items
+	 *            Collection of items
+	 * @param m
+	 *            number of items to subsample
+	 * @return subsampled set
+	 * 
+	 * @see http://eyalsch.wordpress.com/2010/04/01/random-sample/
+	 */
+	public static <T> Set<T> subSample(final Collection<T> items, int m) {
+		final Random rnd = new Random();
+		final HashSet<T> res = new HashSet<T>(m);
+		int visited = 0;
+		final Iterator<T> it = items.iterator();
+		while (m > 0) {
+			final T item = it.next();
+			if (rnd.nextDouble() < ((double) m) / (items.size() - visited)) {
+				res.add(item);
+				m--;
+			}
+			visited++;
+		}
+		return res;
 	}
 
 }

@@ -1,16 +1,34 @@
 package itemsetmining.itemset;
 
 import java.io.Serializable;
+import java.util.AbstractCollection;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Set;
 
-public abstract class AbstractItemset implements Iterable<Integer>,
-		Serializable {
+import com.google.common.collect.Sets;
+
+public abstract class AbstractItemset extends AbstractCollection<Integer>
+		implements Serializable {
 	private static final long serialVersionUID = -6482941473374203517L;
 
 	/** the set of items **/
 	protected BitSet items;
+
+	/**
+	 * Get the items as a Set
+	 * 
+	 * @return the items
+	 * @deprecated slow
+	 */
+	@Deprecated
+	public Set<Integer> getItems() {
+		final Set<Integer> listItems = Sets.newHashSet();
+		for (int i = items.nextSetBit(0); i >= 0; i = items.nextSetBit(i + 1))
+			listItems.add(i);
+		return listItems;
+	}
 
 	/**
 	 * Add given itemset to this itemset
@@ -25,14 +43,29 @@ public abstract class AbstractItemset implements Iterable<Integer>,
 	}
 
 	/**
+	 * Add an item to this itemset
+	 * 
+	 * @param item
+	 *            an item that should be added to this itemset
+	 * @return
+	 */
+	@Override
+	public boolean add(final Integer item) {
+		this.items.set(item);
+		return true;
+	}
+
+	/**
 	 * Add items to this itemset
 	 * 
 	 * @param items
 	 *            a collection of items that should be added to this itemset
 	 */
-	public void add(final Collection<Integer> items) {
+	@Override
+	public boolean addAll(final Collection<? extends Integer> items) {
 		for (final int item : items)
 			this.items.set(item);
+		return true;
 	}
 
 	/**
@@ -80,10 +113,12 @@ public abstract class AbstractItemset implements Iterable<Integer>,
 	/**
 	 * Number of items in this transaction
 	 */
+	@Override
 	public int size() {
 		return items.cardinality();
 	}
 
+	@Override
 	public boolean isEmpty() {
 		return items.isEmpty();
 	}
