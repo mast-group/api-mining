@@ -15,7 +15,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -66,13 +65,13 @@ public class ItemsetMining {
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
-		final String dataset = "caviar.txt";
+		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Articles/ItemSets/DataSets/Succintly/plants.dat";
 		final boolean associationRules = false;
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
 		// Max iterations
-		final int maxStructureSteps = 1000;
-		final int maxEMIterations = 10;
+		final int maxStructureSteps = 100000;
+		final int maxEMIterations = 100;
 
 		// FPGrowth parameters
 		final boolean fpGrowth = false;
@@ -80,15 +79,10 @@ public class ItemsetMining {
 		final double fpGrowthMinConf = 0;
 		final double fpGrowthMinLift = 0;
 
-		// Find transaction database
-		final URL url = ItemsetMining.class.getClassLoader().getResource(
-				dataset);
-		final String input = java.net.URLDecoder.decode(url.getPath(), "UTF-8");
-		final File inputFile = new File(input);
-
 		// Mine interesting itemsets
-		final HashMap<Itemset, Double> itemsets = mineItemsets(inputFile,
-				inferenceAlg, maxStructureSteps, maxEMIterations);
+		final HashMap<Itemset, Double> itemsets = mineItemsets(
+				new File(dataset), inferenceAlg, maxStructureSteps,
+				maxEMIterations);
 
 		// Generate Association rules from the interesting itemsets
 		if (associationRules) {
@@ -104,7 +98,7 @@ public class ItemsetMining {
 		// Compare with the FPGROWTH algorithm
 		if (fpGrowth) {
 			final AlgoFPGrowth algo = new AlgoFPGrowth();
-			final Itemsets patterns = algo.runAlgorithm(input, null,
+			final Itemsets patterns = algo.runAlgorithm(dataset, null,
 					fpGrowthSupport);
 			algo.printStats();
 			patterns.printItemsets(algo.getDatabaseSize());
