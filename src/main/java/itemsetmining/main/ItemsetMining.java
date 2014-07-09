@@ -57,20 +57,21 @@ public class ItemsetMining {
 	private static final int COMBINE_ITEMSETS_EVERY = 4;
 	private static final double OPTIMIZE_TOL = 1e-10;
 
+	private static final boolean SERIAL = false;
 	private static final boolean APRIORI_CANDIDATE_GENERATION = false;
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
-	protected static final Level LOGLEVEL = Level.FINEST;
+	protected static final Level LOGLEVEL = Level.FINER;
 
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
-		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Articles/ItemSets/DataSets/Succintly/plants.dat";
+		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Articles/ItemSets/DataSets/Succintly/retail.dat";
 		final boolean associationRules = false;
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
 		// Max iterations
-		final int maxStructureSteps = 100000;
+		final int maxStructureSteps = 1000000;
 		final int maxEMIterations = 100;
 
 		// FPGrowth parameters
@@ -123,6 +124,10 @@ public class ItemsetMining {
 
 		// Set up logging
 		setUpConsoleLogger();
+
+		// TODO enable ILP to be used in parallel
+		if (inferenceAlgorithm instanceof InferILP)
+			logger.warning(" Reverting to Serial for ILP...");
 
 		// Read in transaction database
 		final TransactionList transactions = readTransactions(inputFile);
@@ -269,9 +274,7 @@ public class ItemsetMining {
 				averageCost = SparkEMStep.parallelEMStep(
 						transactions.getTransactionRDD(), inferenceAlgorithm,
 						prevItemsets, noTransactions, newItemsets);
-			} // TODO enable ILP to be used in parallel
-			else if (inferenceAlgorithm instanceof InferILP) {
-				logger.warning(" Reverting to Serial for ILP...");
+			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
 				averageCost = EMStep.serialEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
 						prevItemsets, noTransactions, newItemsets);
@@ -534,6 +537,10 @@ public class ItemsetMining {
 				p = SparkEMStep.parallelCandidateProbability(
 						transactions.getTransactionRDD(), candidate,
 						noTransactions);
+			} else if (SERIAL) {
+				p = EMStep.serialCandidateProbability(
+						transactions.getTransactionList(), candidate,
+						noTransactions);
 			} else {
 				p = EMStep.parallelCandidateProbability(
 						transactions.getTransactionList(), candidate,
@@ -555,8 +562,7 @@ public class ItemsetMining {
 				curCost = SparkEMStep.parallelEMStep(
 						transactions.getTransactionRDD(), inferenceAlgorithm,
 						itemsets, transactions.size());
-			} else if (inferenceAlgorithm instanceof InferILP) {
-				logger.warning(" Reverting to Serial for ILP...");
+			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
 				curCost = EMStep.serialEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
 						itemsets, noTransactions);
