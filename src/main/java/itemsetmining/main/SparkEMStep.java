@@ -55,6 +55,12 @@ public class SparkEMStep {
 			newItemsets.put(tuple._1, tuple._2 / noTransactions);
 		}
 
+		// Update cached probabilities // FIXME implement
+		if (itemsets == null) {
+			throw new UnsupportedOperationException(
+					"Caching in Spark not implemented.");
+		}
+
 		// Reduce: sum Itemset costs
 		return coveringWithCost.values().reduce(
 				new SparkItemsetMining.SumCost())

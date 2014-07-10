@@ -66,7 +66,7 @@ public class ItemsetMining {
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
-		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Articles/ItemSets/DataSets/Succintly/retail.dat";
+		final String dataset = "/tmp/caviar.txt";
 		final boolean associationRules = false;
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
@@ -172,7 +172,21 @@ public class ItemsetMining {
 			final InferenceAlgorithm inferenceAlgorithm,
 			final int maxStructureSteps, final int maxEMIterations) {
 
-		// Intialize with equiprobable singleton sets
+		// Initialize itemset cache
+		if (transactions instanceof TransactionRDD) {
+			throw new UnsupportedOperationException(
+					"Cache not implemeted for Spark.");
+		} else if (SERIAL) {
+			CacheFunctions.serialInitializeCache(
+					transactions.getTransactionList(), singletons,
+					SINGLETON_PRIOR_PROB);
+		} else {
+			CacheFunctions.parallelInitializeCache(
+					transactions.getTransactionList(), singletons,
+					SINGLETON_PRIOR_PROB);
+		}
+
+		// Intialize itemsets with equiprobable singleton sets
 		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
 		for (final int singleton : singletons) {
 			itemsets.put(new Itemset(singleton), SINGLETON_PRIOR_PROB);
@@ -277,11 +291,19 @@ public class ItemsetMining {
 			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
 				averageCost = EMStep.serialEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
-						prevItemsets, noTransactions, newItemsets);
+						null, noTransactions, newItemsets);
 			} else {
 				averageCost = EMStep.parallelEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
+						null, noTransactions, newItemsets);
+				final double averageCostNoCache = EMStep.parallelEMStep(
+						transactions.getTransactionList(), inferenceAlgorithm,
 						prevItemsets, noTransactions, newItemsets);
+				if (Math.abs(averageCost - averageCostNoCache) > 1e-12)
+					logger.severe("\nCosts do not match!! N.C: "
+							+ averageCostNoCache + " C:" + averageCost);
+				else
+					logger.info("\nCosts match.");
 			}
 
 			// If set has stabilised calculate norm(p_prev - p_new)
@@ -547,6 +569,17 @@ public class ItemsetMining {
 						noTransactions);
 			}
 
+			// Adjust cache probabilities for subsets and add to cache
+			if (transactions instanceof TransactionRDD) {
+				// FIXME implement
+			} else if (SERIAL) {
+				CacheFunctions.serialAddItemsetCache(
+						transactions.getTransactionList(), candidate, p);
+			} else {
+				CacheFunctions.parallelAddItemsetCache(
+						transactions.getTransactionList(), candidate, p);
+			}
+
 			// Adjust probabilities for subsets of itemset
 			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 				if (candidate.contains(entry.getKey())) {
@@ -565,18 +598,40 @@ public class ItemsetMining {
 			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
 				curCost = EMStep.serialEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
-						itemsets, noTransactions);
+						null, noTransactions);
 			} else {
 				curCost = EMStep.parallelEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
+						null, noTransactions);
+				final double curCostNoCache = EMStep.parallelEMStep(
+						transactions.getTransactionList(), inferenceAlgorithm,
 						itemsets, noTransactions);
+				if (Math.abs(curCost - curCostNoCache) > 1e-12)
+					logger.severe("\nCosts do not match!! N.C: "
+							+ curCostNoCache + " C:" + curCost);
+				else
+					logger.info("\nCosts match.");
 			}
 			logger.finer(String.format(", cost: %.2f", curCost));
 
-			if (curCost < averageCost) { // found better set of itemsets
+			// Return if better set of itemsets found
+			if (curCost < averageCost) {
 				logger.finer("\n Candidate Accepted.\n");
 				return curCost;
 			} // otherwise keep trying
+
+			// Remove itemset from cache and restore original probabilities
+			if (transactions instanceof TransactionRDD) {
+				// FIXME implement
+			} else if (SERIAL) {
+				CacheFunctions.serialRemoveItemsetCache(
+						transactions.getTransactionList(), candidate, p);
+			} else {
+				CacheFunctions.parallelRemoveItemsetCache(
+						transactions.getTransactionList(), candidate, p);
+			}
+
+			// Remove itemset
 			itemsets.remove(candidate);
 			// and restore original probabilities
 			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {

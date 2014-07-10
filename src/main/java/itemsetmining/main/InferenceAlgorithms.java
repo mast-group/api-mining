@@ -52,13 +52,18 @@ public class InferenceAlgorithms {
 			final int transactionSize = transaction.size();
 			final Transaction coveredItems = new Transaction();
 
-			// Filter out sets containing items not in transaction and items
-			// with nonzero cost
-			final HashMap<Itemset, Double> filteredItemsets = Maps.newHashMap();
-			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
-				if (entry.getValue() > 0.0
-						&& transaction.contains(entry.getKey()))
-					filteredItemsets.put(entry.getKey(), entry.getValue());
+			final HashMap<Itemset, Double> filteredItemsets;
+			if (itemsets == null) { // Preferably use itemset cache
+				filteredItemsets = transaction.getCachedItemsets();
+			} else { // Else filter out sets containing items not in transaction
+						// and items with nonzero cost
+				filteredItemsets = Maps.newHashMap();
+				for (final Map.Entry<Itemset, Double> entry : itemsets
+						.entrySet()) {
+					if (entry.getValue() > 0.0
+							&& transaction.contains(entry.getKey()))
+						filteredItemsets.put(entry.getKey(), entry.getValue());
+				}
 			}
 
 			while (coveredItems.size() != transactionSize) {
