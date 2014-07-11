@@ -288,14 +288,19 @@ public class ItemsetMining {
 				averageCost = SparkEMStep.parallelEMStep(
 						transactions.getTransactionRDD(), inferenceAlgorithm,
 						prevItemsets, noTransactions, newItemsets);
+				// FIXME implement cache update
 			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
 				averageCost = EMStep.serialEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
 						null, noTransactions, newItemsets);
+				CacheFunctions.serialUpdateCacheProbabilities(
+						transactions.getTransactionList(), newItemsets);
 			} else {
 				averageCost = EMStep.parallelEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
 						null, noTransactions, newItemsets);
+				CacheFunctions.parallelUpdateCacheProbabilities(
+						transactions.getTransactionList(), newItemsets);
 				final double averageCostNoCache = EMStep.parallelEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
 						prevItemsets, noTransactions, newItemsets);

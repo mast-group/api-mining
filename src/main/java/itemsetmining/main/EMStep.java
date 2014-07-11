@@ -4,7 +4,6 @@ import itemsetmining.itemset.Itemset;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.util.FutureThreadPool;
-import itemsetmining.util.ParallelThreadPool;
 
 import java.util.HashMap;
 import java.util.List;
@@ -43,13 +42,6 @@ public class EMStep {
 		// Normalise probabilities
 		for (final Itemset set : allCoverings.elementSet()) {
 			newItemsets.put(set, allCoverings.count(set) / noTransactions);
-		}
-
-		// Update cached probabilities
-		if (itemsets == null) {
-			for (final Transaction transaction : transactions)
-				transaction.updateCacheProbabilities(allCoverings,
-						noTransactions);
 		}
 
 		return averageCost;
@@ -103,22 +95,6 @@ public class EMStep {
 		// Normalise probabilities
 		for (final Itemset set : allCoverings.elementSet()) {
 			newItemsets.put(set, allCoverings.count(set) / noTransactions);
-		}
-
-		// Update cached probabilities in parallel
-		if (itemsets == null) {
-			final ParallelThreadPool ptp = new ParallelThreadPool();
-			for (final Transaction transaction : transactions) {
-
-				ptp.pushTask(new Runnable() {
-					@Override
-					public void run() {
-						transaction.updateCacheProbabilities(allCoverings,
-								noTransactions);
-					}
-				});
-			}
-			ptp.waitForTermination();
 		}
 
 		return sum(costs) / noTransactions;

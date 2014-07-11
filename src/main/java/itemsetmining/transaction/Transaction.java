@@ -11,7 +11,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multiset;
 
 /** A transaction is an ordered list of items */
 public class Transaction extends AbstractItemset implements Serializable {
@@ -43,6 +42,7 @@ public class Transaction extends AbstractItemset implements Serializable {
 		// Adjust probabilities for subsets of candidate
 		for (final Iterator<Entry<Itemset, Double>> it = cachedItemsets
 				.entrySet().iterator(); it.hasNext();) {
+
 			final Entry<Itemset, Double> entry = it.next();
 			if (candidate.contains(entry.getKey())) {
 				final double newProb = entry.getValue() - prob;
@@ -53,6 +53,7 @@ public class Transaction extends AbstractItemset implements Serializable {
 					it.remove();
 				}
 			}
+
 		}
 
 		// Add candidate if it supports this transaction
@@ -75,18 +76,19 @@ public class Transaction extends AbstractItemset implements Serializable {
 		cachedItemsets.putAll(droppedItemsets);
 	}
 
-	public void updateCacheProbabilities(final Multiset<Itemset> allCoverings,
-			final double noTransactions) {
+	public void updateCacheProbabilities(
+			final HashMap<Itemset, Double> newItemsets) {
 
 		for (final Iterator<Entry<Itemset, Double>> it = cachedItemsets
 				.entrySet().iterator(); it.hasNext();) {
+
 			final Entry<Itemset, Double> entry = it.next();
-			final double p = allCoverings.count(entry.getKey())
-					/ noTransactions;
-			if (p > 0.0)
-				entry.setValue(p);
+			final Double newProb = newItemsets.get(entry.getKey());
+			if (newProb != null)
+				entry.setValue(newProb);
 			else
 				it.remove();
+
 		}
 
 	}

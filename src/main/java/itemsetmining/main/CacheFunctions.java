@@ -4,6 +4,7 @@ import itemsetmining.itemset.Itemset;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.util.ParallelThreadPool;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -16,6 +17,15 @@ public class CacheFunctions {
 
 		for (final Transaction transaction : transactions)
 			transaction.initializeCache(singletons, prob);
+	}
+
+	/** Serial update Cache probabilities */
+	static void serialUpdateCacheProbabilities(
+			final List<Transaction> transactions,
+			final HashMap<Itemset, Double> newItemsets) {
+
+		for (final Transaction transaction : transactions)
+			transaction.updateCacheProbabilities(newItemsets);
 	}
 
 	/** Serial add itemset to Cache */
@@ -52,6 +62,25 @@ public class CacheFunctions {
 		}
 		ptp.waitForTermination();
 
+	}
+
+	/** Parallel update Cache probabilities */
+	static void parallelUpdateCacheProbabilities(
+			final List<Transaction> transactions,
+			final HashMap<Itemset, Double> newItemsets) {
+
+		final ParallelThreadPool ptp = new ParallelThreadPool();
+
+		for (final Transaction transaction : transactions) {
+
+			ptp.pushTask(new Runnable() {
+				@Override
+				public void run() {
+					transaction.updateCacheProbabilities(newItemsets);
+				}
+			});
+		}
+		ptp.waitForTermination();
 	}
 
 	/** Parallel add itemset to Cache */
