@@ -15,7 +15,7 @@ import org.apache.spark.api.java.function.Function;
 public class SparkCacheFunctions {
 
 	/** Spark parallel initialize Cache */
-	static TransactionDatabase serialInitializeCache(
+	static TransactionDatabase parallelInitializeCache(
 			final TransactionDatabase transactions,
 			final Set<Integer> singletons, final double prob) {
 
@@ -37,7 +37,7 @@ public class SparkCacheFunctions {
 	}
 
 	/** Spark parallel update Cache probabilities */
-	static TransactionDatabase serialUpdateCacheProbabilities(
+	static TransactionDatabase parallelUpdateCacheProbabilities(
 			final TransactionDatabase transactions,
 			final HashMap<Itemset, Double> newItemsets) {
 
@@ -60,7 +60,7 @@ public class SparkCacheFunctions {
 	}
 
 	/** Spark parallel add itemset to Cache */
-	static TransactionRDD serialAddItemsetCache(
+	static TransactionRDD parallelAddItemsetCache(
 			final TransactionDatabase transactions, final Itemset candidate,
 			final double prob) {
 
@@ -82,7 +82,7 @@ public class SparkCacheFunctions {
 	}
 
 	/** Spark parallel remove itemset from Cache */
-	static TransactionRDD serialRemoveItemsetCache(
+	static TransactionRDD parallelRemoveItemsetCache(
 			final TransactionDatabase transactions, final Itemset candidate,
 			final double prob) {
 
