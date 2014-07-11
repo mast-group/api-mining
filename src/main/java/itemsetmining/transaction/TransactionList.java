@@ -20,12 +20,18 @@ public class TransactionList extends TransactionDatabase {
 
 	@Override
 	public JavaRDD<Transaction> getTransactionRDD() {
-		return null;
+		throw new UnsupportedOperationException("This is a list is not a RDD!!");
 	}
 
 	@Override
 	public long size() {
 		return transactions.size();
+	}
+
+	@Override
+	public void updateTransactionCache(
+			final JavaRDD<Transaction> updatedTransactions) {
+		throw new UnsupportedOperationException("This is a list is not a RDD!!");
 	}
 
 }

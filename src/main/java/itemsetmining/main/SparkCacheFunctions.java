@@ -3,7 +3,6 @@ package itemsetmining.main;
 import itemsetmining.itemset.Itemset;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionDatabase;
-import itemsetmining.transaction.TransactionRDD;
 
 import java.util.HashMap;
 import java.util.Set;
@@ -19,13 +18,14 @@ public class SparkCacheFunctions {
 			final TransactionDatabase transactions,
 			final Set<Integer> singletons, final double prob) {
 
-		JavaRDD<Transaction> updatedTransactions = transactions
+		final JavaRDD<Transaction> updatedTransactions = transactions
 				.getTransactionRDD().map(
 						new Function<Transaction, Transaction>() {
 							private static final long serialVersionUID = 8003006706694722226L;
 
 							@Override
-							public Transaction call(Transaction transaction)
+							public Transaction call(
+									final Transaction transaction)
 									throws Exception {
 								transaction.initializeCache(singletons, prob);
 								return transaction;
@@ -33,7 +33,9 @@ public class SparkCacheFunctions {
 
 						});
 
-		return new TransactionRDD(updatedTransactions, transactions.size());
+		// Update cache
+		transactions.updateTransactionCache(updatedTransactions);
+		return transactions;
 	}
 
 	/** Spark parallel update Cache probabilities */
@@ -41,13 +43,14 @@ public class SparkCacheFunctions {
 			final TransactionDatabase transactions,
 			final HashMap<Itemset, Double> newItemsets) {
 
-		JavaRDD<Transaction> updatedTransactions = transactions
+		final JavaRDD<Transaction> updatedTransactions = transactions
 				.getTransactionRDD().map(
 						new Function<Transaction, Transaction>() {
 							private static final long serialVersionUID = 2790115026883265577L;
 
 							@Override
-							public Transaction call(Transaction transaction)
+							public Transaction call(
+									final Transaction transaction)
 									throws Exception {
 								transaction
 										.updateCacheProbabilities(newItemsets);
@@ -56,21 +59,24 @@ public class SparkCacheFunctions {
 
 						});
 
-		return new TransactionRDD(updatedTransactions, transactions.size());
+		// Update cache
+		transactions.updateTransactionCache(updatedTransactions);
+		return transactions;
 	}
 
 	/** Spark parallel add itemset to Cache */
-	static TransactionRDD parallelAddItemsetCache(
+	static TransactionDatabase parallelAddItemsetCache(
 			final TransactionDatabase transactions, final Itemset candidate,
 			final double prob) {
 
-		JavaRDD<Transaction> updatedTransactions = transactions
+		final JavaRDD<Transaction> updatedTransactions = transactions
 				.getTransactionRDD().map(
 						new Function<Transaction, Transaction>() {
 							private static final long serialVersionUID = 3436396242612335594L;
 
 							@Override
-							public Transaction call(Transaction transaction)
+							public Transaction call(
+									final Transaction transaction)
 									throws Exception {
 								transaction.addItemsetCache(candidate, prob);
 								return transaction;
@@ -78,21 +84,24 @@ public class SparkCacheFunctions {
 
 						});
 
-		return new TransactionRDD(updatedTransactions, transactions.size());
+		// Update cache
+		transactions.updateTransactionCache(updatedTransactions);
+		return transactions;
 	}
 
 	/** Spark parallel remove itemset from Cache */
-	static TransactionRDD parallelRemoveItemsetCache(
+	static TransactionDatabase parallelRemoveItemsetCache(
 			final TransactionDatabase transactions, final Itemset candidate,
 			final double prob) {
 
-		JavaRDD<Transaction> updatedTransactions = transactions
+		final JavaRDD<Transaction> updatedTransactions = transactions
 				.getTransactionRDD().map(
 						new Function<Transaction, Transaction>() {
 							private static final long serialVersionUID = 1629357166651253429L;
 
 							@Override
-							public Transaction call(Transaction transaction)
+							public Transaction call(
+									final Transaction transaction)
 									throws Exception {
 								transaction.removeItemsetCache(candidate, prob);
 								return transaction;
@@ -100,7 +109,9 @@ public class SparkCacheFunctions {
 
 						});
 
-		return new TransactionRDD(updatedTransactions, transactions.size());
+		// Update cache
+		transactions.updateTransactionCache(updatedTransactions);
+		return transactions;
 	}
 
 	private SparkCacheFunctions() {

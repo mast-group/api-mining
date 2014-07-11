@@ -167,15 +167,15 @@ public class ItemsetMining {
 	 * Learn itemsets model using structural EM
 	 */
 	protected static HashMap<Itemset, Double> structuralEM(
-			final TransactionDatabase transactions,
-			final Set<Integer> singletons, final ItemsetTree tree,
+			TransactionDatabase transactions, final Set<Integer> singletons,
+			final ItemsetTree tree,
 			final InferenceAlgorithm inferenceAlgorithm,
 			final int maxStructureSteps, final int maxEMIterations) {
 
 		// Initialize itemset cache
 		if (transactions instanceof TransactionRDD) {
-			throw new UnsupportedOperationException(
-					"Cache not implemeted for Spark.");
+			transactions = SparkCacheFunctions.parallelInitializeCache(
+					transactions, singletons, SINGLETON_PRIOR_PROB);
 		} else if (SERIAL) {
 			CacheFunctions.serialInitializeCache(
 					transactions.getTransactionList(), singletons,
@@ -192,7 +192,6 @@ public class ItemsetMining {
 			itemsets.put(new Itemset(singleton), SINGLETON_PRIOR_PROB);
 		}
 		logger.fine(" Initial itemsets: " + itemsets + "\n");
-		double averageCost = Double.POSITIVE_INFINITY;
 
 		// Convert singletons to itemsets if using Apriori candidate generation
 		final List<Itemset> candidates = Lists.newArrayList();
@@ -205,7 +204,7 @@ public class ItemsetMining {
 		final Set<Itemset> rejected_sets = Sets.newHashSet();
 
 		// Initial parameter optimization step
-		averageCost = expectationMaximizationStep(itemsets, transactions,
+		transactions = expectationMaximizationStep(itemsets, transactions,
 				inferenceAlgorithm);
 
 		// Structural EM
@@ -215,46 +214,45 @@ public class ItemsetMining {
 			if (APRIORI_CANDIDATE_GENERATION) {
 				logger.finer("\n+++++ Apriori Structural Optimization at Step "
 						+ iteration + "\n");
-				averageCost = learnStructureAprioriStep(averageCost, itemsets,
+				transactions = learnStructureAprioriStep(itemsets,
 						transactions, candidates, inferenceAlgorithm,
 						maxStructureSteps);
-				if (averageCost == -1) // apriori finished
+				if (transactions == null) // apriori finished
 					break;
 			} else if (iteration % COMBINE_ITEMSETS_EVERY == 0) {
 				logger.finer("\n----- Itemset Combination at Step " + iteration
 						+ "\n");
-				averageCost = combineItemsetsStep(averageCost, itemsets,
-						transactions, rejected_sets, inferenceAlgorithm,
-						maxStructureSteps);
+				transactions = combineItemsetsStep(itemsets, transactions,
+						rejected_sets, inferenceAlgorithm, maxStructureSteps);
 			} else if (iteration % SIMPLIFY_ITEMSETS_EVERY == 0) {
 				logger.finer("\n----- Itemset Simplification at Step "
 						+ iteration + "\n"); // TODO use dedicated maxSteps
 												// parameter
-				averageCost = simplifyItemsetsStep(averageCost, itemsets,
-						transactions, rejected_sets, inferenceAlgorithm,
-						maxStructureSteps);
+				transactions = simplifyItemsetsStep(itemsets, transactions,
+						rejected_sets, inferenceAlgorithm, maxStructureSteps);
 			} else {
 				logger.finer("\n+++++ Tree Structural Optimization at Step "
 						+ iteration + "\n");
-				averageCost = learnStructureStep(averageCost, itemsets,
-						transactions, tree, rejected_sets, inferenceAlgorithm,
-						maxStructureSteps);
-				if (averageCost == -1) // structure iteration limit exceeded
+				transactions = learnStructureStep(itemsets, transactions, tree,
+						rejected_sets, inferenceAlgorithm, maxStructureSteps);
+				if (transactions == null) // structure iteration limit exceeded
 					break;
 			}
-			logger.finer(String.format(" Average cost: %.2f%n", averageCost));
+			if (transactions != null)
+				logger.finer(String.format(" Average cost: %.2f%n",
+						transactions.getAverageCost()));
 
 			// Optimize parameters of new structure
 			if (iteration % OPTIMIZE_PARAMS_EVERY == 0) {
 				logger.fine("\n***** Parameter Optimization at Step "
 						+ iteration + "\n");
-				averageCost = expectationMaximizationStep(itemsets,
+				transactions = expectationMaximizationStep(itemsets,
 						transactions, inferenceAlgorithm);
 			}
 
 		}
 
-		if (averageCost != -1)
+		if (transactions != null)
 			logger.warning("\nEM iteration limit exceeded.\n");
 		return itemsets;
 	}
@@ -262,13 +260,13 @@ public class ItemsetMining {
 	/**
 	 * Find optimal parameters for given set of itemsets and store in itemsets
 	 * 
-	 * @return average cost per transaction
+	 * @return TransactionDatabase with the average cost per transaction
 	 *         <p>
 	 *         NB. zero probability itemsets are dropped
 	 */
-	private static double expectationMaximizationStep(
+	private static TransactionDatabase expectationMaximizationStep(
 			final HashMap<Itemset, Double> itemsets,
-			final TransactionDatabase transactions,
+			TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm) {
 
 		logger.fine(" Structure Optimal Itemsets: " + itemsets + "\n");
@@ -287,8 +285,18 @@ public class ItemsetMining {
 			if (transactions instanceof TransactionRDD) {
 				averageCost = SparkEMStep.parallelEMStep(
 						transactions.getTransactionRDD(), inferenceAlgorithm,
-						prevItemsets, noTransactions, newItemsets);
-				// FIXME implement cache update
+						null, noTransactions, newItemsets);
+				transactions = SparkCacheFunctions
+						.parallelUpdateCacheProbabilities(transactions,
+								newItemsets);
+				// final double averageCostNoCache = SparkEMStep.parallelEMStep(
+				// transactions.getTransactionRDD(), inferenceAlgorithm,
+				// prevItemsets, noTransactions, newItemsets);
+				// if (Math.abs(averageCost - averageCostNoCache) > 1e-12)
+				// logger.severe("\nCosts do not match!! N.C: "
+				// + averageCostNoCache + " C:" + averageCost);
+				// else
+				// logger.info("\nCosts match.");
 			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
 				averageCost = EMStep.serialEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
@@ -301,14 +309,6 @@ public class ItemsetMining {
 						null, noTransactions, newItemsets);
 				CacheFunctions.parallelUpdateCacheProbabilities(
 						transactions.getTransactionList(), newItemsets);
-				final double averageCostNoCache = EMStep.parallelEMStep(
-						transactions.getTransactionList(), inferenceAlgorithm,
-						prevItemsets, noTransactions, newItemsets);
-				if (Math.abs(averageCost - averageCostNoCache) > 1e-12)
-					logger.severe("\nCosts do not match!! N.C: "
-							+ averageCostNoCache + " C:" + averageCost);
-				else
-					logger.info("\nCosts match.");
 			}
 
 			// If set has stabilised calculate norm(p_prev - p_new)
@@ -330,11 +330,15 @@ public class ItemsetMining {
 		logger.fine(String.format(" Average cost: %.2f%n", averageCost));
 		assert !Double.isNaN(averageCost);
 		assert !Double.isInfinite(averageCost);
-		return averageCost;
+
+		// Update average cost for transactions
+		transactions.setAverageCost(averageCost);
+
+		return transactions;
 	}
 
 	/** Generate candidate itemsets from Itemset tree */
-	private static double learnStructureStep(final double averageCost,
+	private static TransactionDatabase learnStructureStep(
 			final HashMap<Itemset, Double> itemsets,
 			final TransactionDatabase transactions, final ItemsetTree tree,
 			final Set<Itemset> rejected_sets,
@@ -352,7 +356,7 @@ public class ItemsetMining {
 
 			// Evaluate candidate itemset
 			if (!rejected_sets.contains(candidate)) {
-				final Double betterCost = evaluateCandidate(averageCost,
+				final TransactionDatabase betterCost = evaluateCandidate(
 						itemsets, transactions, inferenceAlgorithm, candidate);
 				if (betterCost != null) // Better itemset found
 					return betterCost;
@@ -364,11 +368,11 @@ public class ItemsetMining {
 
 		// No better itemset found
 		logger.warning("\n\n Structure iteration limit exceeded. No better candidate found.\n");
-		return -1;
+		return null;
 	}
 
 	/** Generate candidate itemsets from power set */
-	private static double simplifyItemsetsStep(final double averageCost,
+	private static TransactionDatabase simplifyItemsetsStep(
 			final HashMap<Itemset, Double> itemsets,
 			final TransactionDatabase transactions,
 			final Set<Itemset> rejected_sets,
@@ -401,7 +405,7 @@ public class ItemsetMining {
 				// Evaluate candidate itemset
 				final Itemset candidate = new Itemset(subset);
 				if (!rejected_sets.contains(candidate)) {
-					final Double betterCost = evaluateCandidate(averageCost,
+					final TransactionDatabase betterCost = evaluateCandidate(
 							itemsets, transactions, inferenceAlgorithm,
 							candidate);
 					if (betterCost != null) // Better itemset found
@@ -414,7 +418,7 @@ public class ItemsetMining {
 				iteration++;
 				if (iteration > maxSteps) { // Iteration limit exceeded
 					logger.warning("\n Simplify iteration limit exceeded.\n");
-					return averageCost; // No better itemset found
+					return transactions; // No better itemset found
 				}
 
 			}
@@ -422,11 +426,11 @@ public class ItemsetMining {
 
 		// No better itemset found
 		logger.finer("\n No better candidate found.\n");
-		return averageCost;
+		return transactions;
 	}
 
 	/** Generate candidate itemsets by combining existing sets */
-	private static double combineItemsetsStep(final double averageCost,
+	private static TransactionDatabase combineItemsetsStep(
 			final HashMap<Itemset, Double> itemsets,
 			final TransactionDatabase transactions,
 			final Set<Itemset> rejected_sets,
@@ -456,7 +460,7 @@ public class ItemsetMining {
 
 				// Evaluate candidate itemset
 				if (!rejected_sets.contains(candidate)) {
-					final Double betterCost = evaluateCandidate(averageCost,
+					final TransactionDatabase betterCost = evaluateCandidate(
 							itemsets, transactions, inferenceAlgorithm,
 							candidate);
 					if (betterCost != null) // Better itemset found
@@ -469,7 +473,7 @@ public class ItemsetMining {
 				iteration++;
 				if (iteration > maxSteps) { // Iteration limit exceeded
 					logger.warning("\n Combine iteration limit exceeded.\n");
-					return averageCost; // No better itemset found
+					return transactions; // No better itemset found
 				}
 
 			}
@@ -477,11 +481,11 @@ public class ItemsetMining {
 
 		// No better itemset found
 		logger.finer("\n No better candidate found.\n");
-		return averageCost;
+		return transactions;
 	}
 
 	/** Generate candidate itemsets Apriori style from singletons */
-	private static double learnStructureAprioriStep(final double averageCost,
+	private static TransactionDatabase learnStructureAprioriStep(
 			final HashMap<Itemset, Double> itemsets,
 			final TransactionDatabase transactions,
 			final List<Itemset> candidates,
@@ -511,9 +515,9 @@ public class ItemsetMining {
 					if (!newCandidates.contains(candidate)) {
 
 						// Evaluate candidate itemset
-						final Double betterCost = evaluateCandidate(
-								averageCost, itemsets, transactions,
-								inferenceAlgorithm, candidate);
+						final TransactionDatabase betterCost = evaluateCandidate(
+								itemsets, transactions, inferenceAlgorithm,
+								candidate);
 						if (betterCost != null) { // Better itemset found
 							if (prevCandidates != candidates) {
 								candidates.clear();
@@ -530,7 +534,7 @@ public class ItemsetMining {
 					iteration++;
 					if (iteration > maxSteps) { // Iteration limit exceeded
 						logger.warning("\n Structure iteration limit exceeded. No better candidate found.\n");
-						return -1; // No better itemset found
+						return null; // No better itemset found
 					}
 
 				}
@@ -541,13 +545,13 @@ public class ItemsetMining {
 
 		// No better itemset found
 		logger.finer("\n All possible candidates found.\n");
-		return -1;
+		return null;
 	}
 
 	/** Evaluate a candidate itemset to see if it should be included */
-	private static Double evaluateCandidate(final double averageCost,
+	private static TransactionDatabase evaluateCandidate(
 			final HashMap<Itemset, Double> itemsets,
-			final TransactionDatabase transactions,
+			TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
 		// Skip empty candidates and candidates already present
@@ -576,7 +580,8 @@ public class ItemsetMining {
 
 			// Adjust cache probabilities for subsets and add to cache
 			if (transactions instanceof TransactionRDD) {
-				// FIXME implement
+				transactions = SparkCacheFunctions.parallelAddItemsetCache(
+						transactions, candidate, p);
 			} else if (SERIAL) {
 				CacheFunctions.serialAddItemsetCache(
 						transactions.getTransactionList(), candidate, p);
@@ -599,7 +604,15 @@ public class ItemsetMining {
 			if (transactions instanceof TransactionRDD) {
 				curCost = SparkEMStep.parallelEMStep(
 						transactions.getTransactionRDD(), inferenceAlgorithm,
-						itemsets, transactions.size());
+						null, transactions.size());
+				// final double curCostNoCache = SparkEMStep.parallelEMStep(
+				// transactions.getTransactionRDD(), inferenceAlgorithm,
+				// itemsets, transactions.size());
+				// if (Math.abs(curCost - curCostNoCache) > 1e-12)
+				// logger.severe("\nCosts do not match!! N.C: "
+				// + curCostNoCache + " C:" + curCost);
+				// else
+				// logger.info("\nCosts match.");
 			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
 				curCost = EMStep.serialEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
@@ -608,26 +621,20 @@ public class ItemsetMining {
 				curCost = EMStep.parallelEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
 						null, noTransactions);
-				final double curCostNoCache = EMStep.parallelEMStep(
-						transactions.getTransactionList(), inferenceAlgorithm,
-						itemsets, noTransactions);
-				if (Math.abs(curCost - curCostNoCache) > 1e-12)
-					logger.severe("\nCosts do not match!! N.C: "
-							+ curCostNoCache + " C:" + curCost);
-				else
-					logger.info("\nCosts match.");
 			}
 			logger.finer(String.format(", cost: %.2f", curCost));
 
 			// Return if better set of itemsets found
-			if (curCost < averageCost) {
+			if (curCost < transactions.getAverageCost()) {
 				logger.finer("\n Candidate Accepted.\n");
-				return curCost;
+				transactions.setAverageCost(curCost);
+				return transactions;
 			} // otherwise keep trying
 
 			// Remove itemset from cache and restore original probabilities
 			if (transactions instanceof TransactionRDD) {
-				// FIXME implement
+				transactions = SparkCacheFunctions.parallelRemoveItemsetCache(
+						transactions, candidate, p);
 			} else if (SERIAL) {
 				CacheFunctions.serialRemoveItemsetCache(
 						transactions.getTransactionList(), candidate, p);

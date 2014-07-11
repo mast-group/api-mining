@@ -7,7 +7,7 @@ import org.apache.spark.api.java.JavaRDD;
 /** Wrapper class for storing transaction database as a Spark RDD */
 public class TransactionRDD extends TransactionDatabase {
 
-	private final JavaRDD<Transaction> transactions;
+	private JavaRDD<Transaction> transactions;
 	private final long noTransactions;
 
 	public TransactionRDD(final JavaRDD<Transaction> transactions,
@@ -18,12 +18,18 @@ public class TransactionRDD extends TransactionDatabase {
 
 	@Override
 	public List<Transaction> getTransactionList() {
-		return null;
+		throw new UnsupportedOperationException("This is a RDD not a List!!");
 	}
 
 	@Override
 	public JavaRDD<Transaction> getTransactionRDD() {
 		return transactions;
+	}
+
+	@Override
+	public void updateTransactionCache(
+			final JavaRDD<Transaction> updatedTransactions) {
+		transactions = updatedTransactions;
 	}
 
 	@Override

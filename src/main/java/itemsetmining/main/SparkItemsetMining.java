@@ -31,6 +31,8 @@ import org.apache.spark.api.java.function.PairFunction;
 
 import scala.Tuple2;
 
+import com.google.common.collect.Sets;
+
 public class SparkItemsetMining extends ItemsetMining {
 
 	private static final String LOG_FILE = "%t/spark_mining.log";
@@ -92,8 +94,8 @@ public class SparkItemsetMining extends ItemsetMining {
 		final TransactionRDD transactions = new TransactionRDD(db, db.count());
 		logger.fine("\n============= ITEMSET INFERENCE =============\n");
 		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
-				singletons.keySet(), tree, inferenceAlg, maxStructureSteps,
-				maxEMIterations);
+				Sets.newHashSet(singletons.keySet()), tree, inferenceAlg,
+				maxStructureSteps, maxEMIterations);
 		logger.info("\n============= INTERESTING ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 			logger.info(String.format("%s\tprob: %1.5f %n", entry.getKey(),
