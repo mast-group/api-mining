@@ -19,7 +19,7 @@ import scala.Tuple2;
 
 import com.google.common.collect.Sets;
 
-/** Class to hold the various serial/parallel transaction EM Steps for Spark */
+/** Class to hold the various parallel transaction EM Steps for Spark */
 public class SparkEMStep {
 
 	/** Spark parallel E-step and M-step combined */
