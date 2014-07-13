@@ -20,7 +20,7 @@ public class Transaction extends AbstractItemset implements Serializable {
 	private HashMap<Itemset, Double> cachedItemsets;
 
 	/** Cached itemsets dropped during candidate eval */
-	private static HashMap<Itemset, Double> droppedItemsets;
+	private HashMap<Itemset, Double> droppedItemsets;
 
 	public void initializeCache(final Set<Integer> singletons, final double prob) {
 		cachedItemsets = Maps.newHashMap();
