@@ -125,13 +125,18 @@ public class InferenceAlgorithms {
 				final HashMap<Itemset, Double> itemsets,
 				final Transaction transaction) {
 
-			// Filter out sets containing items not in transaction and items
-			// with nonzero cost
-			final HashMap<Itemset, Double> filteredItemsets = Maps.newHashMap();
-			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
-				if (entry.getValue() > 0.0
-						&& transaction.contains(entry.getKey()))
-					filteredItemsets.put(entry.getKey(), entry.getValue());
+			final HashMap<Itemset, Double> filteredItemsets;
+			if (itemsets == null) { // Preferably use itemset cache
+				filteredItemsets = transaction.getCachedItemsets();
+			} else { // Else filter out sets containing items not in transaction
+						// and items with nonzero cost
+				filteredItemsets = Maps.newHashMap();
+				for (final Map.Entry<Itemset, Double> entry : itemsets
+						.entrySet()) {
+					if (entry.getValue() > 0.0
+							&& transaction.contains(entry.getKey()))
+						filteredItemsets.put(entry.getKey(), entry.getValue());
+				}
 			}
 
 			double totalCost = 0;
@@ -211,6 +216,11 @@ public class InferenceAlgorithms {
 		public double infer(final Set<Itemset> covering,
 				final HashMap<Itemset, Double> itemsets,
 				final Transaction transaction) {
+
+			// Cache not implemented for ILP yet (requires LinkedHashMap)
+			if (itemsets == null)
+				throw new UnsupportedOperationException(
+						"Cache not implemented for ILP yet!");
 
 			// Load solver if necessary
 			final LinearProgramSolver solver = SolverFactory.getSolver("CPLEX");
