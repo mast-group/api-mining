@@ -12,11 +12,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.logging.FileHandler;
-import java.util.logging.Formatter;
 import java.util.logging.Level;
-import java.util.logging.LogManager;
-import java.util.logging.LogRecord;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,8 +30,6 @@ import scala.Tuple2;
 import com.google.common.collect.Sets;
 
 public class SparkItemsetMining extends ItemsetMining {
-
-	private static final String LOG_FILE = "%t/spark_mining.log";
 
 	public static void main(final String[] args) throws IOException {
 
@@ -187,27 +181,6 @@ public class SparkItemsetMining extends ItemsetMining {
 
 			return transaction;
 		}
-	}
-
-	/** Set up logging to file */
-	protected static void setUpFileLogger() {
-		LogManager.getLogManager().reset();
-		logger.setLevel(LOGLEVEL);
-		FileHandler handler = null;
-		try { // Limit log file to 1MB
-			handler = new FileHandler(LOG_FILE, 1048576, 1);
-		} catch (final IOException e) {
-			e.printStackTrace();
-		}
-		handler.setLevel(Level.ALL);
-		final Formatter formatter = new Formatter() {
-			@Override
-			public String format(final LogRecord record) {
-				return record.getMessage();
-			}
-		};
-		handler.setFormatter(formatter);
-		logger.addHandler(handler);
 	}
 
 }

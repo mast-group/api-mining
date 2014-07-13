@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.logging.ConsoleHandler;
+import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
@@ -57,16 +58,18 @@ public class ItemsetMining {
 	private static final int COMBINE_ITEMSETS_EVERY = 4;
 	private static final double OPTIMIZE_TOL = 1e-10;
 
+	private static final boolean ITEMSET_CACHE = true;
 	private static final boolean SERIAL = false;
 	private static final boolean APRIORI_CANDIDATE_GENERATION = false;
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
+	private static final String LOG_FILE = "%t/spark_mining.log";
 	protected static final Level LOGLEVEL = Level.FINER;
 
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
-		final String dataset = "/tmp/caviar.txt";
+		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Articles/ItemSets/DataSets/Succintly/plants.dat";
 		final boolean associationRules = false;
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
@@ -173,17 +176,19 @@ public class ItemsetMining {
 			final int maxStructureSteps, final int maxEMIterations) {
 
 		// Initialize itemset cache
-		if (transactions instanceof TransactionRDD) {
-			transactions = SparkCacheFunctions.parallelInitializeCache(
-					transactions, singletons, SINGLETON_PRIOR_PROB);
-		} else if (SERIAL) {
-			CacheFunctions.serialInitializeCache(
-					transactions.getTransactionList(), singletons,
-					SINGLETON_PRIOR_PROB);
-		} else {
-			CacheFunctions.parallelInitializeCache(
-					transactions.getTransactionList(), singletons,
-					SINGLETON_PRIOR_PROB);
+		if (ITEMSET_CACHE) {
+			if (transactions instanceof TransactionRDD) {
+				transactions = SparkCacheFunctions.parallelInitializeCache(
+						transactions, singletons, SINGLETON_PRIOR_PROB);
+			} else if (SERIAL) {
+				CacheFunctions.serialInitializeCache(
+						transactions.getTransactionList(), singletons,
+						SINGLETON_PRIOR_PROB);
+			} else {
+				CacheFunctions.parallelInitializeCache(
+						transactions.getTransactionList(), singletons,
+						SINGLETON_PRIOR_PROB);
+			}
 		}
 
 		// Intialize itemsets with equiprobable singleton sets
@@ -278,6 +283,13 @@ public class ItemsetMining {
 		double norm = 1;
 		while (norm > OPTIMIZE_TOL) {
 
+			// Use cache in inference algorithm by not passing prevItemsets
+			final HashMap<Itemset, Double> passItemsets;
+			if (ITEMSET_CACHE)
+				passItemsets = null;
+			else
+				passItemsets = prevItemsets;
+
 			// Set up storage
 			final HashMap<Itemset, Double> newItemsets = Maps.newHashMap();
 
@@ -285,10 +297,11 @@ public class ItemsetMining {
 			if (transactions instanceof TransactionRDD) {
 				averageCost = SparkEMStep.parallelEMStep(
 						transactions.getTransactionRDD(), inferenceAlgorithm,
-						null, noTransactions, newItemsets);
-				transactions = SparkCacheFunctions
-						.parallelUpdateCacheProbabilities(transactions,
-								newItemsets);
+						passItemsets, noTransactions, newItemsets);
+				if (ITEMSET_CACHE)
+					transactions = SparkCacheFunctions
+							.parallelUpdateCacheProbabilities(transactions,
+									newItemsets);
 				// final double averageCostNoCache = SparkEMStep.parallelEMStep(
 				// transactions.getTransactionRDD(), inferenceAlgorithm,
 				// prevItemsets, noTransactions, newItemsets);
@@ -300,15 +313,17 @@ public class ItemsetMining {
 			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
 				averageCost = EMStep.serialEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
-						null, noTransactions, newItemsets);
-				CacheFunctions.serialUpdateCacheProbabilities(
-						transactions.getTransactionList(), newItemsets);
+						passItemsets, noTransactions, newItemsets);
+				if (ITEMSET_CACHE)
+					CacheFunctions.serialUpdateCacheProbabilities(
+							transactions.getTransactionList(), newItemsets);
 			} else {
 				averageCost = EMStep.parallelEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
-						null, noTransactions, newItemsets);
-				CacheFunctions.parallelUpdateCacheProbabilities(
-						transactions.getTransactionList(), newItemsets);
+						passItemsets, noTransactions, newItemsets);
+				if (ITEMSET_CACHE)
+					CacheFunctions.parallelUpdateCacheProbabilities(
+							transactions.getTransactionList(), newItemsets);
 			}
 
 			// If set has stabilised calculate norm(p_prev - p_new)
@@ -579,15 +594,17 @@ public class ItemsetMining {
 			}
 
 			// Adjust cache probabilities for subsets and add to cache
-			if (transactions instanceof TransactionRDD) {
-				transactions = SparkCacheFunctions.parallelAddItemsetCache(
-						transactions, candidate, p);
-			} else if (SERIAL) {
-				CacheFunctions.serialAddItemsetCache(
-						transactions.getTransactionList(), candidate, p);
-			} else {
-				CacheFunctions.parallelAddItemsetCache(
-						transactions.getTransactionList(), candidate, p);
+			if (ITEMSET_CACHE) {
+				if (transactions instanceof TransactionRDD) {
+					transactions = SparkCacheFunctions.parallelAddItemsetCache(
+							transactions, candidate, p);
+				} else if (SERIAL) {
+					CacheFunctions.serialAddItemsetCache(
+							transactions.getTransactionList(), candidate, p);
+				} else {
+					CacheFunctions.parallelAddItemsetCache(
+							transactions.getTransactionList(), candidate, p);
+				}
 			}
 
 			// Adjust probabilities for subsets of itemset
@@ -599,12 +616,19 @@ public class ItemsetMining {
 			// Add itemset
 			itemsets.put(candidate, p);
 
+			// Use cache in inference algorithm by not passing itemsets
+			final HashMap<Itemset, Double> passItemsets;
+			if (ITEMSET_CACHE)
+				passItemsets = null;
+			else
+				passItemsets = itemsets;
+
 			// Find cost in parallel
 			double curCost = 0;
 			if (transactions instanceof TransactionRDD) {
 				curCost = SparkEMStep.parallelEMStep(
 						transactions.getTransactionRDD(), inferenceAlgorithm,
-						null, transactions.size());
+						passItemsets, transactions.size());
 				// final double curCostNoCache = SparkEMStep.parallelEMStep(
 				// transactions.getTransactionRDD(), inferenceAlgorithm,
 				// itemsets, transactions.size());
@@ -616,11 +640,11 @@ public class ItemsetMining {
 			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
 				curCost = EMStep.serialEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
-						null, noTransactions);
+						passItemsets, noTransactions);
 			} else {
 				curCost = EMStep.parallelEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
-						null, noTransactions);
+						passItemsets, noTransactions);
 			}
 			logger.finer(String.format(", cost: %.2f", curCost));
 
@@ -632,15 +656,18 @@ public class ItemsetMining {
 			} // otherwise keep trying
 
 			// Remove itemset from cache and restore original probabilities
-			if (transactions instanceof TransactionRDD) {
-				transactions = SparkCacheFunctions.parallelRemoveItemsetCache(
-						transactions, candidate, p);
-			} else if (SERIAL) {
-				CacheFunctions.serialRemoveItemsetCache(
-						transactions.getTransactionList(), candidate, p);
-			} else {
-				CacheFunctions.parallelRemoveItemsetCache(
-						transactions.getTransactionList(), candidate, p);
+			if (ITEMSET_CACHE) {
+				if (transactions instanceof TransactionRDD) {
+					transactions = SparkCacheFunctions
+							.parallelRemoveItemsetCache(transactions,
+									candidate, p);
+				} else if (SERIAL) {
+					CacheFunctions.serialRemoveItemsetCache(
+							transactions.getTransactionList(), candidate, p);
+				} else {
+					CacheFunctions.parallelRemoveItemsetCache(
+							transactions.getTransactionList(), candidate, p);
+				}
 			}
 
 			// Remove itemset
@@ -781,6 +808,15 @@ public class ItemsetMining {
 		}
 	};
 
+	/** Handler for the console logger */
+	public static class Handler extends ConsoleHandler {
+		@Override
+		protected void setOutputStream(final OutputStream out)
+				throws SecurityException {
+			super.setOutputStream(System.out);
+		}
+	}
+
 	/** Set up logging to console */
 	protected static void setUpConsoleLogger() {
 		LogManager.getLogManager().reset();
@@ -797,13 +833,25 @@ public class ItemsetMining {
 		logger.addHandler(handler);
 	}
 
-	/** Handler for the console logger */
-	public static class Handler extends ConsoleHandler {
-		@Override
-		protected void setOutputStream(final OutputStream out)
-				throws SecurityException {
-			super.setOutputStream(System.out);
+	/** Set up logging to file */
+	protected static void setUpFileLogger() {
+		LogManager.getLogManager().reset();
+		logger.setLevel(LOGLEVEL);
+		FileHandler handler = null;
+		try { // Limit log file to 1MB
+			handler = new FileHandler(LOG_FILE, 1048576, 1);
+		} catch (final IOException e) {
+			e.printStackTrace();
 		}
+		handler.setLevel(Level.ALL);
+		final Formatter formatter = new Formatter() {
+			@Override
+			public String format(final LogRecord record) {
+				return record.getMessage();
+			}
+		};
+		handler.setFormatter(formatter);
+		logger.addHandler(handler);
 	}
 
 	/**
