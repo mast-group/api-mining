@@ -21,7 +21,7 @@ public class ItemsetScaling {
 	private static final File dbFile = new File("/tmp/itemset.txt");
 	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
-	private static final int noSamples = 1;
+	private static final int noSamples = 10;
 
 	private static final int noTransactions = 1000;
 	private static final int noExtraSets = 5;
@@ -33,13 +33,13 @@ public class ItemsetScaling {
 	public static void main(final String[] args) throws IOException {
 
 		// Run with and without spark
-		// scalingTransactions(false, 6);
-		// scalingTransactions(true, 8);
+		scalingTransactions(false, 7);
+		scalingTransactions(true, 8);
 
 		// scalingItemsets(false, 4);
 		// scalingItemsets(true, 4);
 
-		scalingItems(false, 7);
+		// scalingItems(false, 7);
 		// scalingItems(true, 7);
 
 	}

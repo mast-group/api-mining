@@ -64,12 +64,12 @@ public class ItemsetMining {
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
 	private static final String LOG_FILE = "%t/spark_mining.log";
-	protected static final Level LOGLEVEL = Level.FINER;
+	protected static final Level LOGLEVEL = Level.FINEST;
 
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
-		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Articles/ItemSets/DataSets/Succintly/plants.dat";
+		final String dataset = "/tmp/caviar.txt";
 		final boolean associationRules = false;
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
@@ -302,14 +302,7 @@ public class ItemsetMining {
 					transactions = SparkCacheFunctions
 							.parallelUpdateCacheProbabilities(transactions,
 									newItemsets);
-				// final double averageCostNoCache = SparkEMStep.parallelEMStep(
-				// transactions.getTransactionRDD(), inferenceAlgorithm,
-				// prevItemsets, noTransactions, newItemsets);
-				// if (Math.abs(averageCost - averageCostNoCache) > 1e-12)
-				// logger.severe("\nCosts do not match!! N.C: "
-				// + averageCostNoCache + " C:" + averageCost);
-				// else
-				// logger.info("\nCosts match.");
+				// checkCacheWorks(averageCost, averageCostNoCache);
 			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
 				averageCost = EMStep.serialEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
@@ -593,28 +586,9 @@ public class ItemsetMining {
 						noTransactions);
 			}
 
-			// Adjust cache probabilities for subsets and add to cache
-			if (ITEMSET_CACHE) {
-				if (transactions instanceof TransactionRDD) {
-					transactions = SparkCacheFunctions.parallelAddItemsetCache(
-							transactions, candidate, p);
-				} else if (SERIAL) {
-					CacheFunctions.serialAddItemsetCache(
-							transactions.getTransactionList(), candidate, p);
-				} else {
-					CacheFunctions.parallelAddItemsetCache(
-							transactions.getTransactionList(), candidate, p);
-				}
-			}
-
-			// Adjust probabilities for subsets of itemset
-			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-				if (candidate.contains(entry.getKey())) {
-					itemsets.put(entry.getKey(), entry.getValue() - p);
-				}
-			}
-			// Add itemset
-			itemsets.put(candidate, p);
+			// If not using cache: Add candidate to itemsets
+			if (!ITEMSET_CACHE)
+				addCandidateItemsets(itemsets, candidate, p);
 
 			// Use cache in inference algorithm by not passing itemsets
 			final HashMap<Itemset, Double> passItemsets;
@@ -628,61 +602,95 @@ public class ItemsetMining {
 			if (transactions instanceof TransactionRDD) {
 				curCost = SparkEMStep.parallelEMStep(
 						transactions.getTransactionRDD(), inferenceAlgorithm,
-						passItemsets, transactions.size());
-				// final double curCostNoCache = SparkEMStep.parallelEMStep(
-				// transactions.getTransactionRDD(), inferenceAlgorithm,
-				// itemsets, transactions.size());
-				// if (Math.abs(curCost - curCostNoCache) > 1e-12)
-				// logger.severe("\nCosts do not match!! N.C: "
-				// + curCostNoCache + " C:" + curCost);
-				// else
-				// logger.info("\nCosts match.");
+						passItemsets, transactions.size(), candidate, p);
+				// checkCacheWorks(curCost, curCostNoCache);
 			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
 				curCost = EMStep.serialEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
-						passItemsets, noTransactions);
+						passItemsets, noTransactions, candidate, p);
 			} else {
 				curCost = EMStep.parallelEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
-						passItemsets, noTransactions);
+						passItemsets, noTransactions, candidate, p);
 			}
 			logger.finer(String.format(", cost: %.2f", curCost));
 
 			// Return if better set of itemsets found
 			if (curCost < transactions.getAverageCost()) {
 				logger.finer("\n Candidate Accepted.\n");
+				if (ITEMSET_CACHE) {
+					// Update cache with candidate
+					if (transactions instanceof TransactionRDD) {
+						transactions = SparkCacheFunctions
+								.parallelAddItemsetCache(transactions,
+										candidate, p);
+					} else if (SERIAL) {
+						CacheFunctions
+								.serialAddItemsetCache(
+										transactions.getTransactionList(),
+										candidate, p);
+					} else {
+						CacheFunctions
+								.parallelAddItemsetCache(
+										transactions.getTransactionList(),
+										candidate, p);
+					}
+					// Update itemsets with candidate
+					addCandidateItemsets(itemsets, candidate, p);
+				}
 				transactions.setAverageCost(curCost);
 				return transactions;
 			} // otherwise keep trying
 
-			// Remove itemset from cache and restore original probabilities
-			if (ITEMSET_CACHE) {
-				if (transactions instanceof TransactionRDD) {
-					transactions = SparkCacheFunctions
-							.parallelRemoveItemsetCache(transactions,
-									candidate, p);
-				} else if (SERIAL) {
-					CacheFunctions.serialRemoveItemsetCache(
-							transactions.getTransactionList(), candidate, p);
-				} else {
-					CacheFunctions.parallelRemoveItemsetCache(
-							transactions.getTransactionList(), candidate, p);
-				}
-			}
-
-			// Remove itemset
-			itemsets.remove(candidate);
-			// and restore original probabilities
-			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-				if (candidate.contains(entry.getKey())) {
-					itemsets.put(entry.getKey(), entry.getValue() + p);
-				}
-			}
+			// If not using cache: Remove candidate from itemsets
+			if (!ITEMSET_CACHE)
+				removeCandidateItemsets(itemsets, candidate, p);
 
 			logger.finer("\n Structural candidate itemsets: ");
 		}
 		// No better candidate found
 		return null;
+	}
+
+	// TODO remove, for debugging only
+	public static void checkCacheWorks(final double curCost,
+			final double curCostNoCache) {
+
+		if (Math.abs(curCost - curCostNoCache) > 1e-12)
+			logger.severe("\nCosts do not match!! N.C: " + curCostNoCache
+					+ " C:" + curCost);
+		else
+			logger.info("\nCosts match.");
+	}
+
+	public static void addCandidateItemsets(
+			final HashMap<Itemset, Double> itemsets, final Itemset candidate,
+			final double p) {
+
+		// Adjust probabilities for subsets of itemset
+		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+			if (candidate.contains(entry.getKey())) {
+				itemsets.put(entry.getKey(), entry.getValue() - p);
+			}
+		}
+
+		// Add itemset
+		itemsets.put(candidate, p);
+	}
+
+	public static void removeCandidateItemsets(
+			final HashMap<Itemset, Double> itemsets, final Itemset candidate,
+			final double p) {
+
+		// Remove itemset
+		itemsets.remove(candidate);
+
+		// and restore original probabilities
+		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+			if (candidate.contains(entry.getKey())) {
+				itemsets.put(entry.getKey(), entry.getValue() + p);
+			}
+		}
 	}
 
 	private static TransactionList readTransactions(final File inputFile)

@@ -89,31 +89,6 @@ public class SparkCacheFunctions {
 		return transactions;
 	}
 
-	/** Spark parallel remove itemset from Cache */
-	static TransactionDatabase parallelRemoveItemsetCache(
-			final TransactionDatabase transactions, final Itemset candidate,
-			final double prob) {
-
-		final JavaRDD<Transaction> updatedTransactions = transactions
-				.getTransactionRDD().map(
-						new Function<Transaction, Transaction>() {
-							private static final long serialVersionUID = 1629357166651253429L;
-
-							@Override
-							public Transaction call(
-									final Transaction transaction)
-									throws Exception {
-								transaction.removeItemsetCache(candidate, prob);
-								return transaction;
-							}
-
-						});
-
-		// Update cache
-		transactions.updateTransactionCache(updatedTransactions);
-		return transactions;
-	}
-
 	private SparkCacheFunctions() {
 	}
 

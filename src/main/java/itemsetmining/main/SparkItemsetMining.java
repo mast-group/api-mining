@@ -31,6 +31,8 @@ import com.google.common.collect.Sets;
 
 public class SparkItemsetMining extends ItemsetMining {
 
+	private static final boolean LOG_TO_FILE = true;
+
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
@@ -59,8 +61,10 @@ public class SparkItemsetMining extends ItemsetMining {
 			final int maxEMIterations) throws IOException {
 
 		// Set up logging
-		// setUpConsoleLogger();
-		setUpFileLogger();
+		if (LOG_TO_FILE)
+			setUpFileLogger();
+		else
+			setUpConsoleLogger();
 
 		// Copy transaction database to hdfs
 		final String datasetPath = "hdfs://cup04.inf.ed.ac.uk:54310/"

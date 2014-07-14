@@ -64,26 +64,32 @@ public class SparkEMStep {
 	/** Spark parallel E-step and M-step combined (without covering, just cost) */
 	static double parallelEMStep(final JavaRDD<Transaction> transactions,
 			final InferenceAlgorithm inferenceAlgorithm,
-			final HashMap<Itemset, Double> itemsets, final double noTransactions) {
+			final HashMap<Itemset, Double> itemsets,
+			final double noTransactions, final Itemset candidate,
+			final double prob) {
 
 		// Map: Parallel E-step and M-step combined
-		final JavaPairRDD<Set<Itemset>, Double> coveringWithCost = transactions
-				.mapToPair(new PairFunction<Transaction, Set<Itemset>, Double>() {
+		final JavaRDD<Double> coveringWithCost = transactions
+				.map(new Function<Transaction, Double>() {
 					private static final long serialVersionUID = -4944391752990605173L;
 
 					@Override
-					public Tuple2<Set<Itemset>, Double> call(
-							final Transaction transaction) {
+					public Double call(final Transaction transaction) {
+
+						if (itemsets == null)
+							transaction.addItemsetCache(candidate, prob);
+
 						final Set<Itemset> covering = Sets.newHashSet();
 						final double cost = inferenceAlgorithm.infer(covering,
 								itemsets, transaction);
-						return new Tuple2<Set<Itemset>, Double>(covering, cost);
+
+						// No need for cache remove as RDD is immutable
+						return cost;
 					}
 				});
 
 		// Reduce: sum Itemset costs
-		return coveringWithCost.values().reduce(
-				new SparkItemsetMining.SumCost())
+		return coveringWithCost.reduce(new SparkItemsetMining.SumCost())
 				/ noTransactions;
 	}
 

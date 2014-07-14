@@ -50,15 +50,23 @@ public class EMStep {
 	/** Serial E-step and M-step combined (without covering, just cost) */
 	static double serialEMStep(final List<Transaction> transactions,
 			final InferenceAlgorithm inferenceAlgorithm,
-			final HashMap<Itemset, Double> itemsets, final double noTransactions) {
+			final HashMap<Itemset, Double> itemsets,
+			final double noTransactions, final Itemset candidate,
+			final double prob) {
 
 		double averageCost = 0;
 		for (final Transaction transaction : transactions) {
+
+			if (itemsets == null)
+				transaction.addItemsetCache(candidate, prob);
 
 			final Set<Itemset> covering = Sets.newHashSet();
 			final double cost = inferenceAlgorithm.infer(covering, itemsets,
 					transaction);
 			averageCost += cost;
+
+			if (itemsets == null)
+				transaction.removeItemsetCache(candidate, prob);
 
 		}
 		averageCost = averageCost / noTransactions;
@@ -103,7 +111,9 @@ public class EMStep {
 	/** Parallel E-step and M-step combined (without covering, just cost) */
 	static double parallelEMStep(final List<Transaction> transactions,
 			final InferenceAlgorithm inferenceAlgorithm,
-			final HashMap<Itemset, Double> itemsets, final double noTransactions) {
+			final HashMap<Itemset, Double> itemsets,
+			final double noTransactions, final Itemset candidate,
+			final double prob) {
 
 		// Parallel E-step and M-step combined
 		final FutureThreadPool<Double> ftp = new FutureThreadPool<Double>();
@@ -112,9 +122,18 @@ public class EMStep {
 			ftp.pushTask(new Callable<Double>() {
 				@Override
 				public Double call() {
+
+					if (itemsets == null)
+						transaction.addItemsetCache(candidate, prob);
+
 					final Set<Itemset> covering = Sets.newHashSet();
-					return inferenceAlgorithm.infer(covering, itemsets,
-							transaction);
+					final double cost = inferenceAlgorithm.infer(covering,
+							itemsets, transaction);
+
+					if (itemsets == null)
+						transaction.removeItemsetCache(candidate, prob);
+
+					return cost;
 				}
 			});
 		}

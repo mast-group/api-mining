@@ -37,15 +37,6 @@ public class CacheFunctions {
 
 	}
 
-	/** Serial remove itemset from Cache */
-	static void serialRemoveItemsetCache(final List<Transaction> transactions,
-			final Itemset candidate, final double prob) {
-
-		for (final Transaction transaction : transactions)
-			transaction.removeItemsetCache(candidate, prob);
-
-	}
-
 	/** Parallel initialize Cache */
 	static void parallelInitializeCache(final List<Transaction> transactions,
 			final Set<Integer> singletons, final double prob) {
@@ -94,25 +85,6 @@ public class CacheFunctions {
 				@Override
 				public void run() {
 					transaction.addItemsetCache(candidate, prob);
-				}
-			});
-		}
-		ptp.waitForTermination();
-
-	}
-
-	/** Parallel remove itemset from Cache */
-	static void parallelRemoveItemsetCache(
-			final List<Transaction> transactions, final Itemset candidate,
-			final double prob) {
-
-		final ParallelThreadPool ptp = new ParallelThreadPool();
-		for (final Transaction transaction : transactions) {
-
-			ptp.pushTask(new Runnable() {
-				@Override
-				public void run() {
-					transaction.removeItemsetCache(candidate, prob);
 				}
 			});
 		}
