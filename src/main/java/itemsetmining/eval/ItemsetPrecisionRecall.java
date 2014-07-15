@@ -1,15 +1,15 @@
 package itemsetmining.eval;
 
 import itemsetmining.itemset.Itemset;
-import itemsetmining.main.InferenceAlgorithms;
-import itemsetmining.main.ItemsetMining;
-import itemsetmining.main.SparkItemsetMining;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
+import itemsetmining.main.ItemsetMining;
+import itemsetmining.main.SparkItemsetMining;
 import itemsetmining.transaction.TransactionGenerator;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map.Entry;
@@ -23,10 +23,13 @@ import com.google.common.collect.Sets;
 
 public class ItemsetPrecisionRecall {
 
-	private static final String name = "overlap";
-	private static final File dbFile = new File("/tmp/itemset.txt");
+	private static final String name = "cross-supp";
+	private static final File dbTmpFile = new File("/tmp/itemset.txt");
+	private static final File saveDir = new File(
+			"/afs/inf.ed.ac.uk/user/j/jfowkes/ItemsetEval");
 	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
 	private static final boolean useSpark = false;
+	private static final boolean useMTV = false;
 
 	private static final int noSamples = 10;
 	private static final int difficultyLevels = 10;
@@ -40,8 +43,8 @@ public class ItemsetPrecisionRecall {
 
 	public static void main(final String[] args) throws IOException {
 
-		// precisionRecall("difficulty", difficultyLevels);
-		precisionRecall("robustness", 20);
+		precisionRecall("difficulty", difficultyLevels);
+		// precisionRecall("robustness", 20);
 
 	}
 
@@ -56,7 +59,7 @@ public class ItemsetPrecisionRecall {
 		FileSystem hdfs = null;
 		JavaSparkContext sc = null;
 		if (useSpark) {
-			sc = SparkItemsetMining.setUpSpark(dbFile.getName());
+			sc = SparkItemsetMining.setUpSpark(dbTmpFile.getName());
 			hdfs = SparkItemsetMining.setUpHDFS();
 		}
 
@@ -98,7 +101,7 @@ public class ItemsetPrecisionRecall {
 
 			// Generate transaction database
 			TransactionGenerator.generateTransactionDatabase(actualItemsets,
-					noTransactions, dbFile);
+					noTransactions, dbTmpFile);
 
 			for (int sample = 0; sample < noSamples; sample++) {
 				System.out.println("\n========= Sample " + (sample + 1)
@@ -107,12 +110,15 @@ public class ItemsetPrecisionRecall {
 				// Mine itemsets
 				HashMap<Itemset, Double> minedItemsets = null;
 				final long startTime = System.currentTimeMillis();
-				if (useSpark)
-					minedItemsets = SparkItemsetMining.mineItemsets(dbFile,
+				if (useMTV)
+					minedItemsets = MTVItemsetMining.mineItemsets(dbTmpFile, 0,
+							actualItemsets.size() + 5);
+				else if (useSpark)
+					minedItemsets = SparkItemsetMining.mineItemsets(dbTmpFile,
 							hdfs, sc, inferenceAlg, maxStructureSteps,
 							maxEMIterations);
 				else
-					minedItemsets = ItemsetMining.mineItemsets(dbFile,
+					minedItemsets = ItemsetMining.mineItemsets(dbTmpFile,
 							inferenceAlg, maxStructureSteps, maxEMIterations);
 				final long endTime = System.currentTimeMillis();
 				final double tim = (endTime - startTime) / (double) 1000;
@@ -159,8 +165,24 @@ public class ItemsetPrecisionRecall {
 			System.out.println("Levels: " + Arrays.toString(levels));
 		if (type.equals("robustness"))
 			System.out.println("No extra sets -1: " + Arrays.toString(levels));
+		System.out.println("\n======== " + name + " ========");
 		System.out.println("Time: " + Arrays.toString(time));
 		System.out.println("Precision: " + Arrays.toString(precision));
 		System.out.println("Recall : " + Arrays.toString(recall));
+
+		// and save to file
+		String prefix = "";
+		if (useMTV)
+			prefix += "mtv_";
+		if (useSpark)
+			prefix += "spark_";
+		final PrintWriter out = new PrintWriter(saveDir + "/" + prefix + name
+				+ "_" + type + ".txt");
+		out.println(Arrays.toString(levels));
+		out.println(Arrays.toString(time));
+		out.println(Arrays.toString(precision));
+		out.println(Arrays.toString(recall));
+		out.close();
 	}
+
 }
