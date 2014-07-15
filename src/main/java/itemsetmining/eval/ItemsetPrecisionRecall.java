@@ -1,6 +1,9 @@
-package itemsetmining.main;
+package itemsetmining.eval;
 
 import itemsetmining.itemset.Itemset;
+import itemsetmining.main.InferenceAlgorithms;
+import itemsetmining.main.ItemsetMining;
+import itemsetmining.main.SparkItemsetMining;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.TransactionGenerator;
