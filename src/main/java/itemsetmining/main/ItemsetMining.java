@@ -64,7 +64,7 @@ public class ItemsetMining {
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
 	private static final String LOG_FILE = "%t/spark_mining.log";
-	protected static final Level LOGLEVEL = Level.FINEST;
+	protected static final Level LOGLEVEL = Level.INFO;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -157,9 +157,12 @@ public class ItemsetMining {
 			logger.finest("\n======= Transaction Database =======\n"
 					+ Files.toString(inputFile, Charsets.UTF_8) + "\n");
 		logger.info("\n============= INTERESTING ITEMSETS =============\n");
+		final HashMap<Itemset, Double> intMap = calculateInterestingness(
+				itemsets, transactions);
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-			logger.info(String.format("%s\tprob: %1.5f %n", entry.getKey(),
-					entry.getValue()));
+			logger.info(String.format("%s\tprob: %1.5f \tint: %1.5f %n",
+					entry.getKey(), entry.getValue(),
+					intMap.get(entry.getKey())));
 		}
 		logger.info("\n");
 
@@ -691,6 +694,41 @@ public class ItemsetMining {
 				itemsets.put(entry.getKey(), entry.getValue() + p);
 			}
 		}
+	}
+
+	/**
+	 * Calculate interestingness as defined by i(S) = |z_S = 1|/|T : S in T|
+	 * where |z_S = 1| is calculated by pi_S*|T|
+	 */
+	protected static HashMap<Itemset, Double> calculateInterestingness(
+			final HashMap<Itemset, Double> itemsets,
+			final TransactionDatabase transactions) {
+
+		final HashMap<Itemset, Double> interestingnessMap = Maps.newHashMap();
+
+		// Calculate denominator (in parallel for each transaction)
+		final Multiset<Itemset> denominators;
+		if (transactions instanceof TransactionRDD) {
+			denominators = SparkEMStep.parallelNoTransactionsContaining(
+					transactions.getTransactionRDD(), itemsets);
+		} else if (SERIAL) {
+			denominators = EMStep.serialNoTransactionsContaining(
+					transactions.getTransactionList(), itemsets);
+		} else {
+			denominators = EMStep.parallelNoTransactionsContaining(
+					transactions.getTransactionList(), itemsets);
+		}
+
+		// Calculate interestingness
+		final long noTransactions = transactions.size();
+		for (final Itemset set : itemsets.keySet()) {
+
+			final double interestingness = itemsets.get(set) * noTransactions
+					/ denominators.count(set);
+			interestingnessMap.put(set, interestingness);
+		}
+
+		return interestingnessMap;
 	}
 
 	private static TransactionList readTransactions(final File inputFile)

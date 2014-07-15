@@ -4,6 +4,7 @@ import itemsetmining.itemset.Itemset;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.util.FutureThreadPool;
+import itemsetmining.util.ParallelThreadPool;
 
 import java.util.HashMap;
 import java.util.List;
@@ -175,6 +176,48 @@ public class EMStep {
 			});
 		}
 		return sum(ftp.getCompletedTasks()) / noTransactions;
+	}
+
+	/** Serial find no. transactions containing each itemset */
+	static Multiset<Itemset> serialNoTransactionsContaining(
+			final List<Transaction> transactions,
+			final HashMap<Itemset, Double> itemsets) {
+
+		final Multiset<Itemset> noContaining = HashMultiset.create();
+		for (final Transaction transaction : transactions) {
+
+			for (final Itemset set : itemsets.keySet()) {
+				if (transaction.contains(set))
+					noContaining.add(set);
+			}
+
+		}
+		return noContaining;
+	}
+
+	/** Parallel find no. transactions containing each itemset */
+	static Multiset<Itemset> parallelNoTransactionsContaining(
+			final List<Transaction> transactions,
+			final HashMap<Itemset, Double> itemsets) {
+
+		final Multiset<Itemset> noContaining = ConcurrentHashMultiset.create();
+		final ParallelThreadPool ptp = new ParallelThreadPool();
+		for (final Transaction transaction : transactions) {
+
+			ptp.pushTask(new Runnable() {
+				@Override
+				public void run() {
+
+					for (final Itemset set : itemsets.keySet()) {
+						if (transaction.contains(set))
+							noContaining.add(set);
+					}
+				}
+			});
+		}
+		ptp.waitForTermination();
+
+		return noContaining;
 	}
 
 	/** Calculates the sum of a Collection */

@@ -17,6 +17,8 @@ import org.apache.spark.api.java.function.PairFunction;
 
 import scala.Tuple2;
 
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 
 /** Class to hold the various parallel transaction EM Steps for Spark */
@@ -99,7 +101,7 @@ public class SparkEMStep {
 			final double noTransactions) {
 
 		final double p = transactions.map(new Function<Transaction, Integer>() {
-			private static final long serialVersionUID = 1L;
+			private static final long serialVersionUID = -2369728585019081981L;
 
 			@Override
 			public Integer call(final Transaction transaction) throws Exception {
@@ -114,6 +116,29 @@ public class SparkEMStep {
 
 	}
 
+	/** Spark parallel find no. transactions containing each itemset */
+	static Multiset<Itemset> parallelNoTransactionsContaining(
+			final JavaRDD<Transaction> transactions,
+			final HashMap<Itemset, Double> itemsets) {
+
+		return transactions.map(new Function<Transaction, Multiset<Itemset>>() {
+			private static final long serialVersionUID = -4859646175437626337L;
+
+			@Override
+			public Multiset<Itemset> call(final Transaction transaction)
+					throws Exception {
+
+				final Multiset<Itemset> noContaining = HashMultiset.create();
+				for (final Itemset set : itemsets.keySet()) {
+					if (transaction.contains(set))
+						noContaining.add(set);
+				}
+				return noContaining;
+			}
+
+		}).reduce(new CombineMultisets());
+	}
+
 	/** Pair itemsets with counts */
 	private static class PairItemsetCount implements
 			PairFunction<Itemset, Itemset, Integer> {
@@ -125,6 +150,7 @@ public class SparkEMStep {
 		}
 	}
 
+	/** Get itemsets from a set of itemsets */
 	private static class GetItemSets implements
 			FlatMapFunction<Set<Itemset>, Itemset> {
 		private static final long serialVersionUID = -1372354921360086260L;
@@ -143,6 +169,19 @@ public class SparkEMStep {
 		@Override
 		public Integer call(final Integer a, final Integer b) {
 			return a + b;
+		}
+	}
+
+	/** Combine two multisets into one */
+	static class CombineMultisets implements
+			Function2<Multiset<Itemset>, Multiset<Itemset>, Multiset<Itemset>> {
+		private static final long serialVersionUID = 6780310628444189003L;
+
+		@Override
+		public Multiset<Itemset> call(final Multiset<Itemset> multiset1,
+				final Multiset<Itemset> multiset2) throws Exception {
+			multiset1.addAll(multiset2);
+			return multiset1;
 		}
 	}
 

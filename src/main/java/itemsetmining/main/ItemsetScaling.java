@@ -33,7 +33,7 @@ public class ItemsetScaling {
 	public static void main(final String[] args) throws IOException {
 
 		// Run with and without spark
-		scalingTransactions(false, 7);
+		// scalingTransactions(false, 7);
 		scalingTransactions(true, 8);
 
 		// scalingItemsets(false, 4);

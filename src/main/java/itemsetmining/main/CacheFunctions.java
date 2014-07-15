@@ -61,7 +61,6 @@ public class CacheFunctions {
 			final HashMap<Itemset, Double> newItemsets) {
 
 		final ParallelThreadPool ptp = new ParallelThreadPool();
-
 		for (final Transaction transaction : transactions) {
 
 			ptp.pushTask(new Runnable() {
@@ -72,6 +71,7 @@ public class CacheFunctions {
 			});
 		}
 		ptp.waitForTermination();
+
 	}
 
 	/** Parallel add itemset to Cache */

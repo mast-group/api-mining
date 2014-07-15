@@ -31,7 +31,7 @@ import com.google.common.collect.Sets;
 
 public class SparkItemsetMining extends ItemsetMining {
 
-	private static final boolean LOG_TO_FILE = true;
+	private static final boolean LOG_TO_FILE = false;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -95,9 +95,12 @@ public class SparkItemsetMining extends ItemsetMining {
 				Sets.newHashSet(singletons.keySet()), tree, inferenceAlg,
 				maxStructureSteps, maxEMIterations);
 		logger.info("\n============= INTERESTING ITEMSETS =============\n");
+		final HashMap<Itemset, Double> intMap = calculateInterestingness(
+				itemsets, transactions);
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-			logger.info(String.format("%s\tprob: %1.5f %n", entry.getKey(),
-					entry.getValue()));
+			logger.info(String.format("%s\tprob: %1.5f \tint: %1.5f %n",
+					entry.getKey(), entry.getValue(),
+					intMap.get(entry.getKey())));
 		}
 		logger.info("\n");
 
