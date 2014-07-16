@@ -178,29 +178,29 @@ public class EMStep {
 		return sum(ftp.getCompletedTasks()) / noTransactions;
 	}
 
-	/** Serial find no. transactions containing each itemset */
-	static Multiset<Itemset> serialNoTransactionsContaining(
+	/** Serial calculate support for each each itemset */
+	static Multiset<Itemset> serialSupportCount(
 			final List<Transaction> transactions,
 			final HashMap<Itemset, Double> itemsets) {
 
-		final Multiset<Itemset> noContaining = HashMultiset.create();
+		final Multiset<Itemset> support = HashMultiset.create();
 		for (final Transaction transaction : transactions) {
 
 			for (final Itemset set : itemsets.keySet()) {
 				if (transaction.contains(set))
-					noContaining.add(set);
+					support.add(set);
 			}
 
 		}
-		return noContaining;
+		return support;
 	}
 
-	/** Parallel find no. transactions containing each itemset */
-	static Multiset<Itemset> parallelNoTransactionsContaining(
+	/** Parallel calculate support for each itemset */
+	static Multiset<Itemset> parallelSupportCount(
 			final List<Transaction> transactions,
 			final HashMap<Itemset, Double> itemsets) {
 
-		final Multiset<Itemset> noContaining = ConcurrentHashMultiset.create();
+		final Multiset<Itemset> support = ConcurrentHashMultiset.create();
 		final ParallelThreadPool ptp = new ParallelThreadPool();
 		for (final Transaction transaction : transactions) {
 
@@ -210,14 +210,14 @@ public class EMStep {
 
 					for (final Itemset set : itemsets.keySet()) {
 						if (transaction.contains(set))
-							noContaining.add(set);
+							support.add(set);
 					}
 				}
 			});
 		}
 		ptp.waitForTermination();
 
-		return noContaining;
+		return support;
 	}
 
 	/** Calculates the sum of a Collection */

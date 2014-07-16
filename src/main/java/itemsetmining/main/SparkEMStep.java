@@ -116,8 +116,8 @@ public class SparkEMStep {
 
 	}
 
-	/** Spark parallel find no. transactions containing each itemset */
-	static Multiset<Itemset> parallelNoTransactionsContaining(
+	/** Spark parallel calculate support for each itemset */
+	static Multiset<Itemset> parallelSupportCount(
 			final JavaRDD<Transaction> transactions,
 			final HashMap<Itemset, Double> itemsets) {
 
@@ -128,12 +128,12 @@ public class SparkEMStep {
 			public Multiset<Itemset> call(final Transaction transaction)
 					throws Exception {
 
-				final Multiset<Itemset> noContaining = HashMultiset.create();
+				final Multiset<Itemset> support = HashMultiset.create();
 				for (final Itemset set : itemsets.keySet()) {
 					if (transaction.contains(set))
-						noContaining.add(set);
+						support.add(set);
 				}
-				return noContaining;
+				return support;
 			}
 
 		}).reduce(new CombineMultisets());

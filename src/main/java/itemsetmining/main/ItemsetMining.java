@@ -706,16 +706,16 @@ public class ItemsetMining {
 
 		final HashMap<Itemset, Double> interestingnessMap = Maps.newHashMap();
 
-		// Calculate denominator (in parallel for each transaction)
-		final Multiset<Itemset> denominators;
+		// Calculate support (in parallel for each transaction)
+		final Multiset<Itemset> support;
 		if (transactions instanceof TransactionRDD) {
-			denominators = SparkEMStep.parallelNoTransactionsContaining(
+			support = SparkEMStep.parallelSupportCount(
 					transactions.getTransactionRDD(), itemsets);
 		} else if (SERIAL) {
-			denominators = EMStep.serialNoTransactionsContaining(
+			support = EMStep.serialSupportCount(
 					transactions.getTransactionList(), itemsets);
 		} else {
-			denominators = EMStep.parallelNoTransactionsContaining(
+			support = EMStep.parallelSupportCount(
 					transactions.getTransactionList(), itemsets);
 		}
 
@@ -724,7 +724,7 @@ public class ItemsetMining {
 		for (final Itemset set : itemsets.keySet()) {
 
 			final double interestingness = itemsets.get(set) * noTransactions
-					/ denominators.count(set);
+					/ support.count(set);
 			interestingnessMap.put(set, interestingness);
 		}
 
