@@ -96,7 +96,7 @@ public class SparkEMStep {
 	}
 
 	/** Spark parallel candidate probability estimation */
-	static double parallelCandidateProbability(
+	static double parallelCandidateSupport(
 			final JavaRDD<Transaction> transactions, final Itemset candidate,
 			final double noTransactions) {
 

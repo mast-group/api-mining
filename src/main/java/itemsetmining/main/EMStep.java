@@ -142,7 +142,7 @@ public class EMStep {
 	}
 
 	/** Serial candidate probability estimation */
-	static double serialCandidateProbability(
+	static double serialCandidateSupport(
 			final List<Transaction> transactions, final Itemset candidate,
 			final double noTransactions) {
 
@@ -158,7 +158,7 @@ public class EMStep {
 	}
 
 	/** Parallel candidate probability estimation */
-	static double parallelCandidateProbability(
+	static double parallelCandidateSupport(
 			final List<Transaction> transactions, final Itemset candidate,
 			final double noTransactions) {
 

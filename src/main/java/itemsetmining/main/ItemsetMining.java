@@ -579,19 +579,19 @@ public class ItemsetMining {
 			logger.finer("\n potential candidate: " + candidate);
 			final double noTransactions = transactions.size();
 
-			// Estimate itemset probability (M-step assuming always
+			// Calculate itemset support (M-step assuming always
 			// included)
 			double p = 0;
 			if (transactions instanceof TransactionRDD) {
-				p = SparkEMStep.parallelCandidateProbability(
+				p = SparkEMStep.parallelCandidateSupport(
 						transactions.getTransactionRDD(), candidate,
 						noTransactions);
 			} else if (SERIAL) {
-				p = EMStep.serialCandidateProbability(
+				p = EMStep.serialCandidateSupport(
 						transactions.getTransactionList(), candidate,
 						noTransactions);
 			} else {
-				p = EMStep.parallelCandidateProbability(
+				p = EMStep.parallelCandidateSupport(
 						transactions.getTransactionList(), candidate,
 						noTransactions);
 			}
