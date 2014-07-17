@@ -6,17 +6,18 @@ import itemsetmining.util.ParallelThreadPool;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+
+import com.google.common.collect.Multiset;
 
 /** Class to hold the various serial/parallel itemset cache functions */
 public class CacheFunctions {
 
 	/** Serial initialize Cache */
 	static void serialInitializeCache(final List<Transaction> transactions,
-			final Set<Integer> singletons, final double prob) {
+			final long noTransactions, final Multiset<Integer> singletons) {
 
 		for (final Transaction transaction : transactions)
-			transaction.initializeCache(singletons, prob);
+			transaction.initializeCache(singletons, noTransactions);
 	}
 
 	/** Serial update Cache probabilities */
@@ -39,7 +40,7 @@ public class CacheFunctions {
 
 	/** Parallel initialize Cache */
 	static void parallelInitializeCache(final List<Transaction> transactions,
-			final Set<Integer> singletons, final double prob) {
+			final long noTransactions, final Multiset<Integer> singletons) {
 
 		final ParallelThreadPool ptp = new ParallelThreadPool();
 		for (final Transaction transaction : transactions) {
@@ -47,7 +48,7 @@ public class CacheFunctions {
 			ptp.pushTask(new Runnable() {
 				@Override
 				public void run() {
-					transaction.initializeCache(singletons, prob);
+					transaction.initializeCache(singletons, noTransactions);
 				}
 			});
 		}

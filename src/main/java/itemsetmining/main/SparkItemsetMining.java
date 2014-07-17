@@ -27,7 +27,8 @@ import org.apache.spark.api.java.function.PairFunction;
 
 import scala.Tuple2;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
 
 public class SparkItemsetMining extends ItemsetMining {
 
@@ -77,23 +78,28 @@ public class SparkItemsetMining extends ItemsetMining {
 				.map(new ParseTransaction()).cache();
 
 		// Determine most frequent singletons
-		final Map<Integer, Integer> singletons = db
+		final Map<Integer, Integer> singletonsMap = db
 				.flatMap(new GetTransactionItems())
 				.mapToPair(new PairItemCount())
 				.reduceByKey(new SparkEMStep.SumCounts()).collectAsMap();
 
 		// Apply the algorithm to build the itemset tree
 		final ItemsetTree tree = new ItemsetTree();
-		tree.buildTree(datasetPath, hdfs, singletons);
+		tree.buildTree(datasetPath, hdfs, singletonsMap);
 		if (LOGLEVEL.equals(Level.FINE))
 			tree.printStatistics(logger);
+
+		// Convert singletons map to Multiset (as Spark map is not serializable)
+		final Multiset<Integer> singletons = HashMultiset.create();
+		for (final Entry<Integer, Integer> entry : singletonsMap.entrySet())
+			singletons.add(entry.getKey(), entry.getValue());
 
 		// Run inference to find interesting itemsets
 		final TransactionRDD transactions = new TransactionRDD(db, db.count());
 		logger.fine("\n============= ITEMSET INFERENCE =============\n");
 		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
-				Sets.newHashSet(singletons.keySet()), tree, inferenceAlg,
-				maxStructureSteps, maxEMIterations);
+				singletons, tree, inferenceAlg, maxStructureSteps,
+				maxEMIterations);
 		logger.info("\n============= INTERESTING ITEMSETS =============\n");
 		final HashMap<Itemset, Double> intMap = calculateInterestingness(
 				itemsets, transactions);

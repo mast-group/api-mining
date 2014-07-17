@@ -5,10 +5,11 @@ import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionDatabase;
 
 import java.util.HashMap;
-import java.util.Set;
 
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
+
+import com.google.common.collect.Multiset;
 
 /** Class to hold the various parallel itemset cache functions for Spark */
 public class SparkCacheFunctions {
@@ -16,8 +17,9 @@ public class SparkCacheFunctions {
 	/** Spark parallel initialize Cache */
 	static TransactionDatabase parallelInitializeCache(
 			final TransactionDatabase transactions,
-			final Set<Integer> singletons, final double prob) {
+			final Multiset<Integer> singletons) {
 
+		final long noTransactions = transactions.size();
 		final JavaRDD<Transaction> updatedTransactions = transactions
 				.getTransactionRDD().map(
 						new Function<Transaction, Transaction>() {
@@ -27,7 +29,8 @@ public class SparkCacheFunctions {
 							public Transaction call(
 									final Transaction transaction)
 									throws Exception {
-								transaction.initializeCache(singletons, prob);
+								transaction.initializeCache(singletons,
+										noTransactions);
 								return transaction;
 							}
 

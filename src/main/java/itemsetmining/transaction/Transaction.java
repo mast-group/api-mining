@@ -8,9 +8,9 @@ import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multiset;
 
 /** A transaction is an ordered list of items */
 public class Transaction extends AbstractItemset implements Serializable {
@@ -22,11 +22,13 @@ public class Transaction extends AbstractItemset implements Serializable {
 	/** Cached itemsets dropped during candidate eval */
 	private HashMap<Itemset, Double> droppedItemsets;
 
-	public void initializeCache(final Set<Integer> singletons, final double prob) {
+	public void initializeCache(final Multiset<Integer> singletons,
+			final long noTransactions) {
 		cachedItemsets = Maps.newHashMap();
-		for (final int singleton : singletons) {
-			if (this.contains(singleton))
-				cachedItemsets.put(new Itemset(singleton), prob);
+		for (final Multiset.Entry<Integer> entry : singletons.entrySet()) {
+			if (this.contains(entry.getElement()))
+				cachedItemsets.put(new Itemset(entry.getElement()),
+						entry.getCount() / (double) noTransactions);
 		}
 	}
 

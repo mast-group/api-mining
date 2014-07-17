@@ -52,7 +52,6 @@ import com.google.common.primitives.Ints;
 
 public class ItemsetMining {
 
-	private static final double SINGLETON_PRIOR_PROB = 0.5;
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
 	private static final int SIMPLIFY_ITEMSETS_EVERY = 2;
 	private static final int COMBINE_ITEMSETS_EVERY = 4;
@@ -151,8 +150,8 @@ public class ItemsetMining {
 		// Run inference to find interesting itemsets
 		logger.fine("\n============= ITEMSET INFERENCE =============\n");
 		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
-				singletons.elementSet(), tree, inferenceAlgorithm,
-				maxStructureSteps, maxEMIterations);
+				singletons, tree, inferenceAlgorithm, maxStructureSteps,
+				maxEMIterations);
 		if (LOGLEVEL.equals(Level.FINEST))
 			logger.finest("\n======= Transaction Database =======\n"
 					+ Files.toString(inputFile, Charsets.UTF_8) + "\n");
@@ -173,31 +172,33 @@ public class ItemsetMining {
 	 * Learn itemsets model using structural EM
 	 */
 	protected static HashMap<Itemset, Double> structuralEM(
-			TransactionDatabase transactions, final Set<Integer> singletons,
-			final ItemsetTree tree,
+			TransactionDatabase transactions,
+			final Multiset<Integer> singletons, final ItemsetTree tree,
 			final InferenceAlgorithm inferenceAlgorithm,
 			final int maxStructureSteps, final int maxEMIterations) {
 
 		// Initialize itemset cache
+		final long noTransactions = transactions.size();
 		if (ITEMSET_CACHE) {
 			if (transactions instanceof TransactionRDD) {
 				transactions = SparkCacheFunctions.parallelInitializeCache(
-						transactions, singletons, SINGLETON_PRIOR_PROB);
+						transactions, singletons);
 			} else if (SERIAL) {
 				CacheFunctions.serialInitializeCache(
-						transactions.getTransactionList(), singletons,
-						SINGLETON_PRIOR_PROB);
+						transactions.getTransactionList(), noTransactions,
+						singletons);
 			} else {
 				CacheFunctions.parallelInitializeCache(
-						transactions.getTransactionList(), singletons,
-						SINGLETON_PRIOR_PROB);
+						transactions.getTransactionList(), noTransactions,
+						singletons);
 			}
 		}
 
-		// Intialize itemsets with equiprobable singleton sets
+		// Intialize itemsets with singleton sets and their relative support
 		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
-		for (final int singleton : singletons) {
-			itemsets.put(new Itemset(singleton), SINGLETON_PRIOR_PROB);
+		for (final Multiset.Entry<Integer> entry : singletons.entrySet()) {
+			itemsets.put(new Itemset(entry.getElement()), entry.getCount()
+					/ (double) noTransactions);
 		}
 		logger.fine(" Initial itemsets: " + itemsets + "\n");
 
@@ -210,10 +211,6 @@ public class ItemsetMining {
 
 		// Initialize list of rejected sets
 		final Set<Itemset> rejected_sets = Sets.newHashSet();
-
-		// Initial parameter optimization step
-		transactions = expectationMaximizationStep(itemsets, transactions,
-				inferenceAlgorithm);
 
 		// Structural EM
 		for (int iteration = 1; iteration <= maxEMIterations; iteration++) {
