@@ -1,5 +1,7 @@
 package itemsetmining.itemset;
 
+import itemsetmining.util.MemoryLogger;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -16,8 +18,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
-import ca.pfv.spmf.tools.MemoryLogger;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;

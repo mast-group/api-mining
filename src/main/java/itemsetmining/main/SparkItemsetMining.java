@@ -33,6 +33,7 @@ import com.google.common.collect.Multiset;
 public class SparkItemsetMining extends ItemsetMining {
 
 	private static final boolean LOG_TO_FILE = true;
+	private static final boolean USE_KRYO = true;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -124,11 +125,14 @@ public class SparkItemsetMining extends ItemsetMining {
 						new String[] { "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/target/itemset-mining-1.1-SNAPSHOT.jar" });
 		conf.set("spark.executor.memory", "10g");
 		conf.set("spark.default.parallelism", "8");
-		// TODO fix Kryo issue
-		// conf.set("spark.serializer",
-		// "org.apache.spark.serializer.KryoSerializer");
-		// conf.set("spark.kryo.registrator",
-		// "itemsetmining.util.ClassRegistrator");
+
+		if (USE_KRYO) {
+			conf.set("spark.serializer",
+					"org.apache.spark.serializer.KryoSerializer");
+			conf.set("spark.kryo.registrator",
+					"itemsetmining.util.ClassRegistrator");
+		}
+
 		return new JavaSparkContext(conf);
 	}
 

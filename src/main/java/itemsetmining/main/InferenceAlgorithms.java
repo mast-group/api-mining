@@ -5,17 +5,11 @@ import itemsetmining.transaction.Transaction;
 
 import java.io.Serializable;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
-
-import scpsolver.constraints.LinearBiggerThanEqualsConstraint;
-import scpsolver.lpsolver.LinearProgramSolver;
-import scpsolver.lpsolver.SolverFactory;
-import scpsolver.problems.LinearProgram;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -217,87 +211,92 @@ public class InferenceAlgorithms {
 				final HashMap<Itemset, Double> itemsets,
 				final Transaction transaction) {
 
-			// Cache not implemented for ILP yet (requires LinkedHashMap)
-			if (itemsets == null)
-				throw new UnsupportedOperationException(
-						"Cache not implemented for ILP yet!");
+			// // Cache not implemented for ILP yet (requires LinkedHashMap)
+			// if (itemsets == null)
+			// throw new UnsupportedOperationException(
+			// "Cache not implemented for ILP yet!");
+			//
+			// // Load solver if necessary
+			// final LinearProgramSolver solver =
+			// SolverFactory.getSolver("CPLEX");
+			// solver.printToScreen(false);
+			//
+			// // Filter out sets containing items not in transaction and items
+			// // with nonzero cost
+			// final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
+			// .newLinkedHashMap();
+			// for (final Map.Entry<Itemset, Double> entry :
+			// itemsets.entrySet()) {
+			// if (entry.getValue() > 0.0
+			// && transaction.contains(entry.getKey()))
+			// filteredItemsets.put(entry.getKey(), entry.getValue());
+			// }
+			//
+			// final int probSize = filteredItemsets.size();
+			//
+			// // Set up cost vector
+			// int i = 0;
+			// final double[] costs = new double[probSize];
+			// for (final double p : filteredItemsets.values()) {
+			// costs[i] = -Math.log(p / (1 - p));
+			// i++;
+			// }
+			//
+			// // Set objective sum(c_s*z_s)
+			// final LinearProgram lp = new LinearProgram(costs);
+			//
+			// // Add covering constraint
+			// for (final Integer item : transaction) {
+			//
+			// i = 0;
+			// final double[] cover = new double[probSize];
+			// for (final Itemset set : filteredItemsets.keySet()) {
+			//
+			// // at least one set covers item
+			// if (set.contains(item)) {
+			// cover[i] = 1;
+			// }
+			// i++;
+			// }
+			// lp.addConstraint(new LinearBiggerThanEqualsConstraint(cover,
+			// 1., "cover"));
+			//
+			// }
+			//
+			// // Set all variables to binary
+			// for (int j = 0; j < probSize; j++) {
+			// lp.setBinary(j);
+			// }
+			//
+			// // Solve
+			// lp.setMinProblem(true);
+			// final double[] sol = solver.solve(lp);
+			//
+			// // No solution is bad
+			// if (sol == null)
+			// return Double.POSITIVE_INFINITY;
+			//
+			// // Add chosen sets to covering
+			// i = 0;
+			// double totalCost = 0;
+			// for (final Entry<Itemset, Double> entry : filteredItemsets
+			// .entrySet()) {
+			// if (doubleToBoolean(sol[i])) {
+			// final Itemset set = entry.getKey();
+			// covering.add(set);
+			// totalCost += costs[i] * sol[i];
+			// }
+			// totalCost += -Math.log(1 - entry.getValue());
+			// i++;
+			// }
+			//
+			// return totalCost;
 
-			// Load solver if necessary
-			final LinearProgramSolver solver = SolverFactory.getSolver("CPLEX");
-			solver.printToScreen(false);
-
-			// Filter out sets containing items not in transaction and items
-			// with nonzero cost
-			final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
-					.newLinkedHashMap();
-			for (final Map.Entry<Itemset, Double> entry : itemsets.entrySet()) {
-				if (entry.getValue() > 0.0
-						&& transaction.contains(entry.getKey()))
-					filteredItemsets.put(entry.getKey(), entry.getValue());
-			}
-
-			final int probSize = filteredItemsets.size();
-
-			// Set up cost vector
-			int i = 0;
-			final double[] costs = new double[probSize];
-			for (final double p : filteredItemsets.values()) {
-				costs[i] = -Math.log(p / (1 - p));
-				i++;
-			}
-
-			// Set objective sum(c_s*z_s)
-			final LinearProgram lp = new LinearProgram(costs);
-
-			// Add covering constraint
-			for (final Integer item : transaction) {
-
-				i = 0;
-				final double[] cover = new double[probSize];
-				for (final Itemset set : filteredItemsets.keySet()) {
-
-					// at least one set covers item
-					if (set.contains(item)) {
-						cover[i] = 1;
-					}
-					i++;
-				}
-				lp.addConstraint(new LinearBiggerThanEqualsConstraint(cover,
-						1., "cover"));
-
-			}
-
-			// Set all variables to binary
-			for (int j = 0; j < probSize; j++) {
-				lp.setBinary(j);
-			}
-
-			// Solve
-			lp.setMinProblem(true);
-			final double[] sol = solver.solve(lp);
-
-			// No solution is bad
-			if (sol == null)
-				return Double.POSITIVE_INFINITY;
-
-			// Add chosen sets to covering
-			i = 0;
-			double totalCost = 0;
-			for (final Entry<Itemset, Double> entry : filteredItemsets
-					.entrySet()) {
-				if (doubleToBoolean(sol[i])) {
-					final Itemset set = entry.getKey();
-					covering.add(set);
-					totalCost += costs[i] * sol[i];
-				}
-				totalCost += -Math.log(1 - entry.getValue());
-				i++;
-			}
-
-			return totalCost;
+			throw new UnsupportedOperationException("Commented out for Spark.");
 		}
 
 		/** Round double to boolean */
+		@SuppressWarnings("unused")
 		private static boolean doubleToBoolean(final double d) {
 			if ((int) Math.round(d) == 1)
 				return true;
