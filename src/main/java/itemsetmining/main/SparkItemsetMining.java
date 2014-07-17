@@ -31,7 +31,7 @@ import com.google.common.collect.Sets;
 
 public class SparkItemsetMining extends ItemsetMining {
 
-	private static final boolean LOG_TO_FILE = false;
+	private static final boolean LOG_TO_FILE = true;
 
 	public static void main(final String[] args) throws IOException {
 

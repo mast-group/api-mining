@@ -64,7 +64,7 @@ public class ItemsetMining {
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
 	private static final String LOG_FILE = "%t/spark_mining.log";
-	protected static final Level LOGLEVEL = Level.INFO;
+	protected static final Level LOGLEVEL = Level.FINEST;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -256,6 +256,13 @@ public class ItemsetMining {
 						+ iteration + "\n");
 				transactions = expectationMaximizationStep(itemsets,
 						transactions, inferenceAlgorithm);
+			}
+
+			// Checkpoint every 100 iterations to avoid StackOverflow errors due
+			// to long lineage (http://tinyurl.com/ouswhrc)
+			if (iteration % 100 == 0 && transactions instanceof TransactionRDD) {
+				transactions.getTransactionRDD().cache();
+				transactions.getTransactionRDD().checkpoint();
 			}
 
 		}
