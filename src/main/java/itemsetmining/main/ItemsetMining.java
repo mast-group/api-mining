@@ -57,6 +57,7 @@ public class ItemsetMining {
 	private static final int COMBINE_ITEMSETS_EVERY = 4;
 	private static final double AVG_COST_TOL = 1e-3;
 	private static final double OPTIMIZE_TOL = 1e-10;
+	private static final long MAX_RUNTIME = 2 * 60 * 60 * 1000; // 2hrs
 
 	private static final boolean ITEMSET_CACHE = true;
 	private static final boolean SERIAL = false;
@@ -177,6 +178,9 @@ public class ItemsetMining {
 			final InferenceAlgorithm inferenceAlgorithm,
 			final int maxStructureSteps, final int maxEMIterations) {
 
+		// Start timer
+		final long startTime = System.currentTimeMillis();
+
 		// Initialize itemset cache
 		final long noTransactions = transactions.size();
 		if (ITEMSET_CACHE) {
@@ -250,6 +254,13 @@ public class ItemsetMining {
 			}
 			prevCost = avgCost;
 
+			// Check if time exceeded
+			if (System.currentTimeMillis() - startTime > MAX_RUNTIME) {
+				logger.warning("\nRuntime limit of " + MAX_RUNTIME
+						/ (60. * 1000.) + " minutes exceeded.\n");
+				break;
+			}
+
 			// Checkpoint every 100 iterations to avoid StackOverflow errors due
 			// to long lineage (http://tinyurl.com/ouswhrc)
 			if (iteration % 100 == 0 && transactions instanceof TransactionRDD) {
@@ -260,6 +271,9 @@ public class ItemsetMining {
 			if (iteration == maxEMIterations)
 				logger.warning("\nEM iteration limit exceeded.\n");
 		}
+		logger.info("\nElapsed time: "
+				+ (System.currentTimeMillis() - startTime) / (60. * 1000.)
+				+ " minutes.\n");
 
 		return itemsets;
 	}
