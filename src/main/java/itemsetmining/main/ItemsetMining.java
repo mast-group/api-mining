@@ -55,6 +55,7 @@ public class ItemsetMining {
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
 	private static final int SIMPLIFY_ITEMSETS_EVERY = 2;
 	private static final int COMBINE_ITEMSETS_EVERY = 4;
+	private static final double AVG_COST_TOL = 1e-3;
 	private static final double OPTIMIZE_TOL = 1e-10;
 
 	private static final boolean ITEMSET_CACHE = true;
@@ -63,7 +64,7 @@ public class ItemsetMining {
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
 	private static final String LOG_FILE = "%t/spark_mining.log";
-	protected static final Level LOGLEVEL = Level.FINEST;
+	protected static final Level LOGLEVEL = Level.FINER;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -213,6 +214,7 @@ public class ItemsetMining {
 		final Set<Itemset> rejected_sets = Sets.newHashSet();
 
 		// Structural EM
+		double prevCost = Double.POSITIVE_INFINITY;
 		for (int iteration = 1; iteration <= maxEMIterations; iteration++) {
 
 			// Learn structure
@@ -243,9 +245,8 @@ public class ItemsetMining {
 				if (transactions == null) // structure iteration limit exceeded
 					break;
 			}
-			if (transactions != null)
-				logger.finer(String.format(" Average cost: %.2f%n",
-						transactions.getAverageCost()));
+			logger.finer(String.format(" Average cost: %.2f%n",
+					transactions.getAverageCost()));
 
 			// Optimize parameters of new structure
 			if (iteration % OPTIMIZE_PARAMS_EVERY == 0) {
@@ -255,6 +256,16 @@ public class ItemsetMining {
 						transactions, inferenceAlgorithm);
 			}
 
+			// Check if average cost has converged
+			final double avgCost = transactions.getAverageCost();
+			if (avgCost != prevCost // TODO better nothing changed check?
+					&& Math.abs(avgCost - prevCost) < AVG_COST_TOL) {
+				logger.info("\nAverage cost converged to within "
+						+ AVG_COST_TOL + ".\n");
+				break;
+			}
+			prevCost = avgCost;
+
 			// Checkpoint every 100 iterations to avoid StackOverflow errors due
 			// to long lineage (http://tinyurl.com/ouswhrc)
 			if (iteration % 100 == 0 && transactions instanceof TransactionRDD) {
@@ -262,10 +273,10 @@ public class ItemsetMining {
 				transactions.getTransactionRDD().checkpoint();
 			}
 
+			if (iteration == maxEMIterations)
+				logger.warning("\nEM iteration limit exceeded.\n");
 		}
 
-		if (transactions != null)
-			logger.warning("\nEM iteration limit exceeded.\n");
 		return itemsets;
 	}
 
