@@ -35,11 +35,6 @@ import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 
-import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.AlgoAgrawalFaster94;
-import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.Rules;
-import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPGrowth;
-import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
-
 import com.google.common.base.Charsets;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
@@ -77,12 +72,6 @@ public class ItemsetMining {
 		final int maxStructureSteps = 1000000;
 		final int maxEMIterations = 100;
 
-		// FPGrowth parameters
-		final boolean fpGrowth = false;
-		final double fpGrowthSupport = 0.25; // relative support
-		final double fpGrowthMinConf = 0;
-		final double fpGrowthMinLift = 0;
-
 		// Mine interesting itemsets
 		final HashMap<Itemset, Double> itemsets = mineItemsets(
 				new File(dataset), inferenceAlg, maxStructureSteps,
@@ -97,24 +86,6 @@ public class ItemsetMining {
 				System.out.println(rule.toString());
 			}
 			System.out.println("\n");
-		}
-
-		// Compare with the FPGROWTH algorithm
-		if (fpGrowth) {
-			final AlgoFPGrowth algo = new AlgoFPGrowth();
-			final Itemsets patterns = algo.runAlgorithm(dataset, null,
-					fpGrowthSupport);
-			algo.printStats();
-			patterns.printItemsets(algo.getDatabaseSize());
-
-			// Generate association rules from FPGROWTH itemsets
-			if (associationRules) {
-				final AlgoAgrawalFaster94 algo2 = new AlgoAgrawalFaster94();
-				final Rules rules2 = algo2.runAlgorithm(patterns, null,
-						algo.getDatabaseSize(), fpGrowthMinConf,
-						fpGrowthMinLift);
-				rules2.printRulesWithLift(algo.getDatabaseSize());
-			}
 		}
 
 	}
