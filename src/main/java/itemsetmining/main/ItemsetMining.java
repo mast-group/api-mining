@@ -60,7 +60,6 @@ public class ItemsetMining {
 
 	private static final boolean ITEMSET_CACHE = true;
 	private static final boolean SERIAL = false;
-	private static final boolean APRIORI_CANDIDATE_GENERATION = false;
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
 	private static final String LOG_FILE = "%t/spark_mining.log";
@@ -203,13 +202,6 @@ public class ItemsetMining {
 		}
 		logger.fine(" Initial itemsets: " + itemsets + "\n");
 
-		// Convert singletons to itemsets if using Apriori candidate generation
-		final List<Itemset> candidates = Lists.newArrayList();
-		if (APRIORI_CANDIDATE_GENERATION) {
-			for (final int singleton : singletons)
-				candidates.add(new Itemset(singleton));
-		}
-
 		// Initialize list of rejected sets
 		final Set<Itemset> rejected_sets = Sets.newHashSet();
 
@@ -218,15 +210,7 @@ public class ItemsetMining {
 		for (int iteration = 1; iteration <= maxEMIterations; iteration++) {
 
 			// Learn structure
-			if (APRIORI_CANDIDATE_GENERATION) {
-				logger.finer("\n+++++ Apriori Structural Optimization at Step "
-						+ iteration + "\n");
-				transactions = learnStructureAprioriStep(itemsets,
-						transactions, candidates, inferenceAlgorithm,
-						maxStructureSteps);
-				if (transactions == null) // apriori finished
-					break;
-			} else if (iteration % COMBINE_ITEMSETS_EVERY == 0) {
+			if (iteration % COMBINE_ITEMSETS_EVERY == 0) {
 				logger.finer("\n----- Itemset Combination at Step " + iteration
 						+ "\n");
 				transactions = combineItemsetsStep(itemsets, transactions,
@@ -508,70 +492,6 @@ public class ItemsetMining {
 		// No better itemset found
 		logger.finer("\n No better candidate found.\n");
 		return transactions;
-	}
-
-	/** Generate candidate itemsets Apriori style from singletons */
-	private static TransactionDatabase learnStructureAprioriStep(
-			final HashMap<Itemset, Double> itemsets,
-			final TransactionDatabase transactions,
-			final List<Itemset> candidates,
-			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
-
-		// Try and find better itemset to add
-		logger.finer(" Structural candidate itemsets: ");
-
-		// Generate candidates of size k from sets of size k-1
-		int iteration = 0;
-		List<Itemset> prevCandidates = candidates;
-		while (!prevCandidates.isEmpty()) {
-
-			// For each pair of itemsets of size k-1
-			final List<Itemset> newCandidates = Lists.newArrayList();
-			for (int i = 0; i < prevCandidates.size(); i++) {
-				final Itemset itemset1 = prevCandidates.get(i);
-				for (int j = i + 1; j < prevCandidates.size(); j++) {
-					final Itemset itemset2 = prevCandidates.get(j);
-
-					// Create a new candidate by combining itemsets
-					// TODO store itemset as sorted list to prevent duplicates?
-					final Itemset candidate = new Itemset();
-					candidate.add(itemset1);
-					candidate.add(itemset2);
-
-					if (!newCandidates.contains(candidate)) {
-
-						// Evaluate candidate itemset
-						final TransactionDatabase betterCost = evaluateCandidate(
-								itemsets, transactions, inferenceAlgorithm,
-								candidate);
-						if (betterCost != null) { // Better itemset found
-							if (prevCandidates != candidates) {
-								candidates.clear();
-								candidates.addAll(prevCandidates);
-							}
-							return betterCost;
-						}
-
-						// Add candidate to level k
-						newCandidates.add(candidate);
-
-					}
-
-					iteration++;
-					if (iteration > maxSteps) { // Iteration limit exceeded
-						logger.warning("\n Structure iteration limit exceeded. No better candidate found.\n");
-						return null; // No better itemset found
-					}
-
-				}
-			}
-
-			prevCandidates = newCandidates;
-		}
-
-		// No better itemset found
-		logger.finer("\n All possible candidates found.\n");
-		return null;
 	}
 
 	/** Evaluate a candidate itemset to see if it should be included */
