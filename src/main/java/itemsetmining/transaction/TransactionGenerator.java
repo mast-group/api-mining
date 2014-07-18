@@ -142,6 +142,29 @@ public class TransactionGenerator {
 		return noisyItemsets;
 	}
 
+	/** Generate some disjoint itemsets for scaling purposes */
+	public static HashMap<Itemset, Double> getItemsetsScaling(
+			final int noItemsets, final int noItemsPerSet,
+			final double itemsetProb) {
+
+		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
+
+		int maxElement = 10;
+		for (int s = 0; s < noItemsets; s++) {
+
+			final int len = noItemsPerSet;
+			final Itemset set = new Itemset();
+			for (int i = maxElement; i < maxElement + len; i++) {
+				set.add(i);
+			}
+			itemsets.put(set, itemsetProb);
+			maxElement += len;
+
+		}
+
+		return itemsets;
+	}
+
 	/** Generate transactions from set of interesting itemsets */
 	public static void generateTransactionDatabase(
 			final HashMap<Itemset, Double> itemsets, final int noTransactions,
