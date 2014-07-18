@@ -27,6 +27,9 @@ import org.apache.spark.api.java.function.PairFunction;
 
 import scala.Tuple2;
 
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParameterException;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 
@@ -35,25 +38,45 @@ public class SparkItemsetMining extends ItemsetMining {
 	private static final boolean LOG_TO_FILE = true;
 	private static final boolean USE_KRYO = true;
 
-	public static void main(final String[] args) throws IOException {
+	/** Main function parameters */
+	public static class Parameters {
 
-		// Main function parameters
-		final File dataset = new File(
+		@Parameter(names = { "-f", "--file" }, description = "Dataset filename")
+		private final File dataset = new File(
 				"/afs/inf.ed.ac.uk/user/j/jfowkes/Articles/ItemSets/DataSets/Succintly/plants.dat");
-		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
-		// Max iterations
+		@Parameter(names = { "-s", "--maxSteps" }, description = "Max structure steps")
 		final int maxStructureSteps = 100000;
+		
+		@Parameter(names = { "-i", "--iterations" }, description = "Max iterations")
 		final int maxEMIterations = 1000;
 
-		// Set up spark
-		final JavaSparkContext sc = setUpSpark(dataset.getName());
+	}
 
-		// Set up HDFS
-		final FileSystem hdfs = setUpHDFS();
+	public static void main(final String[] args) throws IOException {
 
-		mineItemsets(dataset, hdfs, sc, inferenceAlg, maxStructureSteps,
-				maxEMIterations);
+		// Use greedy inference algorithm for Spark
+		final InferenceAlgorithm inferenceAlg = new InferGreedy();
+
+		final Parameters params = new Parameters();
+		final JCommander jc = new JCommander(params);
+
+		try {
+			jc.parse(args);
+
+			// Set up spark
+			final JavaSparkContext sc = setUpSpark(params.dataset.getName());
+
+			// Set up HDFS
+			final FileSystem hdfs = setUpHDFS();
+
+			mineItemsets(params.dataset, hdfs, sc, inferenceAlg,
+					params.maxStructureSteps, params.maxEMIterations);
+
+		} catch (final ParameterException e) {
+			System.out.println(e.getMessage());
+			jc.usage();
+		}
 
 	}
 

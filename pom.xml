@@ -48,8 +48,13 @@
 	  <version>0.96c</version>
 	  <scope>system</scope>
 	  <systemPath>${project.basedir}/../../dependencies/spmf/spmf.jar</systemPath>
-    </dependency> 
-     <dependency> <!-- Spark dependency -->
+    </dependency>
+    <dependency> <!-- Nice option parser -->
+	  <groupId>com.beust</groupId>
+	  <artifactId>jcommander</artifactId>
+	  <version>1.30</version>
+	</dependency> 
+    <dependency> <!-- Spark dependency -->
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-core_2.10</artifactId>
       <version>1.0.0</version>
