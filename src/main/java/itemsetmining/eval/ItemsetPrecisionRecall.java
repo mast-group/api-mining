@@ -26,7 +26,7 @@ public class ItemsetPrecisionRecall {
 	private static final String name = "cross-supp";
 	private static final File dbTmpFile = new File("/tmp/itemset.txt");
 	private static final File saveDir = new File(
-			"/afs/inf.ed.ac.uk/user/j/jfowkes/ItemsetEval");
+			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/ItemsetEval");
 	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
 	private static final boolean useSpark = false;
 	private static final boolean useMTV = false;

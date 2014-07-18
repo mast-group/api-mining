@@ -43,11 +43,11 @@ public class SparkItemsetMining extends ItemsetMining {
 
 		@Parameter(names = { "-f", "--file" }, description = "Dataset filename")
 		private final File dataset = new File(
-				"/afs/inf.ed.ac.uk/user/j/jfowkes/Articles/ItemSets/DataSets/Succintly/plants.dat");
+				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/plants.dat");
 
 		@Parameter(names = { "-s", "--maxSteps" }, description = "Max structure steps")
 		final int maxStructureSteps = 100000;
-		
+
 		@Parameter(names = { "-i", "--iterations" }, description = "Max iterations")
 		final int maxEMIterations = 1000;
 
