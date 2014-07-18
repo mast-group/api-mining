@@ -246,7 +246,8 @@ public class ItemsetMining {
 
 			// Check if average cost has converged
 			final double avgCost = transactions.getAverageCost();
-			if (avgCost != prevCost // TODO better nothing changed check?
+			if (Math.abs(avgCost - prevCost) > 1e-15 // TODO better nothing
+														// changed check?
 					&& Math.abs(avgCost - prevCost) < AVG_COST_TOL) {
 				logger.info("\nAverage cost converged to within "
 						+ AVG_COST_TOL + ".\n");
