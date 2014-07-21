@@ -51,7 +51,7 @@ public class ItemsetMining {
 	private static final int SIMPLIFY_ITEMSETS_EVERY = 2;
 	private static final int COMBINE_ITEMSETS_EVERY = 4;
 	private static final double AVG_COST_TOL = 1e-3;
-	private static final double OPTIMIZE_TOL = 1e-10;
+	private static final double OPTIMIZE_TOL = 1e-5;
 	private static final long MAX_RUNTIME = 2 * 60 * 60 * 1000; // 2hrs
 
 	private static final boolean ITEMSET_CACHE = true;
@@ -69,8 +69,8 @@ public class ItemsetMining {
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
 		// Max iterations
-		final int maxStructureSteps = 1000000;
-		final int maxEMIterations = 100;
+		final int maxStructureSteps = 100_000;
+		final int maxEMIterations = 1_000;
 
 		// Mine interesting itemsets
 		final HashMap<Itemset, Double> itemsets = mineItemsets(
@@ -99,7 +99,6 @@ public class ItemsetMining {
 		// Set up logging
 		setUpConsoleLogger();
 
-		// TODO enable ILP to be used in parallel
 		if (inferenceAlgorithm instanceof InferILP)
 			logger.warning(" Reverting to Serial for ILP...");
 
@@ -181,6 +180,7 @@ public class ItemsetMining {
 		final Set<Itemset> rejected_sets = Sets.newHashSet();
 
 		// Structural EM
+		boolean breakLoop = false;
 		double prevCost = Double.POSITIVE_INFINITY;
 		for (int iteration = 1; iteration <= maxEMIterations; iteration++) {
 
@@ -193,7 +193,7 @@ public class ItemsetMining {
 			} else if (iteration % SIMPLIFY_ITEMSETS_EVERY == 0) {
 				logger.finer("\n----- Itemset Simplification at Step "
 						+ iteration + "\n"); // TODO use dedicated maxSteps
-												// parameter
+												// parameter?
 				transactions = simplifyItemsetsStep(itemsets, transactions,
 						rejected_sets, inferenceAlgorithm, maxStructureSteps);
 			} else {
@@ -201,30 +201,32 @@ public class ItemsetMining {
 						+ iteration + "\n");
 				transactions = learnStructureStep(itemsets, transactions, tree,
 						rejected_sets, inferenceAlgorithm, maxStructureSteps);
-				if (transactions == null) // structure iteration limit exceeded
-					break;
+				if (transactions.getIterationLimitExceeded())
+					breakLoop = true; // structure iteration limit exceeded
+				else { // Check if average cost has converged
+					final double avgCost = transactions.getAverageCost();
+					if (Math.abs(avgCost - prevCost) < AVG_COST_TOL) {
+						logger.info("\nAverage cost converged to within "
+								+ AVG_COST_TOL + ".\n");
+						breakLoop = true;
+					}
+					prevCost = avgCost;
+				}
 			}
 			logger.finer(String.format(" Average cost: %.2f%n",
 					transactions.getAverageCost()));
 
 			// Optimize parameters of new structure
-			if (iteration % OPTIMIZE_PARAMS_EVERY == 0) {
+			if (iteration % OPTIMIZE_PARAMS_EVERY == 0 || breakLoop == true) {
 				logger.fine("\n***** Parameter Optimization at Step "
 						+ iteration + "\n");
 				transactions = expectationMaximizationStep(itemsets,
 						transactions, inferenceAlgorithm);
 			}
 
-			// Check if average cost has converged
-			final double avgCost = transactions.getAverageCost();
-			if (Math.abs(avgCost - prevCost) > 1e-15 // TODO better nothing
-														// changed check?
-					&& Math.abs(avgCost - prevCost) < AVG_COST_TOL) {
-				logger.info("\nAverage cost converged to within "
-						+ AVG_COST_TOL + ".\n");
+			// Break loop if requested
+			if (breakLoop)
 				break;
-			}
-			prevCost = avgCost;
 
 			// Check if time exceeded
 			if (System.currentTimeMillis() - startTime > MAX_RUNTIME) {
@@ -364,7 +366,8 @@ public class ItemsetMining {
 
 		// No better itemset found
 		logger.warning("\n\n Structure iteration limit exceeded. No better candidate found.\n");
-		return null;
+		transactions.setIterationLimitExceeded();
+		return transactions;
 	}
 
 	/** Generate candidate itemsets from power set */
@@ -487,7 +490,6 @@ public class ItemsetMining {
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
 		// Skip empty candidates and candidates already present
-		// TODO can probs skip itemset.contains now that we use reject list
 		if (!candidate.isEmpty() && !itemsets.keySet().contains(candidate)) {
 
 			logger.finer("\n potential candidate: " + candidate);

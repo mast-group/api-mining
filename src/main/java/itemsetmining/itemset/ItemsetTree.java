@@ -111,7 +111,6 @@ public class ItemsetTree {
 			return;
 
 		// Randomly pick child to traverse proportional to its itemset support
-		// TODO change to purely random traversal? Is that what we want?
 		double p = Math.random();
 		ItemsetTreeNode child = null;
 		for (final Map.Entry<ItemsetTreeNode, Integer> entry : supports

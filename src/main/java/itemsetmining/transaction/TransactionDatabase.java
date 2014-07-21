@@ -7,6 +7,9 @@ import org.apache.spark.api.java.JavaRDD;
 /** Wrapper class for storing a database of transactions */
 public abstract class TransactionDatabase {
 
+	/** Set to true if candidate generation iteration limit exceeded */
+	private boolean iterationLimitExceeded = false;
+
 	/** Average cost across the transactions */
 	private double averageCost = Double.POSITIVE_INFINITY;
 
@@ -18,6 +21,14 @@ public abstract class TransactionDatabase {
 	/** Get the average cost */
 	public double getAverageCost() {
 		return averageCost;
+	}
+
+	public void setIterationLimitExceeded() {
+		iterationLimitExceeded = true;
+	}
+
+	public boolean getIterationLimitExceeded() {
+		return iterationLimitExceeded;
 	}
 
 	/** Get a list of transactions */
