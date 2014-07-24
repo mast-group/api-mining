@@ -66,15 +66,6 @@ public class TransactionGenerator {
 			final double p12 = 0.1 * scaling;
 			itemsets.put(s12, p12);
 
-			// Other transactions
-			final Itemset s3 = new Itemset(3);
-			final double p3 = 0.8;
-			itemsets.put(s3, p3);
-
-			final Itemset s4 = new Itemset(4);
-			final double p4 = 0.5;
-			itemsets.put(s4, p4);
-
 		}
 		// Here [1 2 3] would be seen as a frequent itemset
 		// as both [1 2] and [3] are frequent
