@@ -1,11 +1,8 @@
 package itemsetmining.eval;
 
 import itemsetmining.itemset.Itemset;
-import itemsetmining.main.InferenceAlgorithms;
-import itemsetmining.main.ItemsetMining;
-import itemsetmining.main.SparkItemsetMining;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
-import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
+import itemsetmining.main.ItemsetMining;
 import itemsetmining.transaction.TransactionGenerator;
 
 import java.io.File;
@@ -14,15 +11,11 @@ import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.spark.api.java.JavaSparkContext;
-
 import cern.colt.Arrays;
 
 public class ItemsetScaling {
 
 	private static final File dbFile = new File("/tmp/itemset.txt");
-	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
 	private static final int noSamples = 10;
 
@@ -33,7 +26,8 @@ public class ItemsetScaling {
 	private static final int maxStructureSteps = 500;
 	private static final int maxEMIterations = 20;
 
-	public static void main(final String[] args) throws IOException {
+	public static void main(final String[] args) throws IOException,
+			InterruptedException {
 
 		// Run with and without spark
 		// scalingTransactions(false, 7);
@@ -48,17 +42,11 @@ public class ItemsetScaling {
 	}
 
 	public static void scalingTransactions(final boolean useSpark,
-			final int noLogTransactions) throws IOException {
+			final int noLogTransactions) throws IOException,
+			InterruptedException {
 
 		final double[] trans = new double[noLogTransactions];
 		final double[] time = new double[noLogTransactions];
-
-		FileSystem hdfs = null;
-		JavaSparkContext sc = null;
-		if (useSpark) {
-			sc = SparkItemsetMining.setUpSpark(dbFile.getName());
-			hdfs = SparkItemsetMining.setUpHDFS();
-		}
 
 		// Generate real itemsets
 		final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
@@ -86,10 +74,9 @@ public class ItemsetScaling {
 				// Mine itemsets
 				final long startTime = System.currentTimeMillis();
 				if (useSpark)
-					SparkItemsetMining.mineItemsets(dbFile, hdfs, sc,
-							inferenceAlg, maxStructureSteps, maxEMIterations);
+					runSpark();
 				else
-					ItemsetMining.mineItemsets(dbFile, inferenceAlg,
+					ItemsetMining.mineItemsets(dbFile, new InferGreedy(),
 							maxStructureSteps, maxEMIterations);
 
 				final long endTime = System.currentTimeMillis();
@@ -138,13 +125,6 @@ public class ItemsetScaling {
 		final double[] itemsets = new double[param];
 		final double[] time = new double[param];
 
-		FileSystem hdfs = null;
-		JavaSparkContext sc = null;
-		if (useSpark) {
-			sc = SparkItemsetMining.setUpSpark(dbFile.getName());
-			hdfs = SparkItemsetMining.setUpHDFS();
-		}
-
 		// Generate real itemsets
 		for (int i = 0; i < param; i++) {
 
@@ -180,10 +160,9 @@ public class ItemsetScaling {
 				// Mine itemsets
 				final long startTime = System.currentTimeMillis();
 				if (useSpark)
-					SparkItemsetMining.mineItemsets(dbFile, hdfs, sc,
-							inferenceAlg, maxStructureSteps, maxEMIterations);
+					runSpark();
 				else
-					ItemsetMining.mineItemsets(dbFile, inferenceAlg,
+					ItemsetMining.mineItemsets(dbFile, new InferGreedy(),
 							maxStructureSteps, maxEMIterations);
 
 				final long endTime = System.currentTimeMillis();
@@ -222,4 +201,12 @@ public class ItemsetScaling {
 		System.out.println("Time: " + Arrays.toString(time));
 	}
 
+	private static void runSpark() {
+		final String cmd[] = new String[4];
+		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/run-spark.sh";
+		cmd[1] = "-f " + dbFile;
+		cmd[2] = " -s " + maxStructureSteps;
+		cmd[3] = " -i " + maxEMIterations;
+		MTVItemsetMining.runScript(cmd);
+	}
 }
