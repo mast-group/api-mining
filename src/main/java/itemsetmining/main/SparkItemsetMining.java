@@ -143,7 +143,7 @@ public class SparkItemsetMining extends ItemsetMining {
 		final SparkConf conf = new SparkConf();
 		conf.setMaster("spark://cup04.inf.ed.ac.uk:7077")
 				.setAppName("Itemset Mining: " + dataset)
-				.setSparkHome("/disk/data1/jfowkes/spark-1.0.0-bin-hadoop1")
+				.setSparkHome("/tmp/spark")
 				.setJars(
 						new String[] { "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/target/itemset-mining-1.1-SNAPSHOT.jar" });
 		conf.set("spark.executor.memory", "10g");
