@@ -6,7 +6,9 @@ import itemsetmining.main.ItemsetMining;
 import itemsetmining.transaction.TransactionGenerator;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map.Entry;
@@ -16,6 +18,8 @@ import cern.colt.Arrays;
 public class ItemsetScaling {
 
 	private static final File dbFile = new File("/tmp/itemset.txt");
+	private static final File saveDir = new File(
+			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/ItemsetEval");
 
 	private static final int noSamples = 10;
 
@@ -30,7 +34,7 @@ public class ItemsetScaling {
 			InterruptedException {
 
 		// Run with and without spark
-		// scalingTransactions(false, 7);
+		scalingTransactions(false, 7);
 		scalingTransactions(true, 8);
 
 		// scalingItemsets(false, 4);
@@ -58,10 +62,21 @@ public class ItemsetScaling {
 		}
 		System.out.print("\n");
 
+		// Save to file
+		String name = InetAddress.getLocalHost().getHostName();
+		if (useSpark)
+			name = "Spark";
+		String prefix = "";
+		if (useSpark)
+			prefix += "spark_";
+		final PrintWriter out = new PrintWriter(new FileOutputStream(saveDir
+				+ "/" + prefix + name + "_scaling.txt"), true);
+
 		for (int i = 0; i < noLogTransactions; i++) {
 
 			final int tran = (int) Math.pow(10, i + 1);
 			System.out.println("\n========= 10^" + (i + 1) + " Transactions");
+			out.println("\n========= 10^" + (i + 1) + " Transactions");
 
 			// Generate transaction database
 			TransactionGenerator.generateTransactionDatabase(actualItemsets,
@@ -70,6 +85,8 @@ public class ItemsetScaling {
 			for (int sample = 0; sample < noSamples; sample++) {
 				System.out.println("\n========= Sample " + (sample + 1)
 						+ " of " + noSamples);
+				out.println("\n========= Sample " + (sample + 1) + " of "
+						+ noSamples);
 
 				// Mine itemsets
 				final long startTime = System.currentTimeMillis();
@@ -84,6 +101,7 @@ public class ItemsetScaling {
 				time[i] += tim;
 
 				System.out.printf("Time (s): %.2f%n", tim);
+				out.printf("Time (s): %.2f%n", tim);
 			}
 		}
 
@@ -99,12 +117,14 @@ public class ItemsetScaling {
 		}
 
 		// Plot time
-		String name = InetAddress.getLocalHost().getHostName();
-		if (useSpark)
-			name = "Spark";
 		System.out.println("\n========" + name + "========");
 		System.out.println("Transactions:" + Arrays.toString(trans));
 		System.out.println("Time: " + Arrays.toString(time));
+
+		// and save to file
+		out.println(Arrays.toString(trans));
+		out.println(Arrays.toString(time));
+		out.close();
 	}
 
 	public static void scalingItemsets(final boolean useSpark,

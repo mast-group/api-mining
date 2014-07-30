@@ -50,7 +50,7 @@ public class ItemsetMining {
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
 	private static final int SIMPLIFY_ITEMSETS_EVERY = 2;
 	private static final int COMBINE_ITEMSETS_EVERY = 4;
-	private static final double AVG_COST_TOL = 1e-3;
+	// private static final double AVG_COST_TOL = 1e-3;
 	private static final double OPTIMIZE_TOL = 1e-5;
 	private static final long MAX_RUNTIME = 2 * 60 * 60 * 1000; // 2hrs
 
@@ -59,7 +59,7 @@ public class ItemsetMining {
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
 	private static final String LOG_FILE = "%t/spark_mining.log";
-	protected static final Level LOGLEVEL = Level.FINER;
+	protected static final Level LOGLEVEL = Level.INFO;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -181,7 +181,7 @@ public class ItemsetMining {
 
 		// Structural EM
 		boolean breakLoop = false;
-		double prevCost = Double.POSITIVE_INFINITY;
+		// final double prevCost = Double.POSITIVE_INFINITY;
 		for (int iteration = 1; iteration <= maxEMIterations; iteration++) {
 
 			// Learn structure
@@ -203,15 +203,15 @@ public class ItemsetMining {
 						rejected_sets, inferenceAlgorithm, maxStructureSteps);
 				if (transactions.getIterationLimitExceeded())
 					breakLoop = true; // structure iteration limit exceeded
-				else { // Check if average cost has converged
-					final double avgCost = transactions.getAverageCost();
-					if (Math.abs(avgCost - prevCost) < AVG_COST_TOL) {
-						logger.info("\nAverage cost converged to within "
-								+ AVG_COST_TOL + ".\n");
-						breakLoop = true;
-					}
-					prevCost = avgCost;
-				}
+				// else { // Check if average cost has converged
+				// final double avgCost = transactions.getAverageCost();
+				// if (Math.abs(avgCost - prevCost) < AVG_COST_TOL) {
+				// logger.info("\nAverage cost converged to within "
+				// + AVG_COST_TOL + ".\n");
+				// breakLoop = true;
+				// }
+				// prevCost = avgCost;
+				// }
 			}
 			logger.finer(String.format(" Average cost: %.2f%n",
 					transactions.getAverageCost()));
@@ -621,7 +621,7 @@ public class ItemsetMining {
 
 	/**
 	 * Calculate interestingness as defined by i(S) = |z_S = 1|/|T : S in T|
-	 * where |z_S = 1| is calculated by pi_S*|T|
+	 * where |z_S = 1| is calculated by pi_S*|T| and |T : S in T| = supp(S)
 	 */
 	protected static HashMap<Itemset, Double> calculateInterestingness(
 			final HashMap<Itemset, Double> itemsets,

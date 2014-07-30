@@ -35,7 +35,7 @@ import com.google.common.collect.Multiset;
 
 public class SparkItemsetMining extends ItemsetMining {
 
-	private static final boolean LOG_TO_FILE = true;
+	private static final boolean LOG_TO_FILE = false;
 	private static final boolean USE_KRYO = true;
 
 	/** Main function parameters */
