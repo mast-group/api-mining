@@ -35,7 +35,7 @@ import com.google.common.collect.Multiset;
 
 public class SparkItemsetMining extends ItemsetMining {
 
-	private static final boolean LOG_TO_FILE = false;
+	private static final boolean LOG_TO_FILE = true;
 	private static final boolean USE_KRYO = true;
 
 	/** Main function parameters */
@@ -51,6 +51,9 @@ public class SparkItemsetMining extends ItemsetMining {
 		@Parameter(names = { "-i", "--iterations" }, description = "Max iterations")
 		final int maxEMIterations = 1_000;
 
+		@Parameter(names = { "-c", "--cores" }, description = "No cores")
+		final int noCores = 16;
+
 	}
 
 	public static void main(final String[] args) throws IOException {
@@ -65,7 +68,8 @@ public class SparkItemsetMining extends ItemsetMining {
 			jc.parse(args);
 
 			// Set up spark
-			final JavaSparkContext sc = setUpSpark(params.dataset.getName());
+			final JavaSparkContext sc = setUpSpark(params.dataset.getName(),
+					params.noCores);
 
 			// Set up HDFS
 			final FileSystem hdfs = setUpHDFS();
@@ -98,7 +102,8 @@ public class SparkItemsetMining extends ItemsetMining {
 				datasetPath));
 
 		// Read in transaction database
-		final JavaRDD<Transaction> db = sc.textFile(datasetPath, 96)
+		int noCores = Integer.parseInt(sc.getConf().get("spark.cores.max"));
+		final JavaRDD<Transaction> db = sc.textFile(datasetPath, 2 * noCores)
 				.map(new ParseTransaction()).cache();
 
 		// Determine most frequent singletons
@@ -138,7 +143,7 @@ public class SparkItemsetMining extends ItemsetMining {
 	}
 
 	/** Set up Spark */
-	public static JavaSparkContext setUpSpark(final String dataset) {
+	public static JavaSparkContext setUpSpark(final String dataset, int noCores) {
 
 		final SparkConf conf = new SparkConf();
 		conf.setMaster("spark://cup04.inf.ed.ac.uk:7077")
@@ -146,6 +151,7 @@ public class SparkItemsetMining extends ItemsetMining {
 				.setSparkHome("/tmp/spark")
 				.setJars(
 						new String[] { "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/target/itemset-mining-1.1-SNAPSHOT.jar" });
+		conf.set("spark.cores.max", Integer.toString(noCores));
 		conf.set("spark.executor.memory", "10g");
 		conf.set("spark.default.parallelism", "8");
 

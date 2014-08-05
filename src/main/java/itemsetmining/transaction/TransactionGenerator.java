@@ -112,13 +112,13 @@ public class TransactionGenerator {
 
 	/** Generate some disjoint itemsets as background noise */
 	public static HashMap<Itemset, Double> getNoisyItemsets(
-			final int noExtraSets, final int maxSetSize) {
+			final int noItemSets, final int maxSetSize) {
 
 		final HashMap<Itemset, Double> noisyItemsets = Maps.newHashMap();
 
 		final Random rand = new Random(1);
 		int maxElement = 10;
-		for (int s = 0; s < noExtraSets; s++) {
+		for (int s = 0; s < noItemSets; s++) {
 
 			final int len = rand.nextInt(maxSetSize) + 1;
 			final Itemset set = new Itemset();
@@ -133,27 +133,35 @@ public class TransactionGenerator {
 		return noisyItemsets;
 	}
 
-	/** Generate some disjoint itemsets for scaling purposes */
-	public static HashMap<Itemset, Double> getItemsetsScaling(
-			final int noItemsets, final int noItemsPerSet,
-			final double itemsetProb) {
+	/** Generate some disjoint itemsets as background noise */
+	public static HashMap<Itemset, Double> getNoisyItemsetsRandomProb(
+			final int noItems, final int maxSetSize) {
 
-		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
+		final HashMap<Itemset, Double> noisyItemsets = Maps.newHashMap();
 
+		final Random rand = new Random(1);
 		int maxElement = 10;
-		for (int s = 0; s < noItemsets; s++) {
+		while (maxElement < 10 + noItems - maxSetSize) {
 
-			final int len = noItemsPerSet;
+			final int len = rand.nextInt(maxSetSize) + 1;
 			final Itemset set = new Itemset();
 			for (int i = maxElement; i < maxElement + len; i++) {
 				set.add(i);
 			}
-			itemsets.put(set, itemsetProb);
+			final int num = rand.nextInt(7) + 2;
+			noisyItemsets.put(set, num / 10.);
 			maxElement += len;
 
 		}
 
-		return itemsets;
+		final Itemset set = new Itemset();
+		for (int i = maxElement; i < 10 + noItems; i++) {
+			set.add(i);
+		}
+		final int num = rand.nextInt(7) + 2;
+		noisyItemsets.put(set, num / 10.);
+
+		return noisyItemsets;
 	}
 
 	/** Generate transactions from set of interesting itemsets */

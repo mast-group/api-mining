@@ -52,14 +52,14 @@ public class ItemsetMining {
 	private static final int COMBINE_ITEMSETS_EVERY = 4;
 	// private static final double AVG_COST_TOL = 1e-3;
 	private static final double OPTIMIZE_TOL = 1e-5;
-	private static final long MAX_RUNTIME = 2 * 60 * 60 * 1000; // 2hrs
+	private static final long MAX_RUNTIME = 12 * 60 * 60 * 1_000; // 12hrs
 
 	private static final boolean ITEMSET_CACHE = true;
 	private static final boolean SERIAL = false;
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
 	private static final String LOG_FILE = "%t/spark_mining.log";
-	protected static final Level LOGLEVEL = Level.INFO;
+	protected static final Level LOGLEVEL = Level.FINE;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -201,8 +201,8 @@ public class ItemsetMining {
 						+ iteration + "\n");
 				transactions = learnStructureStep(itemsets, transactions, tree,
 						rejected_sets, inferenceAlgorithm, maxStructureSteps);
-				if (transactions.getIterationLimitExceeded())
-					breakLoop = true; // structure iteration limit exceeded
+				// if (transactions.getIterationLimitExceeded())
+				// breakLoop = true; // structure iteration limit exceeded
 				// else { // Check if average cost has converged
 				// final double avgCost = transactions.getAverageCost();
 				// if (Math.abs(avgCost - prevCost) < AVG_COST_TOL) {
@@ -217,7 +217,8 @@ public class ItemsetMining {
 					transactions.getAverageCost()));
 
 			// Optimize parameters of new structure
-			if (iteration % OPTIMIZE_PARAMS_EVERY == 0 || breakLoop == true) {
+			if (iteration % OPTIMIZE_PARAMS_EVERY == 0
+					|| iteration == maxEMIterations || breakLoop == true) {
 				logger.fine("\n***** Parameter Optimization at Step "
 						+ iteration + "\n");
 				transactions = expectationMaximizationStep(itemsets,

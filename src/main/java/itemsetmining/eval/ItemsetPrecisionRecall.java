@@ -29,6 +29,8 @@ public class ItemsetPrecisionRecall {
 			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/ItemsetEval");
 	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
 	private static final boolean useSpark = false;
+	private static final int sparkCores = 16;
+
 	private static final boolean useMTV = false;
 
 	private static final int noSamples = 10;
@@ -59,7 +61,7 @@ public class ItemsetPrecisionRecall {
 		FileSystem hdfs = null;
 		JavaSparkContext sc = null;
 		if (useSpark) {
-			sc = SparkItemsetMining.setUpSpark(dbTmpFile.getName());
+			sc = SparkItemsetMining.setUpSpark(dbTmpFile.getName(), sparkCores);
 			hdfs = SparkItemsetMining.setUpHDFS();
 		}
 
