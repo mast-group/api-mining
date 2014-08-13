@@ -102,7 +102,8 @@ public class SparkItemsetMining extends ItemsetMining {
 				datasetPath));
 
 		// Read in transaction database
-		int noCores = Integer.parseInt(sc.getConf().get("spark.cores.max"));
+		final int noCores = Integer.parseInt(sc.getConf()
+				.get("spark.cores.max"));
 		final JavaRDD<Transaction> db = sc.textFile(datasetPath, 2 * noCores)
 				.map(new ParseTransaction()).cache();
 
@@ -143,12 +144,13 @@ public class SparkItemsetMining extends ItemsetMining {
 	}
 
 	/** Set up Spark */
-	public static JavaSparkContext setUpSpark(final String dataset, int noCores) {
+	public static JavaSparkContext setUpSpark(final String dataset,
+			final int noCores) {
 
 		final SparkConf conf = new SparkConf();
 		conf.setMaster("spark://cup04.inf.ed.ac.uk:7077")
 				.setAppName("Itemset Mining: " + dataset)
-				.setSparkHome("/tmp/spark")
+				.setSparkHome("/disk/data/jfowkes/spark-1.0.0-bin-hadoop1")
 				.setJars(
 						new String[] { "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/target/itemset-mining-1.1-SNAPSHOT.jar" });
 		conf.set("spark.cores.max", Integer.toString(noCores));
