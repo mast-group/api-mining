@@ -16,7 +16,8 @@ import java.util.Map.Entry;
 
 public class ItemsetScaling {
 
-	private static final File dbFile = new File("/tmp/itemset.txt");
+	private static final File dbFile = new File(
+			"/disk/data1/jfowkes/itemset.txt");
 	private static final File saveDir = new File(
 			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/ItemsetEval");
 
@@ -42,8 +43,8 @@ public class ItemsetScaling {
 		// scalingTransactions(false, -1, 5);
 
 		// Run with spark
-		int[] cores = new int[] { 16, 32, 48, 64 };
-		for (int noCores : cores)
+		final int[] cores = new int[] { 16, 32, 48, 64 };
+		for (final int noCores : cores)
 			scalingTransactions(true, noCores, 6);
 
 		// scalingItemsets(false, 64, 4);
@@ -54,8 +55,8 @@ public class ItemsetScaling {
 
 	}
 
-	public static void scalingTransactions(final boolean useSpark, int noCores,
-			final int noLogTransactions) throws IOException,
+	public static void scalingTransactions(final boolean useSpark,
+			final int noCores, final int noLogTransactions) throws IOException,
 			InterruptedException {
 
 		final double[] trans = new double[noLogTransactions];
@@ -83,7 +84,7 @@ public class ItemsetScaling {
 
 		for (int i = 0; i < noLogTransactions; i++) {
 
-			int power = i + 3;
+			final int power = i + 3;
 
 			final int tran = (int) Math.pow(10, power);
 			System.out.println("\n========= 10^" + power + " Transactions");
@@ -118,7 +119,7 @@ public class ItemsetScaling {
 
 		for (int i = 0; i < noLogTransactions; i++) {
 
-			int power = i + 3;
+			final int power = i + 3;
 
 			// Average over samples
 			time[i] /= noSamples;
@@ -140,13 +141,13 @@ public class ItemsetScaling {
 		out.close();
 	}
 
-	public static void scalingItemsets(final boolean useSpark, int noCores,
-			final int noLogSets) throws IOException {
+	public static void scalingItemsets(final boolean useSpark,
+			final int noCores, final int noLogSets) throws IOException {
 
 		scalingItemsOrItemsets(useSpark, noCores, noLogSets, true);
 	}
 
-	public static void scalingItems(final boolean useSpark, int noCores,
+	public static void scalingItems(final boolean useSpark, final int noCores,
 			final int logMaxSetSize) throws IOException {
 
 		scalingItemsOrItemsets(useSpark, noCores, logMaxSetSize, false);
@@ -235,7 +236,7 @@ public class ItemsetScaling {
 		System.out.println("Time: " + Arrays.toString(time));
 	}
 
-	private static void runSpark(int noCores) {
+	private static void runSpark(final int noCores) {
 		final String cmd[] = new String[5];
 		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/run-spark.sh";
 		cmd[1] = "-f " + dbFile;

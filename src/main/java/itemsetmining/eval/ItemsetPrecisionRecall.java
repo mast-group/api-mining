@@ -24,7 +24,8 @@ import com.google.common.collect.Sets;
 public class ItemsetPrecisionRecall {
 
 	private static final String name = "cross-supp";
-	private static final File dbTmpFile = new File("/tmp/itemset.txt");
+	private static final File dbTmpFile = new File(
+			"/disk/data1/jfowkes/itemset.txt");
 	private static final File saveDir = new File(
 			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/ItemsetEval");
 	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
