@@ -35,6 +35,7 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.LineIterator;
 
 import com.google.common.base.Charsets;
@@ -799,10 +800,12 @@ public class ItemsetMining {
 	protected static void setUpFileLogger(final File dataset) {
 		LogManager.getLogManager().reset();
 		logger.setLevel(LOG_LEVEL);
-		final String timeStamp = new SimpleDateFormat().format(new Date());
+		final String timeStamp = new SimpleDateFormat("dd.MM.yyyy-hh:mm:ss")
+				.format(new Date());
 		FileHandler handler = null;
 		try { // Limit log file to 1MB
-			handler = new FileHandler(LOG_DIR + dataset.getName() + "_"
+			handler = new FileHandler(LOG_DIR
+					+ FilenameUtils.getBaseName(dataset.getName()) + "-"
 					+ timeStamp + ".log", 1048576, 1);
 		} catch (final IOException e) {
 			e.printStackTrace();
