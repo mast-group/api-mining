@@ -161,7 +161,7 @@ public class SparkItemsetMining extends ItemsetMining {
 				.setJars(
 						new String[] { "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/target/itemset-mining-1.1-SNAPSHOT.jar" });
 		conf.set("spark.cores.max", Integer.toString(noCores));
-		conf.set("spark.executor.memory", "10g");
+		conf.set("spark.executor.memory", "20g");
 		conf.set("spark.default.parallelism", "8");
 
 		if (USE_KRYO) {
