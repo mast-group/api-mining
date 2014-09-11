@@ -46,14 +46,19 @@ public class SparkItemsetMining extends ItemsetMining {
 				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/plants.dat");
 
 		@Parameter(names = { "-s", "--maxSteps" }, description = "Max structure steps")
-		final int maxStructureSteps = 100_000;
+		int maxStructureSteps = 100_000;
 
 		@Parameter(names = { "-i", "--iterations" }, description = "Max iterations")
-		final int maxEMIterations = 1_000;
+		int maxEMIterations = 1_000;
 
 		@Parameter(names = { "-c", "--cores" }, description = "No cores")
-		final int noCores = 16;
+		int noCores = 16;
 
+		@Parameter(names = { "-l", "--log-level" }, description = "Log level")
+		Level logLevel = Level.FINE;
+
+		@Parameter(names = { "-r", "--runtime" }, description = "Max Runtime (min)")
+		long maxRunTime = 12 * 60; // 12hrs
 	}
 
 	public static void main(final String[] args) throws IOException {
@@ -67,12 +72,14 @@ public class SparkItemsetMining extends ItemsetMining {
 		try {
 			jc.parse(args);
 
-			// Set up spark
+			// Set up spark and HDFS
 			final JavaSparkContext sc = setUpSpark(params.dataset.getName(),
 					params.noCores);
-
-			// Set up HDFS
 			final FileSystem hdfs = setUpHDFS();
+
+			// Set loglevel and runtime
+			LOG_LEVEL = params.logLevel;
+			MAX_RUNTIME = params.maxRunTime * 60 * 1_000;
 
 			mineItemsets(params.dataset, hdfs, sc, inferenceAlg,
 					params.maxStructureSteps, params.maxEMIterations);
@@ -91,7 +98,7 @@ public class SparkItemsetMining extends ItemsetMining {
 
 		// Set up logging
 		if (LOG_TO_FILE)
-			setUpFileLogger();
+			setUpFileLogger(inputFile);
 		else
 			setUpConsoleLogger();
 
@@ -116,7 +123,7 @@ public class SparkItemsetMining extends ItemsetMining {
 		// Apply the algorithm to build the itemset tree
 		final ItemsetTree tree = new ItemsetTree();
 		tree.buildTree(datasetPath, hdfs, singletonsMap);
-		if (LOGLEVEL.equals(Level.FINE))
+		if (LOG_LEVEL.equals(Level.FINE))
 			tree.printStatistics(logger);
 
 		// Convert singletons map to Multiset (as Spark map is not serializable)
@@ -150,7 +157,7 @@ public class SparkItemsetMining extends ItemsetMining {
 		final SparkConf conf = new SparkConf();
 		conf.setMaster("spark://cup04.inf.ed.ac.uk:7077")
 				.setAppName("Itemset Mining: " + dataset)
-				.setSparkHome("/disk/data/jfowkes/spark-1.0.0-bin-hadoop1")
+				.setSparkHome("/disk/data1/jfowkes/spark-1.0.2-bin-hadoop1")
 				.setJars(
 						new String[] { "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/target/itemset-mining-1.1-SNAPSHOT.jar" });
 		conf.set("spark.cores.max", Integer.toString(noCores));

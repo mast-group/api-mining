@@ -15,8 +15,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -47,24 +49,26 @@ import com.google.common.primitives.Ints;
 
 public class ItemsetMining {
 
+	/** Main fixed settings */
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
 	private static final int SIMPLIFY_ITEMSETS_EVERY = 2;
 	private static final int COMBINE_ITEMSETS_EVERY = 4;
-	// private static final double AVG_COST_TOL = 1e-3;
 	private static final double OPTIMIZE_TOL = 1e-5;
-	private static final long MAX_RUNTIME = 12 * 60 * 60 * 1_000; // 12hrs
 
 	private static final boolean ITEMSET_CACHE = true;
 	private static final boolean SERIAL = false;
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
-	private static final String LOG_FILE = "%t/spark_mining.log";
-	protected static final Level LOGLEVEL = Level.FINE;
+	private static final String LOG_DIR = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/";
+
+	/** Variable settings (hacky) */
+	protected static Level LOG_LEVEL = Level.FINE;
+	protected static long MAX_RUNTIME = 12 * 60 * 60 * 1_000; // 12hrs
 
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
-		final String dataset = "/tmp/caviar.txt";
+		final String dataset = "/disk/data1/caviar.txt";
 		final boolean associationRules = false;
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
@@ -111,9 +115,9 @@ public class ItemsetMining {
 		// Apply the algorithm to build the itemset tree
 		final ItemsetTree tree = new ItemsetTree();
 		tree.buildTree(inputFile, singletons);
-		if (LOGLEVEL.equals(Level.FINE))
+		if (LOG_LEVEL.equals(Level.FINE))
 			tree.printStatistics(logger);
-		if (LOGLEVEL.equals(Level.FINEST)) {
+		if (LOG_LEVEL.equals(Level.FINEST)) {
 			logger.finest("THIS IS THE TREE:\n");
 			logger.finest(tree.toString());
 		}
@@ -123,7 +127,7 @@ public class ItemsetMining {
 		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
 				singletons, tree, inferenceAlgorithm, maxStructureSteps,
 				maxEMIterations);
-		if (LOGLEVEL.equals(Level.FINEST))
+		if (LOG_LEVEL.equals(Level.FINEST))
 			logger.finest("\n======= Transaction Database =======\n"
 					+ Files.toString(inputFile, Charsets.UTF_8) + "\n");
 		logger.info("\n============= INTERESTING ITEMSETS =============\n");
@@ -180,8 +184,7 @@ public class ItemsetMining {
 		final Set<Itemset> rejected_sets = Sets.newHashSet();
 
 		// Structural EM
-		boolean breakLoop = false;
-		// final double prevCost = Double.POSITIVE_INFINITY;
+		final boolean breakLoop = false;
 		for (int iteration = 1; iteration <= maxEMIterations; iteration++) {
 
 			// Learn structure
@@ -201,17 +204,6 @@ public class ItemsetMining {
 						+ iteration + "\n");
 				transactions = learnStructureStep(itemsets, transactions, tree,
 						rejected_sets, inferenceAlgorithm, maxStructureSteps);
-				// if (transactions.getIterationLimitExceeded())
-				// breakLoop = true; // structure iteration limit exceeded
-				// else { // Check if average cost has converged
-				// final double avgCost = transactions.getAverageCost();
-				// if (Math.abs(avgCost - prevCost) < AVG_COST_TOL) {
-				// logger.info("\nAverage cost converged to within "
-				// + AVG_COST_TOL + ".\n");
-				// breakLoop = true;
-				// }
-				// prevCost = avgCost;
-				// }
 			}
 			logger.finer(String.format(" Average cost: %.2f%n",
 					transactions.getAverageCost()));
@@ -790,7 +782,7 @@ public class ItemsetMining {
 	/** Set up logging to console */
 	protected static void setUpConsoleLogger() {
 		LogManager.getLogManager().reset();
-		logger.setLevel(LOGLEVEL);
+		logger.setLevel(LOG_LEVEL);
 		final ConsoleHandler handler = new Handler();
 		handler.setLevel(Level.ALL);
 		final Formatter formatter = new Formatter() {
@@ -804,12 +796,14 @@ public class ItemsetMining {
 	}
 
 	/** Set up logging to file */
-	protected static void setUpFileLogger() {
+	protected static void setUpFileLogger(final File dataset) {
 		LogManager.getLogManager().reset();
-		logger.setLevel(LOGLEVEL);
+		logger.setLevel(LOG_LEVEL);
+		final String timeStamp = new SimpleDateFormat().format(new Date());
 		FileHandler handler = null;
 		try { // Limit log file to 1MB
-			handler = new FileHandler(LOG_FILE, 1048576, 1);
+			handler = new FileHandler(LOG_DIR + dataset.getName() + "_"
+					+ timeStamp + ".log", 1048576, 1);
 		} catch (final IOException e) {
 			e.printStackTrace();
 		}
