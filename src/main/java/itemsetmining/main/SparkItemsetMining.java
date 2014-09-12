@@ -171,7 +171,10 @@ public class SparkItemsetMining extends ItemsetMining {
 					"itemsetmining.util.ClassRegistrator");
 		}
 
-		return new JavaSparkContext(conf);
+		final JavaSparkContext sc = new JavaSparkContext(conf);
+		sc.setCheckpointDir("hdfs://cup04.inf.ed.ac.uk:54310/checkpoint/");
+
+		return sc;
 	}
 
 	/** Set up HDFS */
