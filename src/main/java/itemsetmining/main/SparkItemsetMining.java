@@ -163,6 +163,7 @@ public class SparkItemsetMining extends ItemsetMining {
 		conf.set("spark.cores.max", Integer.toString(noCores));
 		conf.set("spark.executor.memory", "20g");
 		conf.set("spark.default.parallelism", "8");
+		conf.set("spark.shuffle.manager", "SORT");
 
 		if (USE_KRYO) {
 			conf.set("spark.serializer",
