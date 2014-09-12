@@ -801,7 +801,7 @@ public class ItemsetMining {
 	protected static void setUpFileLogger(final File dataset) {
 		LogManager.getLogManager().reset();
 		logger.setLevel(LOG_LEVEL);
-		final String timeStamp = new SimpleDateFormat("dd.MM.yyyy-hh:mm:ss")
+		final String timeStamp = new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
 				.format(new Date());
 		FileHandler handler = null;
 		try { // Limit log file to 1MB
