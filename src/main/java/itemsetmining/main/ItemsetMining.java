@@ -234,6 +234,7 @@ public class ItemsetMining {
 			if (iteration % 100 == 0 && transactions instanceof TransactionRDD) {
 				transactions.getTransactionRDD().cache();
 				transactions.getTransactionRDD().checkpoint();
+				transactions.getTransactionRDD().count();
 			}
 
 			if (iteration == maxEMIterations)
