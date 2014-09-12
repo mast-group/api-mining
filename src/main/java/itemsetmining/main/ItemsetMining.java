@@ -64,6 +64,7 @@ public class ItemsetMining {
 
 	/** Variable settings (hacky) */
 	protected static Level LOG_LEVEL = Level.FINE;
+	protected static boolean TIMESTAMP_LOG = true;
 	protected static long MAX_RUNTIME = 12 * 60 * 60 * 1_000; // 12hrs
 
 	public static void main(final String[] args) throws IOException {
@@ -801,13 +802,16 @@ public class ItemsetMining {
 	protected static void setUpFileLogger(final File dataset) {
 		LogManager.getLogManager().reset();
 		logger.setLevel(LOG_LEVEL);
-		final String timeStamp = new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
-				.format(new Date());
+		String timeStamp = "";
+		if (TIMESTAMP_LOG)
+			timeStamp = "-"
+					+ new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
+							.format(new Date());
 		FileHandler handler = null;
 		try { // Limit log file to 1MB
 			handler = new FileHandler(LOG_DIR
-					+ FilenameUtils.getBaseName(dataset.getName()) + "-"
-					+ timeStamp + ".log", 1048576, 1);
+					+ FilenameUtils.getBaseName(dataset.getName()) + timeStamp
+					+ ".log", 1048576, 1);
 		} catch (final IOException e) {
 			e.printStackTrace();
 		}

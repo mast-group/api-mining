@@ -59,6 +59,9 @@ public class SparkItemsetMining extends ItemsetMining {
 
 		@Parameter(names = { "-r", "--runtime" }, description = "Max Runtime (min)")
 		long maxRunTime = 12 * 60; // 12hrs
+
+		@Parameter(names = { "-t", "--timestamp" }, description = "Timestamp Logfile", arity = 1)
+		boolean timestampLog = true;
 	}
 
 	public static void main(final String[] args) throws IOException {
@@ -77,9 +80,10 @@ public class SparkItemsetMining extends ItemsetMining {
 					params.noCores);
 			final FileSystem hdfs = setUpHDFS();
 
-			// Set loglevel and runtime
+			// Set loglevel, runtime and timestamp
 			LOG_LEVEL = params.logLevel;
 			MAX_RUNTIME = params.maxRunTime * 60 * 1_000;
+			TIMESTAMP_LOG = params.timestampLog;
 
 			mineItemsets(params.dataset, hdfs, sc, inferenceAlg,
 					params.maxStructureSteps, params.maxEMIterations);

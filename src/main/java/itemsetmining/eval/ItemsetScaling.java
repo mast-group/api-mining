@@ -13,26 +13,30 @@ import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.logging.Level;
 
 public class ItemsetScaling {
 
+	/** Main Settings */
 	private static final File dbFile = new File(
 			"/disk/data1/jfowkes/itemset.txt");
 	private static final File saveDir = new File(
 			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/ItemsetEval");
 
+	/** Scaling Settings */
 	private static final int noSamples = 1;
+	private static final double MU = 0.910658459511;
+	private static final double SIGMA = 1.02333623562;
 
-	// For itemset scaling
-	private static final int noTransactions = 100;
-	private static final int noItemsets = 10;
+	/** For transaction scaling */
+	private static final int noItemsets = 50;
 
-	// For transaction scaling
-	private static final int noItems = 100;
+	/** For itemset scaling */
+	private static final int noTransactions = 100_000;
 
-	// For both
-	private static final int maxSetSize = 5;
-
+	/** Spark Settings */
+	protected static Level LOG_LEVEL = Level.INFO;
+	protected static long MAX_RUNTIME = 2 * 60; // 2hrs
 	private static final int maxStructureSteps = 10_000;
 	private static final int maxEMIterations = 100;
 
@@ -43,9 +47,9 @@ public class ItemsetScaling {
 		// scalingTransactions(false, -1, 5);
 
 		// Run with spark
-		final int[] cores = new int[] { 16, 32, 48, 64 };
-		for (final int noCores : cores)
-			scalingTransactions(true, noCores, 6);
+		// final int[] cores = new int[] { 16, 32, 48, 64 };
+		// for (final int noCores : cores)
+		scalingTransactions(true, 64, 6);
 
 		// scalingItemsets(false, 64, 4);
 		// scalingItemsets(true, 64, 4);
@@ -64,7 +68,7 @@ public class ItemsetScaling {
 
 		// Generate real itemsets
 		final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
-				.getNoisyItemsetsRandomProb(noItems, maxSetSize);
+				.getNoisyItemsets(noItemsets, MU, SIGMA);
 		System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
 			System.out.print(String.format("%s\tprob: %1.5f %n",
@@ -142,20 +146,7 @@ public class ItemsetScaling {
 	}
 
 	public static void scalingItemsets(final boolean useSpark,
-			final int noCores, final int noLogSets) throws IOException {
-
-		scalingItemsOrItemsets(useSpark, noCores, noLogSets, true);
-	}
-
-	public static void scalingItems(final boolean useSpark, final int noCores,
-			final int logMaxSetSize) throws IOException {
-
-		scalingItemsOrItemsets(useSpark, noCores, logMaxSetSize, false);
-	}
-
-	public static void scalingItemsOrItemsets(final boolean useSpark,
-			final int noCores, final int param, final boolean scaleItemsets)
-			throws IOException {
+			final int noCores, final int param) throws IOException {
 
 		final double[] itemsets = new double[param];
 		final double[] time = new double[param];
@@ -163,20 +154,11 @@ public class ItemsetScaling {
 		// Generate real itemsets
 		for (int i = 0; i < param; i++) {
 
-			int noSets;
-			int maxSets;
-			if (scaleItemsets) {
-				noSets = (int) ((5 * (i + 1)) / 100. * noTransactions);
-				maxSets = maxSetSize;
-				System.out.println("\n========= " + noSets + " Itemsets");
-			} else {
-				noSets = noItemsets;
-				maxSets = 10 * (i + 1);
-				System.out.println("\n========= Max Itemset size: " + maxSets);
-			}
+			final int noSets = (int) ((5 * (i + 1)) / 100. * noTransactions);
+			System.out.println("\n========= " + noSets + " Itemsets");
 
 			final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
-					.getNoisyItemsets(noSets, maxSets);
+					.getNoisyItemsets(noSets, MU, SIGMA);
 			System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 			for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
 				System.out.print(String.format("%s\tprob: %1.5f %n",
@@ -212,16 +194,11 @@ public class ItemsetScaling {
 
 			// Average over samples
 			time[i] /= noSamples;
-			if (scaleItemsets)
-				itemsets[i] = (int) ((5 * (i + 1)) / 100. * noTransactions);
-			else
-				itemsets[i] = 10 * (i + 1);
+			itemsets[i] = (int) ((5 * (i + 1)) / 100. * noTransactions);
 
 			// Display
-			if (scaleItemsets)
-				System.out.println("\n========= No Itemsets: " + itemsets[i]);
-			else
-				System.out.println("\n========= Max Sets: " + itemsets[i]);
+			System.out.println("\n========= No Itemsets: " + itemsets[i]);
+
 			System.out.printf("Average Time (s): %.2f%n", time[i]);
 		}
 
@@ -229,20 +206,20 @@ public class ItemsetScaling {
 		if (useSpark)
 			name = "Spark";
 		System.out.println("\n========" + name + "========");
-		if (scaleItemsets)
-			System.out.println("Itemsets: " + Arrays.toString(itemsets));
-		else
-			System.out.println("Max Sets: " + Arrays.toString(itemsets));
+		System.out.println("Itemsets: " + Arrays.toString(itemsets));
 		System.out.println("Time: " + Arrays.toString(time));
 	}
 
 	private static void runSpark(final int noCores) {
-		final String cmd[] = new String[5];
+		final String cmd[] = new String[8];
 		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/run-spark.sh";
 		cmd[1] = "-f " + dbFile;
 		cmd[2] = " -s " + maxStructureSteps;
 		cmd[3] = " -i " + maxEMIterations;
 		cmd[4] = " -c " + noCores;
+		cmd[5] = " -l" + LOG_LEVEL;
+		cmd[6] = " -r" + MAX_RUNTIME;
+		cmd[7] = " -t false";
 		MTVItemsetMining.runScript(cmd);
 	}
 }

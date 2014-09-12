@@ -17,13 +17,13 @@ public class TransactionTest {
 	public void testNoisyItemsets() {
 
 		final HashMap<Itemset, Double> itemsets = TransactionGenerator
-				.getNoisyItemsets(10, 3);
+				.getNoisyItemsets(10, 1., 1.);
 		System.out.println(itemsets);
 
-		// Check that all items >= 10
+		// Check that all items >= 20
 		for (final Itemset set : itemsets.keySet()) {
 			for (final int item : set) {
-				assertTrue(item >= 10);
+				assertTrue(item >= 20);
 			}
 		}
 

@@ -4,7 +4,6 @@ import itemsetmining.itemset.Itemset;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.main.ItemsetMining;
-import itemsetmining.main.SparkItemsetMining;
 import itemsetmining.transaction.TransactionGenerator;
 
 import java.io.File;
@@ -14,35 +13,38 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Set;
-
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.spark.api.java.JavaSparkContext;
+import java.util.logging.Level;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class ItemsetPrecisionRecall {
 
+	/** Main Settings */
 	private static final String name = "cross-supp";
-	private static final File dbTmpFile = new File(
+	private static final File dbFile = new File(
 			"/disk/data1/jfowkes/itemset.txt");
 	private static final File saveDir = new File(
 			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/ItemsetEval");
 	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
-	private static final boolean useSpark = false;
-	private static final int sparkCores = 16;
+	private static final boolean useFIM = false;
 
-	private static final boolean useMTV = false;
-
-	private static final int noSamples = 10;
+	/** Itemset Settings */
+	private static final int noSamples = 1;
+	private static final int noNoisyItemsets = 45;
+	private static final int noSpecialItemsets = 5;
+	private static final double MU = 0.910658459511;
+	private static final double SIGMA = 1.02333623562;
 	private static final int difficultyLevels = 10;
+	private static final int noTransactions = 100_000;
 
-	private static final int noTransactions = 1000;
-	private static final int noExtraSets = 5;
-	private static final int maxSetSize = 3;
-
-	private static final int maxStructureSteps = 500;
-	private static final int maxEMIterations = 20;
+	/** Spark Settings */
+	private static final boolean useSpark = true;
+	private static final int sparkCores = 64;
+	protected static Level LOG_LEVEL = Level.INFO;
+	protected static long MAX_RUNTIME = 2 * 60; // 2hrs
+	private static final int maxStructureSteps = 10_000;
+	private static final int maxEMIterations = 100;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -59,36 +61,31 @@ public class ItemsetPrecisionRecall {
 		final double[] precision = new double[noLevels + 1];
 		final double[] recall = new double[noLevels + 1];
 
-		FileSystem hdfs = null;
-		JavaSparkContext sc = null;
-		if (useSpark) {
-			sc = SparkItemsetMining.setUpSpark(dbTmpFile.getName(), sparkCores);
-			hdfs = SparkItemsetMining.setUpHDFS();
-		}
-
 		for (int level = 0; level <= noLevels; level++) {
 
 			int difficultyLevel;
 			int extraSets;
 			if (type.equals("difficulty")) {
 				difficultyLevel = level;
-				extraSets = noExtraSets;
+				extraSets = noNoisyItemsets;
 				System.out.println("\n========= Difficulty level " + level
 						+ " of " + noLevels);
 			} else if (type.equals("robustness")) {
 				difficultyLevel = 0;
 				extraSets = level + 1;
-				System.out.println("\n========= Extra Sets: " + extraSets);
+				System.out.println("\n========= No. Noisy Itemsets: "
+						+ extraSets);
 			} else
 				throw new RuntimeException("Incorrect argument.");
 
 			// Generate real itemsets
 			final HashMap<Itemset, Double> exampleItemsets = TransactionGenerator
-					.generateExampleItemsets(name, difficultyLevel);
+					.generateExampleItemsets(name, noSpecialItemsets,
+							difficultyLevel);
 
 			// Generate some noise
 			final HashMap<Itemset, Double> noisyItemsets = TransactionGenerator
-					.getNoisyItemsets(extraSets, maxSetSize);
+					.getNoisyItemsets(extraSets, MU, SIGMA);
 
 			// Combine the two
 			final HashMap<Itemset, Double> actualItemsets = Maps
@@ -104,7 +101,7 @@ public class ItemsetPrecisionRecall {
 
 			// Generate transaction database
 			TransactionGenerator.generateTransactionDatabase(actualItemsets,
-					noTransactions, dbTmpFile);
+					noTransactions, dbFile);
 
 			for (int sample = 0; sample < noSamples; sample++) {
 				System.out.println("\n========= Sample " + (sample + 1)
@@ -113,15 +110,13 @@ public class ItemsetPrecisionRecall {
 				// Mine itemsets
 				HashMap<Itemset, Double> minedItemsets = null;
 				final long startTime = System.currentTimeMillis();
-				if (useMTV)
-					minedItemsets = MTVItemsetMining.mineItemsets(dbTmpFile, 0,
+				if (useFIM)
+					minedItemsets = MTVItemsetMining.mineItemsets(dbFile, 0,
 							actualItemsets.size() + 5);
-				else if (useSpark)
-					minedItemsets = SparkItemsetMining.mineItemsets(dbTmpFile,
-							hdfs, sc, inferenceAlg, maxStructureSteps,
-							maxEMIterations);
-				else
-					minedItemsets = ItemsetMining.mineItemsets(dbTmpFile,
+				else if (useSpark) {
+					minedItemsets = runSpark(sparkCores);
+				} else
+					minedItemsets = ItemsetMining.mineItemsets(dbFile,
 							inferenceAlg, maxStructureSteps, maxEMIterations);
 				final long endTime = System.currentTimeMillis();
 				final double tim = (endTime - startTime) / (double) 1000;
@@ -175,7 +170,7 @@ public class ItemsetPrecisionRecall {
 
 		// and save to file
 		String prefix = "";
-		if (useMTV)
+		if (useFIM)
 			prefix += "mtv_";
 		if (useSpark)
 			prefix += "spark_";
@@ -186,6 +181,26 @@ public class ItemsetPrecisionRecall {
 		out.println(Arrays.toString(precision));
 		out.println(Arrays.toString(recall));
 		out.close();
+	}
+
+	private static HashMap<Itemset, Double> runSpark(final int noCores) {
+		final String cmd[] = new String[8];
+		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/run-spark.sh";
+		cmd[1] = "-f " + dbFile;
+		cmd[2] = " -s " + maxStructureSteps;
+		cmd[3] = " -i " + maxEMIterations;
+		cmd[4] = " -c " + noCores;
+		cmd[5] = " -l" + LOG_LEVEL;
+		cmd[6] = " -r" + MAX_RUNTIME;
+		cmd[7] = " -t false";
+		MTVItemsetMining.runScript(cmd);
+
+		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
+		final File output = new File(
+				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/"
+						+ dbFile.getName() + ".log");
+
+		return null;
 	}
 
 }
