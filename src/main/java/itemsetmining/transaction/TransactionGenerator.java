@@ -96,7 +96,9 @@ public class TransactionGenerator {
 		int maxElement = 20;
 		for (int j = 0; j < noItemsets; j++) {
 
-			final int len = (int) Math.round(dist.sample());
+			int len = -1;
+			while (len <= 0)
+				len = (int) Math.round(dist.sample());
 			final Itemset set = new Itemset();
 			for (int i = maxElement; i < maxElement + len; i++) {
 				set.add(i);
@@ -104,7 +106,6 @@ public class TransactionGenerator {
 			final int num = rand.nextInt(7) + 2;
 			noisyItemsets.put(set, num / 10.);
 			maxElement += len;
-
 		}
 
 		return noisyItemsets;
