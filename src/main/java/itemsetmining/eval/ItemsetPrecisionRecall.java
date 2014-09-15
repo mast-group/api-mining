@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.logging.Level;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -23,7 +24,7 @@ import com.google.common.collect.Sets;
 public class ItemsetPrecisionRecall {
 
 	/** Main Settings */
-	private static final String name = "cross-supp";
+	private static final String name = "caviar";
 	private static final File dbFile = new File(
 			"/disk/data1/jfowkes/itemset.txt");
 	private static final File saveDir = new File(
@@ -33,8 +34,8 @@ public class ItemsetPrecisionRecall {
 
 	/** Itemset Settings */
 	private static final int noSamples = 1;
-	private static final int noNoisyItemsets = 45;
-	private static final int noSpecialItemsets = 5;
+	private static final int noNoisyItemsets = 18;
+	private static final int noSpecialItemsets = 2;
 	private static final double MU = 0.910658459511;
 	private static final double SIGMA = 1.02333623562;
 	private static final int difficultyLevels = 0;
@@ -44,7 +45,7 @@ public class ItemsetPrecisionRecall {
 	private static final boolean useSpark = true;
 	private static final int sparkCores = 64;
 	protected static Level LOG_LEVEL = Level.INFO;
-	protected static long MAX_RUNTIME = 2 * 60; // 2hrs
+	protected static long MAX_RUNTIME = 1 * 60; // 1hr
 	private static final int maxStructureSteps = 10_000;
 	private static final int maxEMIterations = 100;
 
@@ -198,10 +199,8 @@ public class ItemsetPrecisionRecall {
 		cmd[6] = " -t false";
 		MTVItemsetMining.runScript(cmd);
 
-		final File output = new File(
-				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/"
-						+ dbFile.getName() + ".log");
-
+		final File output = new File(ItemsetMining.LOG_DIR
+				+ FilenameUtils.getBaseName(dbFile.getName()) + ".log");
 		final HashMap<Itemset, Double> itemsets = readSparkOutput(output);
 
 		return itemsets;

@@ -60,7 +60,8 @@ public class ItemsetMining {
 	private static final boolean SERIAL = false;
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
-	private static final String LOG_DIR = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/";
+	public static final String LOG_DIR = "/tmp/";
+	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/";
 
 	/** Variable settings (hacky) */
 	protected static Level LOG_LEVEL = Level.FINE;
