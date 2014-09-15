@@ -27,6 +27,7 @@ import org.apache.spark.api.java.function.PairFunction;
 
 import scala.Tuple2;
 
+import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
@@ -54,7 +55,7 @@ public class SparkItemsetMining extends ItemsetMining {
 		@Parameter(names = { "-c", "--cores" }, description = "No cores")
 		int noCores = 16;
 
-		@Parameter(names = { "-l", "--log-level" }, description = "Log level")
+		@Parameter(names = { "-l", "--log-level" }, description = "Log level", converter = LogLevelConverter.class)
 		Level logLevel = Level.FINE;
 
 		@Parameter(names = { "-r", "--runtime" }, description = "Max Runtime (min)")
@@ -243,6 +244,29 @@ public class SparkItemsetMining extends ItemsetMining {
 			}
 
 			return transaction;
+		}
+	}
+
+	/** Convert string level to level class */
+	public class LogLevelConverter implements IStringConverter<Level> {
+		@Override
+		public Level convert(final String value) {
+			if (value.equals("SEVERE"))
+				return Level.SEVERE;
+			else if (value.equals("WARNING"))
+				return Level.WARNING;
+			else if (value.equals("INFO"))
+				return Level.INFO;
+			else if (value.equals("CONFIG"))
+				return Level.CONFIG;
+			else if (value.equals("FINE"))
+				return Level.FINE;
+			else if (value.equals("FINER"))
+				return Level.FINER;
+			else if (value.equals("FINEST"))
+				return Level.FINEST;
+			else
+				throw new RuntimeException("Incorrect Log Level.");
 		}
 	}
 

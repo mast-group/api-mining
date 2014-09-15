@@ -15,6 +15,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Level;
 
+import org.apache.commons.io.FileUtils;
+
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -35,7 +37,7 @@ public class ItemsetPrecisionRecall {
 	private static final int noSpecialItemsets = 5;
 	private static final double MU = 0.910658459511;
 	private static final double SIGMA = 1.02333623562;
-	private static final int difficultyLevels = 10;
+	private static final int difficultyLevels = 0;
 	private static final int noTransactions = 100_000;
 
 	/** Spark Settings */
@@ -183,24 +185,57 @@ public class ItemsetPrecisionRecall {
 		out.close();
 	}
 
-	private static HashMap<Itemset, Double> runSpark(final int noCores) {
-		final String cmd[] = new String[8];
+	private static HashMap<Itemset, Double> runSpark(final int noCores)
+			throws IOException {
+		final String cmd[] = new String[7];
 		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/run-spark.sh";
 		cmd[1] = "-f " + dbFile;
 		cmd[2] = " -s " + maxStructureSteps;
 		cmd[3] = " -i " + maxEMIterations;
 		cmd[4] = " -c " + noCores;
-		cmd[5] = " -l" + LOG_LEVEL;
-		cmd[6] = " -r" + MAX_RUNTIME;
-		cmd[7] = " -t false";
+		// cmd[5] = " -l " + LOG_LEVEL;
+		cmd[5] = " -r " + MAX_RUNTIME;
+		cmd[6] = " -t false";
 		MTVItemsetMining.runScript(cmd);
 
-		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
 		final File output = new File(
 				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/"
 						+ dbFile.getName() + ".log");
 
-		return null;
+		final HashMap<Itemset, Double> itemsets = readSparkOutput(output);
+
+		return itemsets;
+	}
+
+	/** Read Spark output itemsets to file */
+	static HashMap<Itemset, Double> readSparkOutput(final File output)
+			throws IOException {
+		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
+
+		final String[] lines = FileUtils.readFileToString(output).split("\n");
+
+		boolean found = false;
+		for (final String line : lines) {
+
+			if (found && !line.trim().isEmpty()) {
+				final String[] splitLine = line.split("\t");
+				final String[] items = splitLine[0].split(",");
+				items[0] = items[0].replace("{", "");
+				items[items.length - 1] = items[items.length - 1].replace("}",
+						"");
+				final Itemset itemset = new Itemset();
+				for (final String item : items)
+					itemset.add(Integer.parseInt(item.trim()));
+				final double prob = Double
+						.parseDouble(splitLine[1].split(":")[1]);
+				// double intr = Double.parseDouble(splitLine[2].split(":")[1]);
+				itemsets.put(itemset, prob);
+			}
+
+			if (line.contains("INTERESTING ITEMSETS"))
+				found = true;
+		}
+		return itemsets;
 	}
 
 }
