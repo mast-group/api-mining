@@ -38,7 +38,7 @@ public class ItemsetPrecisionRecall {
 	private static final double MU = 0.910658459511;
 	private static final double SIGMA = 1.02333623562;
 	private static final int difficultyLevels = 0;
-	private static final int noTransactions = 100_000;
+	private static final int noTransactions = 1_000;
 
 	/** Spark Settings */
 	private static final boolean useSpark = true;

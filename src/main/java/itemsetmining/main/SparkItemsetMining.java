@@ -112,6 +112,12 @@ public class SparkItemsetMining extends ItemsetMining {
 				+ inputFile.getName();
 		hdfs.copyFromLocalFile(new Path(inputFile.getAbsolutePath()), new Path(
 				datasetPath));
+		hdfs.setReplication(new Path(datasetPath), (short) 8);
+		try { // Wait for file to replicate
+			Thread.sleep(10 * 1000);
+		} catch (final InterruptedException e) {
+			e.printStackTrace();
+		}
 
 		// Read in transaction database
 		final int noCores = Integer.parseInt(sc.getConf()
