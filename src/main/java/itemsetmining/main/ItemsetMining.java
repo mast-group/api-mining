@@ -186,7 +186,7 @@ public class ItemsetMining {
 		final Set<Itemset> rejected_sets = Sets.newHashSet();
 
 		// Structural EM
-		final boolean breakLoop = false;
+		boolean breakLoop = false;
 		for (int iteration = 1; iteration <= maxEMIterations; iteration++) {
 
 			// Learn structure
@@ -206,6 +206,8 @@ public class ItemsetMining {
 						+ iteration + "\n");
 				transactions = learnStructureStep(itemsets, transactions, tree,
 						rejected_sets, inferenceAlgorithm, maxStructureSteps);
+				if (transactions.getIterationLimitExceeded())
+					breakLoop = true;
 			}
 			logger.finer(String.format(" Average cost: %.2f%n",
 					transactions.getAverageCost()));
