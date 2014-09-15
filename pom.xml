@@ -57,7 +57,7 @@
     <dependency> <!-- Nice option parser -->
 	  <groupId>com.beust</groupId>
 	  <artifactId>jcommander</artifactId>
-	  <version>1.30</version>
+	  <version>1.35</version>
 	</dependency> 
     <dependency> <!-- Spark dependency -->
       <groupId>org.apache.spark</groupId>
