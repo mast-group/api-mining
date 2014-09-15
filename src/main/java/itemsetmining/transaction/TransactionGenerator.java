@@ -8,10 +8,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map.Entry;
-import java.util.Random;
 
 import org.apache.commons.io.LineIterator;
 import org.apache.commons.math3.distribution.LogNormalDistribution;
+import org.apache.commons.math3.random.RandomGenerator;
+import org.apache.commons.math3.random.Well19937c;
 
 import com.google.common.collect.Maps;
 
@@ -90,8 +91,9 @@ public class TransactionGenerator {
 
 		final HashMap<Itemset, Double> noisyItemsets = Maps.newHashMap();
 
-		final LogNormalDistribution dist = new LogNormalDistribution(mu, sigma);
-		final Random rand = new Random(1);
+		final LogNormalDistribution dist = new LogNormalDistribution(
+				new Well19937c(1), mu, sigma);
+		final RandomGenerator rand = new Well19937c(1);
 
 		int maxElement = 20;
 		for (int j = 0; j < noItemsets; j++) {
