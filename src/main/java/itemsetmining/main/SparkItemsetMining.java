@@ -254,7 +254,7 @@ public class SparkItemsetMining extends ItemsetMining {
 	}
 
 	/** Convert string level to level class */
-	public class LogLevelConverter implements IStringConverter<Level> {
+	public static class LogLevelConverter implements IStringConverter<Level> {
 		@Override
 		public Level convert(final String value) {
 			if (value.equals("SEVERE"))

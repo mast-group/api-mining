@@ -211,15 +211,15 @@ public class ItemsetScaling {
 	}
 
 	private static void runSpark(final int noCores) {
-		final String cmd[] = new String[7];
+		final String cmd[] = new String[8];
 		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/run-spark.sh";
 		cmd[1] = "-f " + dbFile;
 		cmd[2] = " -s " + maxStructureSteps;
 		cmd[3] = " -i " + maxEMIterations;
 		cmd[4] = " -c " + noCores;
-		// cmd[5] = " -l" + LOG_LEVEL;
-		cmd[5] = " -r" + MAX_RUNTIME;
-		cmd[6] = " -t false";
+		cmd[5] = " -l" + LOG_LEVEL;
+		cmd[6] = " -r" + MAX_RUNTIME;
+		cmd[7] = " -t false";
 		MTVItemsetMining.runScript(cmd);
 	}
 }
