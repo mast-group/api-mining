@@ -105,8 +105,8 @@ public class TransactionGenerator {
 			for (int i = maxElement; i < maxElement + len; i++) {
 				set.add(i);
 			}
-			final int num = rand.nextInt(7) + 2;
-			noisyItemsets.put(set, num / 10.);
+			final int num = rand.nextInt(20) + 1;
+			noisyItemsets.put(set, num / 100.);
 			maxElement += len;
 		}
 
