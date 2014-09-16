@@ -27,7 +27,7 @@
                       <goal>shade</goal>
                   </goals>
                   <configuration>
-                      <finalName>driver-${artifactId}-${version}</finalName>
+                      <finalName>driver-${project.artifactId}-${project.version}</finalName>
                       <minimizeJar>false</minimizeJar>
 					  <createDependencyReducedPom>false</createDependencyReducedPom>
                       <filters>
