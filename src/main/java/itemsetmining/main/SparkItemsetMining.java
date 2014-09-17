@@ -175,7 +175,7 @@ public class SparkItemsetMining extends ItemsetMining {
 		conf.set("spark.executor.memory", "20g");
 		conf.set("spark.default.parallelism", "8");
 		conf.set("spark.shuffle.manager", "SORT");
-		conf.set("spark.eventLog.enabled", "true");
+		// conf.set("spark.eventLog.enabled", "true"); uses GB of space!!!
 
 		if (USE_KRYO) {
 			conf.set("spark.serializer",
