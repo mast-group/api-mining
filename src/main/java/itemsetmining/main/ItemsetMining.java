@@ -61,7 +61,6 @@ public class ItemsetMining {
 	protected static final Logger logger = Logger.getLogger(ItemsetMining.class
 			.getName());
 	public static final String LOG_DIR = "/tmp/";
-	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/";
 
 	/** Variable settings (hacky) */
 	protected static Level LOG_LEVEL = Level.FINE;
@@ -309,7 +308,7 @@ public class ItemsetMining {
 			}
 
 			// If set has stabilised calculate norm(p_prev - p_new)
-			if (prevItemsets.size() == newItemsets.size()) {
+			if (prevItemsets.keySet().equals(newItemsets.keySet())) {
 				norm = 0;
 				for (final Itemset set : prevItemsets.keySet()) {
 					norm += Math.pow(
