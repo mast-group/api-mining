@@ -115,8 +115,8 @@ public class ItemsetMining {
 		final Multiset<Integer> singletons = scanDatabaseToDetermineFrequencyOfSingleItems(inputFile);
 
 		// Apply the algorithm to build the itemset tree
-		final ItemsetTree tree = new ItemsetTree();
-		tree.buildTree(inputFile, singletons);
+		final ItemsetTree tree = new ItemsetTree(singletons);
+		tree.buildTree(inputFile);
 		if (LOG_LEVEL.equals(Level.FINE))
 			tree.printStatistics(logger);
 		if (LOG_LEVEL.equals(Level.FINEST)) {
@@ -696,7 +696,7 @@ public class ItemsetMining {
 	 *            the input file
 	 * @return a multiset for storing the support of each item
 	 */
-	private static Multiset<Integer> scanDatabaseToDetermineFrequencyOfSingleItems(
+	public static Multiset<Integer> scanDatabaseToDetermineFrequencyOfSingleItems(
 			final File inputFile) throws IOException {
 
 		final Multiset<Integer> singletons = HashMultiset.create();
@@ -714,9 +714,9 @@ public class ItemsetMining {
 			}
 
 			// split the line into items
-			final String[] lineSplited = line.split(" ");
+			final String[] lineSplit = line.split(" ");
 			// for each item
-			for (final String itemString : lineSplited) {
+			for (final String itemString : lineSplit) {
 				// increase the support count of the item
 				singletons.add(Integer.parseInt(itemString));
 			}

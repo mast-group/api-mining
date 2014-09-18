@@ -131,16 +131,16 @@ public class SparkItemsetMining extends ItemsetMining {
 				.mapToPair(new PairItemCount())
 				.reduceByKey(new SparkEMStep.SumCounts()).collectAsMap();
 
-		// Apply the algorithm to build the itemset tree
-		final ItemsetTree tree = new ItemsetTree();
-		tree.buildTree(datasetPath, hdfs, singletonsMap);
-		if (LOG_LEVEL.equals(Level.FINE))
-			tree.printStatistics(logger);
-
 		// Convert singletons map to Multiset (as Spark map is not serializable)
 		final Multiset<Integer> singletons = HashMultiset.create();
 		for (final Entry<Integer, Integer> entry : singletonsMap.entrySet())
 			singletons.add(entry.getKey(), entry.getValue());
+
+		// Apply the algorithm to build the itemset tree
+		final ItemsetTree tree = new ItemsetTree(singletons);
+		tree.buildTree(datasetPath, hdfs);
+		if (LOG_LEVEL.equals(Level.FINE))
+			tree.printStatistics(logger);
 
 		// Run inference to find interesting itemsets
 		final TransactionRDD transactions = new TransactionRDD(db, db.count());
@@ -242,12 +242,12 @@ public class SparkItemsetMining extends ItemsetMining {
 			final Transaction transaction = new Transaction();
 
 			// split the transaction into items
-			final String[] lineSplited = line.split(" ");
+			final String[] lineSplit = line.split(" ");
 
 			// for each item in the transaction
-			for (int i = 0; i < lineSplited.length; i++) {
+			for (int i = 0; i < lineSplit.length; i++) {
 				// convert the item to integer and add it to the structure
-				transaction.add(Integer.parseInt(lineSplited[i]));
+				transaction.add(Integer.parseInt(lineSplit[i]));
 			}
 
 			return transaction;

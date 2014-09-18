@@ -19,6 +19,7 @@ import org.apache.commons.io.LineIterator;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import com.google.common.primitives.Ints;
@@ -53,6 +54,24 @@ public class ItemsetTree {
 	// root of the itemset tree
 	private ItemsetTreeNode root = null;
 
+	// items with their supports (for ordering items in the tree)
+	private final Multiset<Integer> items;
+
+	// / Comparator for ordering items by descending order of support
+	private final Comparator<Integer> itemComparator = new Comparator<Integer>() {
+		@Override
+		public int compare(final Integer item1, final Integer item2) {
+			// compare the frequency
+			final int compare = items.count(item2) - items.count(item1);
+			// if the same frequency, we check the lexical ordering!
+			if (compare == 0) {
+				return (item1 - item2);
+			}
+			// otherwise, just use the frequency
+			return compare;
+		}
+	};
+
 	// statistics about tree construction
 	int nodeCount; // number of nodes in the tree (recalculated by
 					// printStatistics() )
@@ -66,7 +85,8 @@ public class ItemsetTree {
 	/**
 	 * Default constructor
 	 */
-	public ItemsetTree() {
+	public ItemsetTree(final Multiset<Integer> singletons) {
+		items = singletons;
 	}
 
 	/**
@@ -136,8 +156,7 @@ public class ItemsetTree {
 	 *            an input file
 	 * @return
 	 */
-	public void buildTree(final File inputFile, final Multiset<Integer> support)
-			throws IOException {
+	public void buildTree(final File inputFile) throws IOException {
 		// record start time
 		startTimestamp = System.currentTimeMillis();
 
@@ -159,35 +178,8 @@ public class ItemsetTree {
 				continue;
 			}
 
-			// split the transaction into items
-			final String[] lineSplited = line.split(" ");
-			// create a structure for storing the transaction
-			final List<Integer> itemset = new ArrayList<Integer>();
-			// for each item in the transaction
-			for (int i = 0; i < lineSplited.length; i++) {
-				// convert the item to integer and add it to the structure
-				itemset.add(Integer.parseInt(lineSplited[i]));
-
-			}
-
-			// sort items in the itemset by descending order of support
-			Collections.sort(itemset, new Comparator<Integer>() {
-				@Override
-				public int compare(final Integer item1, final Integer item2) {
-					// compare the frequency
-					final int compare = support.count(item2)
-							- support.count(item1);
-					// if the same frequency, we check the lexical ordering!
-					if (compare == 0) {
-						return (item1 - item2);
-					}
-					// otherwise, just use the frequency
-					return compare;
-				}
-			});
-
-			// call the method "construct" to add the transaction to the tree
-			construct(null, root, Ints.toArray(itemset), null);
+			// add transaction to the tree
+			addTransaction(line);
 
 		}
 		// close the input file
@@ -203,12 +195,14 @@ public class ItemsetTree {
 	 * Build the itemset-tree based on an HDFS input file containing
 	 * transactions
 	 * 
-	 * @param input
-	 *            HDFS input file string
+	 * @param hdfsPath
+	 *            HDFS input path string
+	 * @param hdfs
+	 *            HDFS FileSystem
 	 * @return
 	 */
-	public void buildTree(final String hdfsPath, final FileSystem hdfs,
-			final Map<Integer, Integer> support) throws IOException {
+	public void buildTree(final String hdfsPath, final FileSystem hdfs)
+			throws IOException {
 		// record start time
 		startTimestamp = System.currentTimeMillis();
 
@@ -231,34 +225,8 @@ public class ItemsetTree {
 				continue;
 			}
 
-			// split the transaction into items
-			final String[] lineSplited = line.split(" ");
-			// create a structure for storing the transaction
-			final List<Integer> itemset = new ArrayList<Integer>();
-			// for each item in the transaction
-			for (int i = 0; i < lineSplited.length; i++) {
-				// convert the item to integer and add it to the structure
-				itemset.add(Integer.parseInt(lineSplited[i]));
-
-			}
-
-			// sort items in the itemset by descending order of support
-			Collections.sort(itemset, new Comparator<Integer>() {
-				@Override
-				public int compare(final Integer item1, final Integer item2) {
-					// compare the frequency
-					final int compare = support.get(item2) - support.get(item1);
-					// if the same frequency, we check the lexical ordering!
-					if (compare == 0) {
-						return (item1 - item2);
-					}
-					// otherwise, just use the frequency
-					return compare;
-				}
-			});
-
-			// call the method "construct" to add the transaction to the tree
-			construct(null, root, Ints.toArray(itemset), null);
+			// add transaction to the tree
+			addTransaction(line);
 
 		}
 		// close the input file
@@ -271,14 +239,28 @@ public class ItemsetTree {
 	}
 
 	/**
-	 * Add a transaction to the itemset tree.
+	 * Add transaction to tree
 	 * 
-	 * @param transaction
-	 *            the transaction to be added (array of ints)
+	 * @param line
+	 *            the transaction as a string of items
 	 */
-	public void addTransaction(final int[] transaction) {
-		// call the "construct" algorithm to add it
-		construct(null, root, transaction, null);
+	private void addTransaction(final String line) {
+
+		// split the transaction into items
+		final String[] lineSplit = line.split(" ");
+		// create a structure for storing the transaction
+		final List<Integer> itemset = new ArrayList<Integer>();
+		// for each item in the transaction
+		for (int i = 0; i < lineSplit.length; i++) {
+			// convert the item to integer and add it to the structure
+			itemset.add(Integer.parseInt(lineSplit[i]));
+		}
+
+		// sort items in the itemset by descending order of support
+		Collections.sort(itemset, itemComparator);
+
+		// call the method "construct" to add the transaction to the tree
+		construct(null, root, Ints.toArray(itemset), null);
 	}
 
 	/**
@@ -819,6 +801,99 @@ public class ItemsetTree {
 	@Override
 	public String toString() {
 		return root.toString(new StringBuffer(), "");
+	}
+
+	/**
+	 * Get the support of a given itemset s.
+	 * 
+	 * @param s
+	 *            the itemset
+	 * @return the support as an integer.
+	 */
+	public int getSupportOfItemset(final Itemset s) {
+		final List<Integer> items = Lists.newArrayList(s.getItems());
+		Collections.sort(items, itemComparator); // sort by descending support
+		return count(Ints.toArray(items), root, new int[0]); // call count
+																// method
+	}
+
+	/**
+	 * This method calculate the support of an itemset by using a subtree
+	 * defined by its root.
+	 * 
+	 * Note: this is implemented based on the algorithm "count" of Table 2 in
+	 * the paper by Kubat et al.
+	 * 
+	 * <p>
+	 * Note that there was a problem with the algorithm in the paper. I had to
+	 * change > to < in : ci.itemset[ci.itemset.length -1] < s[s.length -1]).
+	 * 
+	 * @param s
+	 *            the itemset
+	 * @param root
+	 *            the root of the subtree
+	 * @param prefix
+	 *            the prefix of the subtree
+	 * @return the support as an integer
+	 */
+	private int count(final int[] s, final ItemsetTreeNode root,
+			final int[] prefix) {
+		// the variable count will be used to count the support
+		int count = 0;
+		// for each child of the root
+		for (final ItemsetTreeNode ci : root.children) {
+			// if the first item of the itemset that we are looking for
+			// is greater than (wrt descending support ordering) the first item
+			// of the child, we need to look further in that tree.
+			final int[] ciprefix = append(prefix, ci.itemset);
+
+			if (itemComparator.compare(ciprefix[0], s[0]) <= 0) {
+
+				// if s is included in ci, add the support of ci to the current
+				// count.
+				if (includedIn(s, ciprefix)) {
+					count += ci.support;
+				} else if (itemComparator.compare(
+						ciprefix[ciprefix.length - 1], s[s.length - 1]) < 0) {
+					// otherwise, if the last item of ci is smaller than (wrt
+					// descending support ordering) the last item of s,
+					// then make a recursive call to explore
+					// the subtree where ci is the root
+					count += count(s, ci, ciprefix);
+				}
+			}
+		}
+		// return the total count
+		return count;
+	}
+
+	/**
+	 * Check if an itemset is contained in another
+	 * 
+	 * @param itemset1
+	 *            the first itemset
+	 * @param itemset2
+	 *            the second itemset
+	 * @return true if yes, otherwise false
+	 */
+	private boolean includedIn(final int[] itemset1, final int[] itemset2) {
+		int count = 0; // the current position of itemset1 that we want to find
+						// in itemset2
+
+		// for each item in itemset2
+		for (int i = 0; i < itemset2.length; i++) {
+			// if we found the item
+			if (itemset2[i] == itemset1[count]) {
+				// we will look for the next item of itemset1
+				count++;
+				// if we have found all items already, return true
+				if (count == itemset1.length) {
+					return true;
+				}
+			}
+		}
+		// it is not included, so return false!
+		return false;
 	}
 
 }
