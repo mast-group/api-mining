@@ -30,10 +30,10 @@ import com.google.common.primitives.Ints;
 public abstract class ItemsetMiningCore {
 
 	/** Main fixed settings */
-	public static final String CANDGEN_NAME = "SimpRecomb";
+	public static final String CANDGEN_NAME = "CombSupp";
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
 	private static final int SIMPLIFY_ITEMSETS_EVERY = 1;
-	private static final int COMBINE_ITEMSETS_EVERY = 2;
+	private static final int COMBINE_ITEMSETS_EVERY = 1;
 	private static final double OPTIMIZE_TOL = 1e-5;
 
 	private static final boolean ITEMSET_CACHE = true;
@@ -42,7 +42,7 @@ public abstract class ItemsetMiningCore {
 			.getLogger(ItemsetMiningCore.class.getName());
 	public static final String LOG_DIR = "/tmp/";
 
-	/** Variable settings (hacky) */
+	/** Variable settings */
 	protected static Level LOG_LEVEL = Level.FINE;
 	protected static boolean TIMESTAMP_LOG = true;
 	protected static long MAX_RUNTIME = 12 * 60 * 60 * 1_000; // 12hrs
@@ -95,8 +95,12 @@ public abstract class ItemsetMiningCore {
 			if (iteration % COMBINE_ITEMSETS_EVERY == 0) {
 				logger.finer("\n----- Itemset Combination at Step " + iteration
 						+ "\n");
-				transactions = combineItemsetsStep(itemsets, transactions,
-						rejected_sets, inferenceAlgorithm, maxStructureSteps);
+				transactions = combineSupportItemsetsStep(itemsets,
+						transactions, tree, rejected_sets, inferenceAlgorithm,
+						maxStructureSteps);
+				// transactions = combineItemsetsStep(itemsets,
+				// transactions, rejected_sets, inferenceAlgorithm,
+				// maxStructureSteps, new orderBySize());
 			} else if (iteration % SIMPLIFY_ITEMSETS_EVERY == 0) {
 				logger.finer("\n----- Itemset Simplification at Step "
 						+ iteration + "\n"); // TODO use dedicated maxSteps
@@ -328,21 +332,46 @@ public abstract class ItemsetMiningCore {
 		return transactions;
 	}
 
-	/** Generate candidate itemsets by combining existing sets */
+	/** Generate candidates by combining existing itemsets with highest support */
+	private static TransactionDatabase combineSupportItemsetsStep(
+			final HashMap<Itemset, Double> itemsets,
+			final TransactionDatabase transactions, final ItemsetTree tree,
+			final Set<Itemset> rejected_sets,
+			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
+
+		final Ordering<Itemset> supportOrdering = new Ordering<Itemset>() {
+			@Override
+			public int compare(final Itemset set1, final Itemset set2) {
+				return tree.getSupportOfItemset(set2)
+						- tree.getSupportOfItemset(set1);
+			}
+		};
+
+		return combineItemsetsStep(itemsets, transactions, rejected_sets,
+				inferenceAlgorithm, maxSteps, supportOrdering);
+	}
+
+	/**
+	 * Generate candidate itemsets by combining existing sets with highest order
+	 * 
+	 * @param itemsetOrdering
+	 *            ordering that determines which itemsets to combine first
+	 */
 	private static TransactionDatabase combineItemsetsStep(
 			final HashMap<Itemset, Double> itemsets,
 			final TransactionDatabase transactions,
 			final Set<Itemset> rejected_sets,
-			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
+			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps,
+			final Ordering<Itemset> itemsetOrdering) {
 
 		// Try and find better itemset to add
 		logger.finer(" Structural candidate itemsets: ");
 
-		// Sort itemsets from smallest to largest // TODO skip sorting?
+		// Sort itemsets according to given ordering
 		final List<Itemset> sortedItemsets = Lists.newArrayList(itemsets
 				.keySet());
 		Collections.sort(sortedItemsets,
-				new orderBySize().compound((Ordering.usingToString())));
+				itemsetOrdering.compound((Ordering.usingToString())));
 
 		// Suggest supersets for all itemsets
 		int iteration = 0;
