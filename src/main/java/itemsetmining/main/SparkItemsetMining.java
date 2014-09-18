@@ -9,11 +9,18 @@ import itemsetmining.transaction.TransactionRDD;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
 import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.LogRecord;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,9 +41,8 @@ import com.beust.jcommander.ParameterException;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 
-public class SparkItemsetMining extends ItemsetMining {
+public class SparkItemsetMining extends ItemsetMiningCore {
 
-	private static final boolean LOG_TO_FILE = true;
 	private static final boolean USE_KRYO = true;
 
 	/** Main function parameters */
@@ -102,10 +108,7 @@ public class SparkItemsetMining extends ItemsetMining {
 			final int maxEMIterations) throws IOException {
 
 		// Set up logging
-		if (LOG_TO_FILE)
-			setUpFileLogger(inputFile);
-		else
-			setUpConsoleLogger();
+		setUpFileLogger(inputFile);
 
 		// Copy transaction database to hdfs
 		final String datasetPath = "hdfs://cup04.inf.ed.ac.uk:54310/"
@@ -252,6 +255,34 @@ public class SparkItemsetMining extends ItemsetMining {
 
 			return transaction;
 		}
+	}
+
+	/** Set up logging to file */
+	protected static void setUpFileLogger(final File dataset) {
+		LogManager.getLogManager().reset();
+		logger.setLevel(LOG_LEVEL);
+		String timeStamp = "";
+		if (TIMESTAMP_LOG)
+			timeStamp = "-"
+					+ new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
+							.format(new Date());
+		FileHandler handler = null;
+		try { // Limit log file to 1MB
+			handler = new FileHandler(LOG_DIR
+					+ FilenameUtils.getBaseName(dataset.getName()) + "-"
+					+ CANDGEN_NAME + timeStamp + ".log", 1048576, 1);
+		} catch (final IOException e) {
+			e.printStackTrace();
+		}
+		handler.setLevel(Level.ALL);
+		final Formatter formatter = new Formatter() {
+			@Override
+			public String format(final LogRecord record) {
+				return record.getMessage();
+			}
+		};
+		handler.setFormatter(formatter);
+		logger.addHandler(handler);
 	}
 
 	/** Convert string level to level class */

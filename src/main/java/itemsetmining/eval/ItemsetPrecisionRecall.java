@@ -9,7 +9,9 @@ import itemsetmining.transaction.TransactionGenerator;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -20,6 +22,7 @@ import org.apache.commons.io.FilenameUtils;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.io.Files;
 
 public class ItemsetPrecisionRecall {
 
@@ -27,6 +30,8 @@ public class ItemsetPrecisionRecall {
 	private static final String name = "caviar";
 	private static final File dbFile = new File(
 			"/disk/data1/jfowkes/itemset.txt");
+	private static final File logDir = new File(
+			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/");
 	private static final File saveDir = new File(
 			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/ItemsetEval");
 	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
@@ -44,7 +49,7 @@ public class ItemsetPrecisionRecall {
 	/** Spark Settings */
 	private static final boolean useSpark = true;
 	private static final int sparkCores = 64;
-	protected static Level LOG_LEVEL = Level.INFO;
+	protected static Level LOG_LEVEL = Level.FINE;
 	protected static long MAX_RUNTIME = 1 * 60; // 1hr
 	private static final int maxStructureSteps = 10_000;
 	private static final int maxEMIterations = 100;
@@ -202,6 +207,11 @@ public class ItemsetPrecisionRecall {
 		final File output = new File(ItemsetMining.LOG_DIR
 				+ FilenameUtils.getBaseName(dbFile.getName()) + ".log");
 		final HashMap<Itemset, Double> itemsets = readSparkOutput(output);
+
+		final String timestamp = new SimpleDateFormat("-dd.MM.yyyy-HH:mm:ss")
+				.format(new Date());
+		final File newLog = new File(logDir + name + timestamp + ".log");
+		Files.move(output, newLog);
 
 		return itemsets;
 	}
