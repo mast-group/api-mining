@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.logging.Level;
 
 import org.apache.commons.io.FileUtils;
@@ -68,6 +67,7 @@ public class ItemsetPrecisionRecall {
 		final double[] time = new double[noLevels + 1];
 		final double[] precision = new double[noLevels + 1];
 		final double[] recall = new double[noLevels + 1];
+		final double[] accuracy = new double[noLevels + 1];
 
 		for (int level = 0; level <= noLevels; level++) {
 
@@ -130,20 +130,24 @@ public class ItemsetPrecisionRecall {
 				final double tim = (endTime - startTime) / (double) 1000;
 				time[level] += tim;
 
-				// Calculate precision and recall for example sets
-				final Set<Itemset> minedLessNoise = Sets.difference(
-						minedItemsets.keySet(), noisyItemsets.keySet());
+				// Calculate precision and recall
 				final double noInBoth = Sets.intersection(
+						actualItemsets.keySet(), minedItemsets.keySet()).size();
+				final double noExamplesInBoth = Sets.intersection(
 						exampleItemsets.keySet(), minedItemsets.keySet())
 						.size();
-				final double pr = noInBoth / (double) minedLessNoise.size();
-				final double rec = noInBoth / (double) exampleItemsets.size();
+				final double pr = noInBoth / (double) minedItemsets.size();
+				final double rec = noInBoth / (double) actualItemsets.size();
+				final double acc = noExamplesInBoth
+						/ (double) exampleItemsets.size();
 				precision[level] += pr;
 				recall[level] += rec;
+				accuracy[level] += acc;
 
 				// Display precision and recall
-				System.out.printf("Precision: %.2f%n", pr);
-				System.out.printf("Recall: %.2f%n", rec);
+				System.out.printf("Precision All: %.2f%n", pr);
+				System.out.printf("Recall All: %.2f%n", rec);
+				System.out.printf("Accuracy Special: %.2f%n", acc);
 				System.out.printf("Time (s): %.2f%n", tim);
 			}
 		}
@@ -153,6 +157,7 @@ public class ItemsetPrecisionRecall {
 			// Average over samples
 			precision[i] /= noSamples;
 			recall[i] /= noSamples;
+			accuracy[i] /= noSamples;
 			time[i] /= noSamples;
 			levels[i] = i;
 
@@ -161,8 +166,9 @@ public class ItemsetPrecisionRecall {
 				System.out.println("\n========= Difficulty Level: " + i);
 			if (type.equals("robustness"))
 				System.out.println("\n========= Extra Sets: " + (i + 1));
-			System.out.printf("Average Precision: %.2f%n", precision[i]);
-			System.out.printf("Average Recall: %.2f%n", recall[i]);
+			System.out.printf("Average Precision All: %.2f%n", precision[i]);
+			System.out.printf("Average Recall All: %.2f%n", recall[i]);
+			System.out.printf("Average Acccuracy Special: %.2f%n", accuracy[i]);
 			System.out.printf("Average Time (s): %.2f%n", time[i]);
 		}
 
@@ -173,8 +179,9 @@ public class ItemsetPrecisionRecall {
 			System.out.println("No extra sets -1: " + Arrays.toString(levels));
 		System.out.println("\n======== " + name + " ========");
 		System.out.println("Time: " + Arrays.toString(time));
-		System.out.println("Precision: " + Arrays.toString(precision));
-		System.out.println("Recall : " + Arrays.toString(recall));
+		System.out.println("Precision All: " + Arrays.toString(precision));
+		System.out.println("Recall All: " + Arrays.toString(recall));
+		System.out.println("Accuracy Special: " + Arrays.toString(accuracy));
 
 		// and save to file
 		String prefix = "";
@@ -188,6 +195,7 @@ public class ItemsetPrecisionRecall {
 		out.println(Arrays.toString(time));
 		out.println(Arrays.toString(precision));
 		out.println(Arrays.toString(recall));
+		out.println(Arrays.toString(accuracy));
 		out.close();
 	}
 
