@@ -35,8 +35,8 @@ public class ItemsetScaling {
 	private static final int noTransactions = 100_000;
 
 	/** Spark Settings */
-	protected static Level LOG_LEVEL = Level.INFO;
-	protected static long MAX_RUNTIME = 2 * 60; // 2hrs
+	private static final Level LOG_LEVEL = Level.INFO;
+	private static final long MAX_RUNTIME = 2 * 60; // 2hrs
 	private static final int maxStructureSteps = 10_000;
 	private static final int maxEMIterations = 100;
 

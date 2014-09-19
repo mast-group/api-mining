@@ -48,8 +48,8 @@ public class ItemsetPrecisionRecall {
 	/** Spark Settings */
 	private static final boolean useSpark = true;
 	private static final int sparkCores = 64;
-	protected static Level LOG_LEVEL = Level.FINE;
-	protected static long MAX_RUNTIME = 1 * 60; // 1hr
+	private static final Level LOG_LEVEL = Level.FINE;
+	private static final long MAX_RUNTIME = 1 * 60; // 1hr
 	private static final int maxStructureSteps = 10_000;
 	private static final int maxEMIterations = 50;
 
