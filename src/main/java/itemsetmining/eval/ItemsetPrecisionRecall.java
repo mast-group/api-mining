@@ -52,7 +52,7 @@ public class ItemsetPrecisionRecall {
 	protected static Level LOG_LEVEL = Level.FINE;
 	protected static long MAX_RUNTIME = 1 * 60; // 1hr
 	private static final int maxStructureSteps = 10_000;
-	private static final int maxEMIterations = 100;
+	private static final int maxEMIterations = 50;
 
 	public static void main(final String[] args) throws IOException {
 
@@ -210,7 +210,7 @@ public class ItemsetPrecisionRecall {
 
 		final String timestamp = new SimpleDateFormat("-dd.MM.yyyy-HH:mm:ss")
 				.format(new Date());
-		final File newLog = new File(logDir + name + timestamp + ".log");
+		final File newLog = new File(logDir + "/" + name + timestamp + ".log");
 		Files.move(output, newLog);
 
 		return itemsets;
