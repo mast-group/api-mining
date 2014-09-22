@@ -44,19 +44,19 @@ public class ItemsetPrecisionRecall {
 	private static final double SIGMA = 0.403254861612;
 	private static final double PMIN = 0.01;
 	private static final double PMAX = 0.1;
-	private static final int noTransactions = 100_000;
+	private static final int noTransactions = 10_000;
 
 	/** Spark Settings */
 	private static final boolean useSpark = true;
 	private static final int sparkCores = 64;
 	private static final Level LOG_LEVEL = Level.FINE;
-	private static final long MAX_RUNTIME = 3 * 60; // 1hr
+	private static final long MAX_RUNTIME = 1 * 60; // 1hr
 	private static final int maxStructureSteps = 10_000;
 	private static final int maxEMIterations = 100;
 
 	public static void main(final String[] args) throws IOException {
 
-		precisionRecall("difficulty", new int[] { 10 });
+		precisionRecall("difficulty", new int[] { 0, 5, 10 });
 		// precisionRecall("robustness", 20);
 
 	}
@@ -65,10 +65,10 @@ public class ItemsetPrecisionRecall {
 			throws IOException {
 
 		final int noLevels = levels.length;
-		final double[] time = new double[noLevels + 1];
-		final double[] precision = new double[noLevels + 1];
-		final double[] recall = new double[noLevels + 1];
-		final double[] accuracy = new double[noLevels + 1];
+		final double[] time = new double[noLevels];
+		final double[] precision = new double[noLevels];
+		final double[] recall = new double[noLevels];
+		final double[] accuracy = new double[noLevels];
 
 		for (int i = 0; i < noLevels; i++) {
 
