@@ -38,22 +38,22 @@ public class ItemsetPrecisionRecall {
 
 	/** Itemset Settings */
 	private static final int noSamples = 1;
-	private static final int noNoisyItemsets = 18;
-	private static final int noSpecialItemsets = 2;
-	private static final double MU = 0.910658459511;
-	private static final double SIGMA = 1.02333623562;
+	private static final int noNoisyItemsets = 45;
+	private static final int noSpecialItemsets = 5;
+	private static final double MU = 0.912831416393;
+	private static final double SIGMA = 0.403254861612;
 	private static final double PMIN = 0.01;
-	private static final double PMAX = 0.2;
+	private static final double PMAX = 0.1;
 	private static final int difficultyLevels = 0;
-	private static final int noTransactions = 1_000;
+	private static final int noTransactions = 100_000;
 
 	/** Spark Settings */
 	private static final boolean useSpark = true;
 	private static final int sparkCores = 64;
 	private static final Level LOG_LEVEL = Level.FINE;
-	private static final long MAX_RUNTIME = 1 * 60; // 1hr
+	private static final long MAX_RUNTIME = 3 * 60; // 1hr
 	private static final int maxStructureSteps = 10_000;
-	private static final int maxEMIterations = 50;
+	private static final int maxEMIterations = 100;
 
 	public static void main(final String[] args) throws IOException {
 

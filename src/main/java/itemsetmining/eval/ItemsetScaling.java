@@ -25,10 +25,10 @@ public class ItemsetScaling {
 
 	/** Scaling Settings */
 	private static final int noSamples = 1;
-	private static final double MU = 0.910658459511;
-	private static final double SIGMA = 1.02333623562;
+	private static final double MU = 0.912831416393;
+	private static final double SIGMA = 0.403254861612;
 	private static final double PMIN = 0.01;
-	private static final double PMAX = 0.2;
+	private static final double PMAX = 0.1;
 
 	/** For transaction scaling */
 	private static final int noItemsets = 50;
