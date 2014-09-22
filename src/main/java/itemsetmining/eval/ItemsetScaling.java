@@ -27,6 +27,8 @@ public class ItemsetScaling {
 	private static final int noSamples = 1;
 	private static final double MU = 0.910658459511;
 	private static final double SIGMA = 1.02333623562;
+	private static final double PMIN = 0.01;
+	private static final double PMAX = 0.2;
 
 	/** For transaction scaling */
 	private static final int noItemsets = 50;
@@ -68,7 +70,7 @@ public class ItemsetScaling {
 
 		// Generate real itemsets
 		final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
-				.getNoisyItemsets(noItemsets, MU, SIGMA);
+				.getNoisyItemsets(noItemsets, MU, SIGMA, PMIN, PMAX);
 		System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
 			System.out.print(String.format("%s\tprob: %1.5f %n",
@@ -158,7 +160,7 @@ public class ItemsetScaling {
 			System.out.println("\n========= " + noSets + " Itemsets");
 
 			final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
-					.getNoisyItemsets(noSets, MU, SIGMA);
+					.getNoisyItemsets(noSets, MU, SIGMA, PMIN, PMAX);
 			System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 			for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
 				System.out.print(String.format("%s\tprob: %1.5f %n",

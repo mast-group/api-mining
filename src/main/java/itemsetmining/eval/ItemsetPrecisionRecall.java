@@ -42,6 +42,8 @@ public class ItemsetPrecisionRecall {
 	private static final int noSpecialItemsets = 2;
 	private static final double MU = 0.910658459511;
 	private static final double SIGMA = 1.02333623562;
+	private static final double PMIN = 0.01;
+	private static final double PMAX = 0.2;
 	private static final int difficultyLevels = 0;
 	private static final int noTransactions = 1_000;
 
@@ -93,7 +95,7 @@ public class ItemsetPrecisionRecall {
 
 			// Generate some noise
 			final HashMap<Itemset, Double> noisyItemsets = TransactionGenerator
-					.getNoisyItemsets(extraSets, MU, SIGMA);
+					.getNoisyItemsets(extraSets, MU, SIGMA, PMIN, PMAX);
 
 			// Combine the two
 			final HashMap<Itemset, Double> actualItemsets = Maps

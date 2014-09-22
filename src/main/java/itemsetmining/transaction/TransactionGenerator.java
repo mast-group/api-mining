@@ -46,7 +46,7 @@ public class TransactionGenerator {
 
 				// Champagne & Caviar
 				final Itemset s12 = new Itemset(maxElement + 1, maxElement + 2);
-				final double p12 = 0.1 * scaling;
+				final double p12 = 0.01 * scaling;
 				itemsets.put(s12, p12);
 				maxElement += 2;
 
@@ -87,7 +87,8 @@ public class TransactionGenerator {
 
 	/** Generate some disjoint itemsets as background noise */
 	public static HashMap<Itemset, Double> getNoisyItemsets(
-			final int noItemsets, final double mu, final double sigma) {
+			final int noItemsets, final double mu, final double sigma,
+			final double pmin, final double pmax) {
 
 		final HashMap<Itemset, Double> noisyItemsets = Maps.newHashMap();
 
@@ -105,8 +106,8 @@ public class TransactionGenerator {
 			for (int i = maxElement; i < maxElement + len; i++) {
 				set.add(i);
 			}
-			final int num = rand.nextInt(20) + 1;
-			noisyItemsets.put(set, num / 100.);
+			final double num = pmin + (pmax - pmin) * rand.nextDouble();
+			noisyItemsets.put(set, num);
 			maxElement += len;
 		}
 
