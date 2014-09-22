@@ -44,7 +44,6 @@ public class ItemsetPrecisionRecall {
 	private static final double SIGMA = 0.403254861612;
 	private static final double PMIN = 0.01;
 	private static final double PMAX = 0.1;
-	private static final int difficultyLevels = 0;
 	private static final int noTransactions = 100_000;
 
 	/** Spark Settings */
@@ -57,32 +56,32 @@ public class ItemsetPrecisionRecall {
 
 	public static void main(final String[] args) throws IOException {
 
-		precisionRecall("difficulty", difficultyLevels);
+		precisionRecall("difficulty", new int[] { 10 });
 		// precisionRecall("robustness", 20);
 
 	}
 
-	public static void precisionRecall(final String type, final int noLevels)
+	public static void precisionRecall(final String type, final int[] levels)
 			throws IOException {
 
-		final double[] levels = new double[noLevels + 1];
+		final int noLevels = levels.length;
 		final double[] time = new double[noLevels + 1];
 		final double[] precision = new double[noLevels + 1];
 		final double[] recall = new double[noLevels + 1];
 		final double[] accuracy = new double[noLevels + 1];
 
-		for (int level = 0; level <= noLevels; level++) {
+		for (int i = 0; i < noLevels; i++) {
 
 			int difficultyLevel;
 			int extraSets;
 			if (type.equals("difficulty")) {
-				difficultyLevel = level;
+				difficultyLevel = levels[i];
 				extraSets = noNoisyItemsets;
-				System.out.println("\n========= Difficulty level " + level
-						+ " of " + noLevels);
+				System.out.println("\n========= Difficulty level "
+						+ difficultyLevel + " from " + Arrays.toString(levels));
 			} else if (type.equals("robustness")) {
 				difficultyLevel = 0;
-				extraSets = level + 1;
+				extraSets = levels[i];
 				System.out.println("\n========= No. Noisy Itemsets: "
 						+ extraSets);
 			} else
@@ -130,7 +129,7 @@ public class ItemsetPrecisionRecall {
 							inferenceAlg, maxStructureSteps, maxEMIterations);
 				final long endTime = System.currentTimeMillis();
 				final double tim = (endTime - startTime) / (double) 1000;
-				time[level] += tim;
+				time[i] += tim;
 
 				// Calculate precision and recall
 				final double noInBoth = Sets.intersection(
@@ -142,9 +141,9 @@ public class ItemsetPrecisionRecall {
 				final double rec = noInBoth / (double) actualItemsets.size();
 				final double acc = noExamplesInBoth
 						/ (double) exampleItemsets.size();
-				precision[level] += pr;
-				recall[level] += rec;
-				accuracy[level] += acc;
+				precision[i] += pr;
+				recall[i] += rec;
+				accuracy[i] += acc;
 
 				// Display precision and recall
 				System.out.printf("Precision All: %.2f%n", pr);
@@ -154,20 +153,20 @@ public class ItemsetPrecisionRecall {
 			}
 		}
 
-		for (int i = 0; i <= noLevels; i++) {
+		for (int i = 0; i < noLevels; i++) {
 
 			// Average over samples
 			precision[i] /= noSamples;
 			recall[i] /= noSamples;
 			accuracy[i] /= noSamples;
 			time[i] /= noSamples;
-			levels[i] = i;
 
 			// Display average precision and recall
 			if (type.equals("difficulty"))
-				System.out.println("\n========= Difficulty Level: " + i);
+				System.out
+						.println("\n========= Difficulty Level: " + levels[i]);
 			if (type.equals("robustness"))
-				System.out.println("\n========= Extra Sets: " + (i + 1));
+				System.out.println("\n========= Extra Sets: " + levels[i]);
 			System.out.printf("Average Precision All: %.2f%n", precision[i]);
 			System.out.printf("Average Recall All: %.2f%n", recall[i]);
 			System.out.printf("Average Acccuracy Special: %.2f%n", accuracy[i]);
