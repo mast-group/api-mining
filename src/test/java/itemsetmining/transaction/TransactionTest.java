@@ -17,7 +17,7 @@ public class TransactionTest {
 	public void testNoisyItemsets() {
 
 		final HashMap<Itemset, Double> itemsets = TransactionGenerator
-				.getNoisyItemsets(10, 1., 1.);
+				.getNoisyItemsets(10, 1., 1., 0.01, 0.1);
 		System.out.println(itemsets);
 
 		// Check that all items >= 20
