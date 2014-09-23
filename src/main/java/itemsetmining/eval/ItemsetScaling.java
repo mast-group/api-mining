@@ -10,6 +10,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
+import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map.Entry;
@@ -31,42 +32,38 @@ public class ItemsetScaling {
 	private static final double PMAX = 0.1;
 
 	/** For transaction scaling */
-	private static final int noItemsets = 50;
+	private static final int noItemsets = 30;
 
 	/** For itemset scaling */
-	private static final int noTransactions = 100_000;
+	private static final int noTransactions = 1_000;
 
 	/** Spark Settings */
-	private static final Level LOG_LEVEL = Level.INFO;
-	private static final long MAX_RUNTIME = 2 * 60; // 2hrs
+	private static final Level LOG_LEVEL = Level.FINE;
+	private static final long MAX_RUNTIME = 6 * 60; // 6hrs
 	private static final int maxStructureSteps = 10_000;
 	private static final int maxEMIterations = 100;
 
 	public static void main(final String[] args) throws IOException,
 			InterruptedException {
 
-		// Run without spark
-		// scalingTransactions(false, -1, 5);
-
 		// Run with spark
 		// final int[] cores = new int[] { 16, 32, 48, 64 };
 		// for (final int noCores : cores)
-		scalingTransactions(true, 64, 6);
+		// Makes sense as 10^3 * PMIN = 10
+		scalingTransactions(true, 64, new int[] { 1_000, 10_000, 100_000,
+				1_000_000, 10_000_000, 100_000_000 });
 
-		// scalingItemsets(false, 64, 4);
-		// scalingItemsets(true, 64, 4);
-
-		// scalingItems(false, 64, 7);
-		// scalingItems(true, 64, 7);
+		// Here itemset sizes are relative
+		scalingItemsets(true, 64, new double[] { 0.05, 0.1, 0.15, 0.2 });
 
 	}
 
 	public static void scalingTransactions(final boolean useSpark,
-			final int noCores, final int noLogTransactions) throws IOException,
+			final int noCores, final int[] trans) throws IOException,
 			InterruptedException {
 
-		final double[] trans = new double[noLogTransactions];
-		final double[] time = new double[noLogTransactions];
+		final double[] time = new double[trans.length];
+		final DecimalFormat formatter = new DecimalFormat("0.0E0");
 
 		// Generate real itemsets
 		final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
@@ -88,13 +85,13 @@ public class ItemsetScaling {
 		final PrintWriter out = new PrintWriter(new FileOutputStream(saveDir
 				+ "/" + prefix + name + "_scaling.txt"), true);
 
-		for (int i = 0; i < noLogTransactions; i++) {
+		for (int i = 0; i < trans.length; i++) {
 
-			final int power = i + 3;
-
-			final int tran = (int) Math.pow(10, power);
-			System.out.println("\n========= 10^" + power + " Transactions");
-			out.println("\n========= 10^" + power + " Transactions");
+			final int tran = trans[i];
+			System.out.println("\n========= " + formatter.format(tran)
+					+ " Transactions");
+			out.println("\n========= " + formatter.format(tran)
+					+ " Transactions");
 
 			// Generate transaction database
 			TransactionGenerator.generateTransactionDatabase(actualItemsets,
@@ -123,16 +120,14 @@ public class ItemsetScaling {
 			}
 		}
 
-		for (int i = 0; i < noLogTransactions; i++) {
-
-			final int power = i + 3;
+		for (int i = 0; i < trans.length; i++) {
 
 			// Average over samples
 			time[i] /= noSamples;
-			trans[i] = (int) Math.pow(10, power);
 
 			// Display average precision and recall
-			System.out.println("\n========= No Transactions: " + trans[i]);
+			System.out.println("\n========= No Transactions: "
+					+ formatter.format(trans[i]));
 			System.out.printf("Average Time (s): %.2f%n", time[i]);
 		}
 
@@ -148,15 +143,17 @@ public class ItemsetScaling {
 	}
 
 	public static void scalingItemsets(final boolean useSpark,
-			final int noCores, final int param) throws IOException {
+			final int noCores, final double[] relItemsets) throws IOException {
 
-		final double[] itemsets = new double[param];
-		final double[] time = new double[param];
+		final int itemsets[] = new int[relItemsets.length];
+		for (int i = 0; i < relItemsets.length; i++)
+			itemsets[i] = (int) (relItemsets[i] * noTransactions);
+		final double[] time = new double[itemsets.length];
 
 		// Generate real itemsets
-		for (int i = 0; i < param; i++) {
+		for (int i = 0; i < itemsets.length; i++) {
 
-			final int noSets = (int) ((5 * (i + 1)) / 100. * noTransactions);
+			final int noSets = itemsets[i];
 			System.out.println("\n========= " + noSets + " Itemsets");
 
 			final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
@@ -192,15 +189,13 @@ public class ItemsetScaling {
 			}
 		}
 
-		for (int i = 0; i < param; i++) {
+		for (int i = 0; i < itemsets.length; i++) {
 
 			// Average over samples
 			time[i] /= noSamples;
-			itemsets[i] = (int) ((5 * (i + 1)) / 100. * noTransactions);
 
 			// Display
 			System.out.println("\n========= No Itemsets: " + itemsets[i]);
-
 			System.out.printf("Average Time (s): %.2f%n", time[i]);
 		}
 
@@ -219,9 +214,9 @@ public class ItemsetScaling {
 		cmd[2] = " -s " + maxStructureSteps;
 		cmd[3] = " -i " + maxEMIterations;
 		cmd[4] = " -c " + noCores;
-		cmd[5] = " -l" + LOG_LEVEL;
-		cmd[6] = " -r" + MAX_RUNTIME;
-		cmd[7] = " -t false";
+		cmd[5] = " -l " + LOG_LEVEL;
+		cmd[6] = " -r " + MAX_RUNTIME;
+		cmd[7] = " -t true";
 		MTVItemsetMining.runScript(cmd);
 	}
 }

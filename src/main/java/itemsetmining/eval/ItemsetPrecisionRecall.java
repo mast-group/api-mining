@@ -38,8 +38,8 @@ public class ItemsetPrecisionRecall {
 
 	/** Itemset Settings */
 	private static final int noSamples = 1;
-	private static final int noNoisyItemsets = 45;
-	private static final int noSpecialItemsets = 5;
+	private static final int noNoisyItemsets = 27;
+	private static final int noSpecialItemsets = 3;
 	private static final double MU = 0.912831416393;
 	private static final double SIGMA = 0.403254861612;
 	private static final double PMIN = 0.01;
@@ -50,7 +50,7 @@ public class ItemsetPrecisionRecall {
 	private static final boolean useSpark = true;
 	private static final int sparkCores = 64;
 	private static final Level LOG_LEVEL = Level.FINE;
-	private static final long MAX_RUNTIME = 1 * 60; // 1hr
+	private static final long MAX_RUNTIME = 2 * 60; // 1hr
 	private static final int maxStructureSteps = 10_000;
 	private static final int maxEMIterations = 100;
 
