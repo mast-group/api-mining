@@ -446,6 +446,8 @@ public class ItemsetTree {
 	 *            the other itemset named "s"
 	 * @return the itemset
 	 */
+	// TODO Efficiency improvement: add loop breaks due to decreasing support
+	// ordering (cf. original implementation in MemoryEfficientItemsetTree)
 	private int[] copyItemsetWithoutItemsFromArrays(final int[] r,
 			final int[] prefix, final int[] s) {
 
@@ -498,6 +500,8 @@ public class ItemsetTree {
 	 *            the second itemset
 	 * @return the new itemset
 	 */
+	// TODO Efficiency improvement: add loop breaks due to decreasing support
+	// ordering (cf. original implementation in MemoryEfficientItemsetTree)
 	private int[] copyItemsetWithoutItemsFrom(final int[] itemset1,
 			final int[] itemset2) {
 		// if the second itemset is null, just return the first itemset
