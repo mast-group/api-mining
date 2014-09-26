@@ -20,50 +20,49 @@ public class FrequentItemsetMining {
 
 	public static void main(final String[] args) throws IOException {
 
-		// FPGrowth parameters
+		// FIM parameters
 		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/plants.dat";
 		final double minSupp = 0.05750265949; // relative support
 		final String saveFile = "/tmp/plants-fim.txt";
 
-		mineItemsetsFPGrowth(dataset, saveFile, minSupp);
-		// generateAssociationRules(itemsets, dbSize, 0, 0);
+		mineFrequentItemsetsFPGrowth(dataset, saveFile, minSupp);
+		// generateAssociationRules(itemsets, dbSize, null, 0, 0);
 	}
 
-	/** Run FPGrowth algorithm * */
-	public static Itemsets mineItemsetsFPGrowth(final String dataset,
+	/** Run FPGrowth algorithm */
+	public static Itemsets mineFrequentItemsetsFPGrowth(final String dataset,
 			final String saveFile, final double minSupp) throws IOException {
 
 		final AlgoFPGrowth algo = new AlgoFPGrowth();
 		final Itemsets patterns = algo.runAlgorithm(dataset, saveFile, minSupp);
 		// algo.printStats();
-		if (saveFile == null)
-			patterns.printItemsets(algo.getDatabaseSize());
+		// patterns.printItemsets(algo.getDatabaseSize());
 
 		return patterns;
 	}
 
-	/** Run Apriori algorithm * */
-	public static Itemsets mineItemsetsApriori(final String dataset,
+	/** Run Apriori algorithm */
+	public static Itemsets mineFrequentItemsetsApriori(final String dataset,
 			final String saveFile, final double minSupp) throws IOException {
 
 		final AlgoApriori algo = new AlgoApriori();
 		final Itemsets patterns = algo.runAlgorithm(minSupp, dataset, saveFile);
 		// algo.printStats();
-		if (saveFile == null)
-			patterns.printItemsets(algo.getDatabaseSize());
+		// patterns.printItemsets(algo.getDatabaseSize());
 
 		return patterns;
 	}
 
 	/** Generate association rules from FIM itemsets */
 	public static AssocRules generateAssociationRules(final Itemsets patterns,
-			final int databaseSize, final double minConf, final double minLift)
-			throws IOException {
+			final int databaseSize, final String saveFile,
+			final double minConf, final double minLift) throws IOException {
 
 		final AlgoAgrawalFaster94 algo = new AlgoAgrawalFaster94();
-		final AssocRules rules = algo.runAlgorithm(patterns, null,
+		final AssocRules rules = algo.runAlgorithm(patterns, saveFile,
 				databaseSize, minConf, minLift);
-		rules.printRulesWithLift(databaseSize);
+		if (saveFile == null)
+			rules.printRulesWithLift(databaseSize);
 
 		return rules;
 	}
