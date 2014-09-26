@@ -7,8 +7,9 @@ import itemsetmining.main.ItemsetMining;
 import itemsetmining.transaction.TransactionGenerator;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -18,6 +19,7 @@ import java.util.logging.Level;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.output.TeeOutputStream;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -31,17 +33,16 @@ public class ItemsetPrecisionRecall {
 			"/disk/data1/jfowkes/itemset.txt");
 	private static final File logDir = new File(
 			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/");
-	private static final File saveDir = new File(
-			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/ItemsetEval");
+	private static final File saveDir = new File("/tmp/");
 	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
 	private static final boolean useFIM = false;
+	private static final int noRuns = 1;
 
-	/** Itemset Settings */
-	private static final int noSamples = 1;
+	/** Itemset Distribution Settings */
 	private static final int noNoisyItemsets = 27;
 	private static final int noSpecialItemsets = 3;
-	private static final double MU = 0.912831416393;
-	private static final double SIGMA = 0.403254861612;
+	private static final double MU = 1.72934946954;
+	private static final double SIGMA = 1.65280083046;
 	private static final double PMIN = 0.01;
 	private static final double PMAX = 0.1;
 	private static final int noTransactions = 10_000;
@@ -69,6 +70,17 @@ public class ItemsetPrecisionRecall {
 		final double[] precision = new double[noLevels];
 		final double[] recall = new double[noLevels];
 		final double[] accuracy = new double[noLevels];
+
+		String prefix = "";
+		if (useFIM)
+			prefix += "mtv_";
+		if (useSpark)
+			prefix += "spark_";
+		final FileOutputStream outFile = new FileOutputStream(saveDir + "/"
+				+ prefix + name + "_" + type + ".txt");
+		final TeeOutputStream out = new TeeOutputStream(System.out, outFile);
+		final PrintStream ps = new PrintStream(out);
+		System.setOut(ps);
 
 		for (int i = 0; i < noLevels; i++) {
 
@@ -112,9 +124,9 @@ public class ItemsetPrecisionRecall {
 			TransactionGenerator.generateTransactionDatabase(actualItemsets,
 					noTransactions, dbFile);
 
-			for (int sample = 0; sample < noSamples; sample++) {
-				System.out.println("\n========= Sample " + (sample + 1)
-						+ " of " + noSamples);
+			for (int run = 0; run < noRuns; run++) {
+				System.out.println("\n========= Run " + (run + 1) + " of "
+						+ noRuns);
 
 				// Mine itemsets
 				HashMap<Itemset, Double> minedItemsets = null;
@@ -155,11 +167,11 @@ public class ItemsetPrecisionRecall {
 
 		for (int i = 0; i < noLevels; i++) {
 
-			// Average over samples
-			precision[i] /= noSamples;
-			recall[i] /= noSamples;
-			accuracy[i] /= noSamples;
-			time[i] /= noSamples;
+			// Average over runs
+			precision[i] /= noRuns;
+			recall[i] /= noRuns;
+			accuracy[i] /= noRuns;
+			time[i] /= noRuns;
 
 			// Display average precision and recall
 			if (type.equals("difficulty"))
@@ -185,18 +197,6 @@ public class ItemsetPrecisionRecall {
 		System.out.println("Accuracy Special: " + Arrays.toString(accuracy));
 
 		// and save to file
-		String prefix = "";
-		if (useFIM)
-			prefix += "mtv_";
-		if (useSpark)
-			prefix += "spark_";
-		final PrintWriter out = new PrintWriter(saveDir + "/" + prefix + name
-				+ "_" + type + ".txt");
-		out.println(Arrays.toString(levels));
-		out.println(Arrays.toString(time));
-		out.println(Arrays.toString(precision));
-		out.println(Arrays.toString(recall));
-		out.println(Arrays.toString(accuracy));
 		out.close();
 	}
 
