@@ -82,7 +82,7 @@
     <dependency>
 	<groupId>spmf</groupId>
 	  <artifactId>spmf</artifactId>
-	  <version>0.96c</version>
+	  <version>0.96q</version>
 	  <scope>system</scope>
 	  <systemPath>${project.basedir}/../../dependencies/spmf/spmf.jar</systemPath>
     </dependency>

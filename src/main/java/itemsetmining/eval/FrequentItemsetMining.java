@@ -9,7 +9,7 @@ import java.util.HashMap;
 import org.apache.commons.io.FileUtils;
 
 import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.AlgoAgrawalFaster94;
-import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.Rules;
+import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.AssocRules;
 import ca.pfv.spmf.algorithms.frequentpatterns.apriori.AlgoApriori;
 import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPGrowth;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
@@ -56,13 +56,13 @@ public class FrequentItemsetMining {
 	}
 
 	/** Generate association rules from FIM itemsets */
-	public static Rules generateAssociationRules(final Itemsets patterns,
+	public static AssocRules generateAssociationRules(final Itemsets patterns,
 			final int databaseSize, final double minConf, final double minLift)
 			throws IOException {
 
 		final AlgoAgrawalFaster94 algo = new AlgoAgrawalFaster94();
-		final Rules rules = algo.runAlgorithm(patterns, null, databaseSize,
-				minConf, minLift);
+		final AssocRules rules = algo.runAlgorithm(patterns, null,
+				databaseSize, minConf, minLift);
 		rules.printRulesWithLift(databaseSize);
 
 		return rules;
