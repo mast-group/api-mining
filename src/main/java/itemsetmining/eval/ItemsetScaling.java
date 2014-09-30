@@ -86,7 +86,7 @@ public class ItemsetScaling {
 		if (useSpark)
 			name = "Spark";
 		final FileOutputStream outFile = new FileOutputStream(saveDir + "/"
-				+ name + "_scaling.txt");
+				+ name + "_scaling_" + noCores +".txt");
 		final TeeOutputStream out = new TeeOutputStream(System.out, outFile);
 		final PrintStream ps = new PrintStream(out);
 		System.setOut(ps);
