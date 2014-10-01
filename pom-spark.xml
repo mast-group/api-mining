@@ -1,10 +1,11 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>codemining</groupId>
-  <name>Itemset Mining</name>
   <artifactId>itemset-mining</artifactId>
-  <packaging>jar</packaging>
+  <packaging>pom</packaging>
   <version>1.1-SNAPSHOT</version>
+  <name>Interesting Itemset Mining</name>
   
   <build>
     <plugins>
@@ -51,12 +52,7 @@
       </plugin>
     </plugins>
   </build>
-  <parent>
-  	<groupId>codemining</groupId>
-  	<artifactId>codemining-all</artifactId>
-  	<version>1.1-SNAPSHOT</version>
-        <relativePath>../../pom.xml</relativePath>
-  </parent>
+  
   <dependencies>
      <dependency>
       <groupId>com.google.guava</groupId>
@@ -84,7 +80,7 @@
 	  <artifactId>spmf</artifactId>
 	  <version>0.96q</version>
 	  <scope>system</scope>
-	  <systemPath>${project.basedir}/../../dependencies/spmf/spmf.jar</systemPath>
+	  <systemPath>${project.basedir}/dependencies/spmf/spmf.jar</systemPath>
     </dependency>
      <dependency> <!-- Nice option parser -->
 	  <groupId>com.beust</groupId>

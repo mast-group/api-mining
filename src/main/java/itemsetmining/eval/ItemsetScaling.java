@@ -57,11 +57,11 @@ public class ItemsetScaling {
 			InterruptedException {
 
 		// Run with spark
-		final int[] cores = new int[] { 1, 4, 16, 64, 128 };
-		for (final int noCores : cores)
-			// Makes sense as 10^3 * PMIN = 10
-			scalingTransactions(true, noCores, new int[] { 1_000, 10_000,
-					100_000, 1_000_000, 10_000_000, 100_000_000 });
+		// final int[] cores = new int[] { 1, 4, 16, 64, 128 };
+		// for (final int noCores : cores)
+		// Makes sense as 10^3 * PMIN = 10
+		scalingTransactions(true, 16, new int[] { 1_000, 10_000, 100_000,
+				1_000_000, 10_000_000, 100_000_000 });
 
 		// Here itemset sizes are relative
 		// scalingItemsets(true, 64, new double[] { 0.05, 0.1, 0.15, 0.2 });
@@ -86,7 +86,7 @@ public class ItemsetScaling {
 		if (useSpark)
 			name = "Spark";
 		final FileOutputStream outFile = new FileOutputStream(saveDir + "/"
-				+ name + "_scaling_" + noCores +".txt");
+				+ name + "_scaling_" + noCores + ".txt");
 		final TeeOutputStream out = new TeeOutputStream(System.out, outFile);
 		final PrintStream ps = new PrintStream(out);
 		System.setOut(ps);
