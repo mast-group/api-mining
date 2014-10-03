@@ -5,6 +5,7 @@ import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionDatabase;
 
 import java.util.HashMap;
+import java.util.Set;
 
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
@@ -70,7 +71,7 @@ public class SparkCacheFunctions {
 	/** Spark parallel add itemset to Cache */
 	static TransactionDatabase parallelAddItemsetCache(
 			final TransactionDatabase transactions, final Itemset candidate,
-			final double prob) {
+			final double prob, Set<Itemset> subsets) {
 
 		final JavaRDD<Transaction> updatedTransactions = transactions
 				.getTransactionRDD().map(
@@ -81,7 +82,8 @@ public class SparkCacheFunctions {
 							public Transaction call(
 									final Transaction transaction)
 									throws Exception {
-								transaction.addItemsetCache(candidate, prob);
+								transaction.addItemsetCache(candidate, prob,
+										subsets);
 								return transaction;
 							}
 

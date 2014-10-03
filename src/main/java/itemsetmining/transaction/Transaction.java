@@ -8,6 +8,7 @@ import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
@@ -36,26 +37,24 @@ public class Transaction extends AbstractItemset implements Serializable {
 		return cachedItemsets;
 	}
 
-	public void addItemsetCache(final Itemset candidate, final double prob) {
+	public void addItemsetCache(final Itemset candidate, final double prob,
+			Set<Itemset> subsets) {
 
 		// Initialize dropped itemsets
 		droppedItemsets = Maps.newHashMap();
 
-		// Adjust probabilities for subsets of candidate
-		for (final Iterator<Entry<Itemset, Double>> it = cachedItemsets
-				.entrySet().iterator(); it.hasNext();) {
-
-			final Entry<Itemset, Double> entry = it.next();
-			if (candidate.contains(entry.getKey())) {
-				final double newProb = entry.getValue() - prob;
+		// Adjust probabilities for direct subsets of candidate
+		for (Itemset subset : subsets) {
+			Double oldProb = cachedItemsets.get(subset);
+			if (oldProb != null) { // subset supports this transaction
+				final double newProb = oldProb - prob;
 				if (newProb > 0.0) {
-					entry.setValue(newProb);
+					cachedItemsets.put(subset, newProb);
 				} else {
-					droppedItemsets.put(entry.getKey(), entry.getValue());
-					it.remove();
+					droppedItemsets.put(subset, oldProb);
+					cachedItemsets.remove(subset);
 				}
 			}
-
 		}
 
 		// Add candidate if it supports this transaction
@@ -63,15 +62,17 @@ public class Transaction extends AbstractItemset implements Serializable {
 			cachedItemsets.put(candidate, prob);
 	}
 
-	public void removeItemsetCache(final Itemset candidate, final double prob) {
+	public void removeItemsetCache(final Itemset candidate, final double prob,
+			Set<Itemset> subsets) {
 
 		// Remove candidate
 		cachedItemsets.remove(candidate);
 
 		// Restore probabilities prior to adding candidate
-		for (final Entry<Itemset, Double> entry : cachedItemsets.entrySet()) {
-			if (candidate.contains(entry.getKey()))
-				cachedItemsets.put(entry.getKey(), entry.getValue() + prob);
+		for (Itemset subset : subsets) {
+			Double oldProb = cachedItemsets.get(subset);
+			if (oldProb != null) // subset supports this transaction
+				cachedItemsets.put(subset, oldProb + prob);
 		}
 
 		// And restore dropped itemsets

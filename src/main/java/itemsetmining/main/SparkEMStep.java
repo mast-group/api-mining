@@ -68,7 +68,7 @@ public class SparkEMStep {
 			final InferenceAlgorithm inferenceAlgorithm,
 			final HashMap<Itemset, Double> itemsets,
 			final double noTransactions, final Itemset candidate,
-			final double prob) {
+			final double prob, Set<Itemset> subsets) {
 
 		// Map: Parallel E-step and M-step combined
 		final JavaRDD<Double> coveringWithCost = transactions
@@ -79,7 +79,8 @@ public class SparkEMStep {
 					public Double call(final Transaction transaction) {
 
 						if (itemsets == null)
-							transaction.addItemsetCache(candidate, prob);
+							transaction.addItemsetCache(candidate, prob,
+									subsets);
 
 						final Set<Itemset> covering = Sets.newHashSet();
 						final double cost = inferenceAlgorithm.infer(covering,

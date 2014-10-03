@@ -53,13 +53,13 @@ public class EMStep {
 			final InferenceAlgorithm inferenceAlgorithm,
 			final HashMap<Itemset, Double> itemsets,
 			final double noTransactions, final Itemset candidate,
-			final double prob) {
+			final double prob, Set<Itemset> subsets) {
 
 		double averageCost = 0;
 		for (final Transaction transaction : transactions) {
 
 			if (itemsets == null)
-				transaction.addItemsetCache(candidate, prob);
+				transaction.addItemsetCache(candidate, prob, subsets);
 
 			final Set<Itemset> covering = Sets.newHashSet();
 			final double cost = inferenceAlgorithm.infer(covering, itemsets,
@@ -67,7 +67,7 @@ public class EMStep {
 			averageCost += cost;
 
 			if (itemsets == null)
-				transaction.removeItemsetCache(candidate, prob);
+				transaction.removeItemsetCache(candidate, prob, subsets);
 
 		}
 		averageCost = averageCost / noTransactions;
@@ -114,7 +114,7 @@ public class EMStep {
 			final InferenceAlgorithm inferenceAlgorithm,
 			final HashMap<Itemset, Double> itemsets,
 			final double noTransactions, final Itemset candidate,
-			final double prob) {
+			final double prob, Set<Itemset> subsets) {
 
 		// Parallel E-step and M-step combined
 		final FutureThreadPool<Double> ftp = new FutureThreadPool<Double>();
@@ -125,14 +125,15 @@ public class EMStep {
 				public Double call() {
 
 					if (itemsets == null)
-						transaction.addItemsetCache(candidate, prob);
+						transaction.addItemsetCache(candidate, prob, subsets);
 
 					final Set<Itemset> covering = Sets.newHashSet();
 					final double cost = inferenceAlgorithm.infer(covering,
 							itemsets, transaction);
 
 					if (itemsets == null)
-						transaction.removeItemsetCache(candidate, prob);
+						transaction
+								.removeItemsetCache(candidate, prob, subsets);
 
 					return cost;
 				}
@@ -142,9 +143,8 @@ public class EMStep {
 	}
 
 	/** Serial candidate probability estimation */
-	static double serialCandidateSupport(
-			final List<Transaction> transactions, final Itemset candidate,
-			final double noTransactions) {
+	static double serialCandidateSupport(final List<Transaction> transactions,
+			final Itemset candidate, final double noTransactions) {
 
 		double p = 0;
 		for (final Transaction transaction : transactions) {

@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.logging.Level;
@@ -441,9 +440,13 @@ public abstract class ItemsetMiningCore {
 						noTransactions);
 			}
 
+			// Find direct subsets of candidate
+			Set<Itemset> subsets = getDirectSubsets(itemsets.keySet(),
+					candidate);
+
 			// If not using cache: Add candidate to itemsets
 			if (!ITEMSET_CACHE)
-				addCandidateItemsets(itemsets, candidate, p);
+				addCandidateItemsets(itemsets, candidate, p, subsets);
 
 			// Use cache in inference algorithm by not passing itemsets
 			final HashMap<Itemset, Double> passItemsets;
@@ -457,16 +460,20 @@ public abstract class ItemsetMiningCore {
 			if (transactions instanceof TransactionRDD) {
 				curCost = SparkEMStep.parallelEMStep(
 						transactions.getTransactionRDD(), inferenceAlgorithm,
-						passItemsets, transactions.size(), candidate, p);
-				// checkCacheWorks(curCost, curCostNoCache);
+						passItemsets, transactions.size(), candidate, p,
+						subsets);
+				double curCostNoCache = SparkEMStep.parallelEMStep(
+						transactions.getTransactionRDD(), inferenceAlgorithm,
+						itemsets, transactions.size(), candidate, p, subsets);
+				checkCacheWorks(curCost, curCostNoCache);
 			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
 				curCost = EMStep.serialEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
-						passItemsets, noTransactions, candidate, p);
+						passItemsets, noTransactions, candidate, p, subsets);
 			} else {
 				curCost = EMStep.parallelEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
-						passItemsets, noTransactions, candidate, p);
+						passItemsets, noTransactions, candidate, p, subsets);
 			}
 			logger.finer(String.format(", cost: %.2f", curCost));
 
@@ -478,20 +485,18 @@ public abstract class ItemsetMiningCore {
 					if (transactions instanceof TransactionRDD) {
 						transactions = SparkCacheFunctions
 								.parallelAddItemsetCache(transactions,
-										candidate, p);
+										candidate, p, subsets);
 					} else if (SERIAL) {
-						CacheFunctions
-								.serialAddItemsetCache(
-										transactions.getTransactionList(),
-										candidate, p);
+						CacheFunctions.serialAddItemsetCache(
+								transactions.getTransactionList(), candidate,
+								p, subsets);
 					} else {
-						CacheFunctions
-								.parallelAddItemsetCache(
-										transactions.getTransactionList(),
-										candidate, p);
+						CacheFunctions.parallelAddItemsetCache(
+								transactions.getTransactionList(), candidate,
+								p, subsets);
 					}
 					// Update itemsets with candidate
-					addCandidateItemsets(itemsets, candidate, p);
+					addCandidateItemsets(itemsets, candidate, p, subsets);
 				}
 				transactions.setAverageCost(curCost);
 				return transactions;
@@ -499,7 +504,7 @@ public abstract class ItemsetMiningCore {
 
 			// If not using cache: Remove candidate from itemsets
 			if (!ITEMSET_CACHE)
-				removeCandidateItemsets(itemsets, candidate, p);
+				removeCandidateItemsets(itemsets, candidate, p, subsets);
 
 			logger.finer("\n Structural candidate itemsets: ");
 		}
@@ -520,13 +525,12 @@ public abstract class ItemsetMiningCore {
 
 	public static void addCandidateItemsets(
 			final HashMap<Itemset, Double> itemsets, final Itemset candidate,
-			final double p) {
+			final double p, Set<Itemset> subsets) {
 
-		// Adjust probabilities for subsets of itemset
-		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-			if (candidate.contains(entry.getKey())) {
-				itemsets.put(entry.getKey(), entry.getValue() - p);
-			}
+		// Adjust probabilities for direct subsets of itemset
+		for (Itemset subset : subsets) {
+			double prob = itemsets.get(subset);
+			itemsets.put(subset, prob - p);
 		}
 
 		// Add itemset
@@ -535,16 +539,15 @@ public abstract class ItemsetMiningCore {
 
 	public static void removeCandidateItemsets(
 			final HashMap<Itemset, Double> itemsets, final Itemset candidate,
-			final double p) {
+			final double p, Set<Itemset> subsets) {
 
 		// Remove itemset
 		itemsets.remove(candidate);
 
 		// and restore original probabilities
-		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-			if (candidate.contains(entry.getKey())) {
-				itemsets.put(entry.getKey(), entry.getValue() + p);
-			}
+		for (Itemset subset : subsets) {
+			double prob = itemsets.get(subset);
+			itemsets.put(subset, prob + p);
 		}
 	}
 
