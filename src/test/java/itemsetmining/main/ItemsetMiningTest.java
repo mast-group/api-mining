@@ -112,4 +112,26 @@ public class ItemsetMiningTest {
 		// assertEquals(expectedCost234, actualCost, 1e-15);
 
 	}
+
+	@Test
+	public void testDirectSubsets() {
+
+		Set<Itemset> itemsets = Sets.newHashSet();
+		itemsets.add(new Itemset(1, 2));
+		itemsets.add(new Itemset(17));
+		itemsets.add(new Itemset(18));
+		itemsets.add(new Itemset(33));
+		itemsets.add(new Itemset(39));
+		itemsets.add(new Itemset(33, 39));
+		itemsets.add(new Itemset(18, 33, 39));
+
+		Set<Itemset> expectedDirectSubsets = Sets.newHashSet();
+		expectedDirectSubsets.add(new Itemset(17));
+		expectedDirectSubsets.add(new Itemset(18, 33, 39));
+
+		Set<Itemset> actualDirectSubsets = ItemsetMiningCore.getDirectSubsets(
+				itemsets, new Itemset(17, 18, 33, 39));
+		assertEquals(expectedDirectSubsets, actualDirectSubsets);
+	}
+
 }

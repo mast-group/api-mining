@@ -29,7 +29,7 @@ public class TransactionTest {
 
 		// Check that disjoint
 		for (final Itemset set1 : itemsets.keySet()) {
-			final HashSet<Itemset> setItemset = new HashSet<Itemset>();
+			final HashSet<Itemset> setItemset = Sets.newHashSet();
 			setItemset.add(set1);
 			for (final Itemset set2 : Sets.difference(itemsets.keySet(),
 					setItemset)) {

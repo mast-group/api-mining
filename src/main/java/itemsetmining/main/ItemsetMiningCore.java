@@ -548,6 +548,34 @@ public abstract class ItemsetMiningCore {
 		}
 	}
 
+	/** Find all itemsets that are direct subsets of candidate itemset */
+	static Set<Itemset> getDirectSubsets(final Set<Itemset> itemsets,
+			final Itemset candidate) {
+
+		// Find all subsets
+		Set<Itemset> subsets = Sets.newHashSet();
+		for (Itemset set : itemsets) {
+			if (candidate.contains(set))
+				subsets.add(set);
+		}
+
+		// Remove subsets with supersets
+		Set<Itemset> directSubsets = Sets.newHashSet();
+		for (Itemset set : subsets) {
+			boolean isDirectSubset = true;
+			for (Itemset otherSet : subsets) {
+				if (!otherSet.equals(set) && otherSet.contains(set)) {
+					isDirectSubset = false; // set has superset
+					break;
+				}
+			}
+			if (isDirectSubset)
+				directSubsets.add(set);
+		}
+
+		return directSubsets;
+	}
+
 	/**
 	 * Calculate interestingness as defined by i(S) = |z_S = 1|/|T : S in T|
 	 * where |z_S = 1| is calculated by pi_S*|T| and |T : S in T| = supp(S)
