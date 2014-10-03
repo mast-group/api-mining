@@ -17,8 +17,6 @@ import org.apache.spark.api.java.function.PairFunction;
 
 import scala.Tuple2;
 
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 
 /** Class to hold the various parallel transaction EM Steps for Spark */
@@ -96,50 +94,6 @@ public class SparkEMStep {
 				/ noTransactions;
 	}
 
-	/** Spark parallel candidate probability estimation */
-	static double parallelCandidateSupport(
-			final JavaRDD<Transaction> transactions, final Itemset candidate,
-			final double noTransactions) {
-
-		final double p = transactions.map(new Function<Transaction, Integer>() {
-			private static final long serialVersionUID = -2369728585019081981L;
-
-			@Override
-			public Integer call(final Transaction transaction) throws Exception {
-				if (transaction.contains(candidate)) {
-					return 1;
-				}
-				return 0;
-			}
-
-		}).reduce(new SumCounts());
-		return p / noTransactions;
-
-	}
-
-	/** Spark parallel calculate support for each itemset */
-	static Multiset<Itemset> parallelSupportCount(
-			final JavaRDD<Transaction> transactions,
-			final HashMap<Itemset, Double> itemsets) {
-
-		return transactions.map(new Function<Transaction, Multiset<Itemset>>() {
-			private static final long serialVersionUID = -4859646175437626337L;
-
-			@Override
-			public Multiset<Itemset> call(final Transaction transaction)
-					throws Exception {
-
-				final Multiset<Itemset> support = HashMultiset.create();
-				for (final Itemset set : itemsets.keySet()) {
-					if (transaction.contains(set))
-						support.add(set);
-				}
-				return support;
-			}
-
-		}).reduce(new CombineMultisets());
-	}
-
 	/** Pair itemsets with counts */
 	private static class PairItemsetCount implements
 			PairFunction<Itemset, Itemset, Integer> {
@@ -170,19 +124,6 @@ public class SparkEMStep {
 		@Override
 		public Integer call(final Integer a, final Integer b) {
 			return a + b;
-		}
-	}
-
-	/** Combine two multisets into one */
-	static class CombineMultisets implements
-			Function2<Multiset<Itemset>, Multiset<Itemset>, Multiset<Itemset>> {
-		private static final long serialVersionUID = 6780310628444189003L;
-
-		@Override
-		public Multiset<Itemset> call(final Multiset<Itemset> multiset1,
-				final Multiset<Itemset> multiset2) throws Exception {
-			multiset1.addAll(multiset2);
-			return multiset1;
 		}
 	}
 

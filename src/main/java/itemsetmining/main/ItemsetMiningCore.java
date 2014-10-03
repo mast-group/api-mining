@@ -42,7 +42,7 @@ public abstract class ItemsetMiningCore {
 	public static final String LOG_DIR = "/tmp/";
 
 	/** Variable settings */
-	protected static Level LOG_LEVEL = Level.FINE;
+	protected static Level LOG_LEVEL = Level.FINER;
 	protected static boolean TIMESTAMP_LOG = true;
 	protected static long MAX_RUNTIME = 12 * 60 * 60 * 1_000; // 12hrs
 
@@ -105,7 +105,8 @@ public abstract class ItemsetMiningCore {
 						+ iteration + "\n"); // TODO use dedicated maxSteps
 												// parameter?
 				transactions = simplifyItemsetsStep(itemsets, transactions,
-						rejected_sets, inferenceAlgorithm, maxStructureSteps);
+						tree, rejected_sets, inferenceAlgorithm,
+						maxStructureSteps);
 			} else {
 				logger.finer("\n+++++ Tree Structural Optimization at Step "
 						+ iteration + "\n");
@@ -258,7 +259,8 @@ public abstract class ItemsetMiningCore {
 			// Evaluate candidate itemset
 			if (!rejected_sets.contains(candidate)) {
 				final TransactionDatabase betterCost = evaluateCandidate(
-						itemsets, transactions, inferenceAlgorithm, candidate);
+						itemsets, transactions, tree, inferenceAlgorithm,
+						candidate);
 				if (betterCost != null) // Better itemset found
 					return betterCost;
 				else
@@ -276,7 +278,7 @@ public abstract class ItemsetMiningCore {
 	/** Generate candidate itemsets from power set */
 	private static TransactionDatabase simplifyItemsetsStep(
 			final HashMap<Itemset, Double> itemsets,
-			final TransactionDatabase transactions,
+			final TransactionDatabase transactions, ItemsetTree tree,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
 
@@ -308,7 +310,7 @@ public abstract class ItemsetMiningCore {
 				final Itemset candidate = new Itemset(subset);
 				if (!rejected_sets.contains(candidate)) {
 					final TransactionDatabase betterCost = evaluateCandidate(
-							itemsets, transactions, inferenceAlgorithm,
+							itemsets, transactions, tree, inferenceAlgorithm,
 							candidate);
 					if (betterCost != null) // Better itemset found
 						return betterCost;
@@ -346,7 +348,7 @@ public abstract class ItemsetMiningCore {
 			}
 		};
 
-		return combineItemsetsStep(itemsets, transactions, rejected_sets,
+		return combineItemsetsStep(itemsets, transactions, tree, rejected_sets,
 				inferenceAlgorithm, maxSteps, supportOrdering);
 	}
 
@@ -358,7 +360,7 @@ public abstract class ItemsetMiningCore {
 	 */
 	private static TransactionDatabase combineItemsetsStep(
 			final HashMap<Itemset, Double> itemsets,
-			final TransactionDatabase transactions,
+			final TransactionDatabase transactions, ItemsetTree tree,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps,
 			final Ordering<Itemset> itemsetOrdering) {
@@ -388,7 +390,7 @@ public abstract class ItemsetMiningCore {
 				// Evaluate candidate itemset
 				if (!rejected_sets.contains(candidate)) {
 					final TransactionDatabase betterCost = evaluateCandidate(
-							itemsets, transactions, inferenceAlgorithm,
+							itemsets, transactions, tree, inferenceAlgorithm,
 							candidate);
 					if (betterCost != null) // Better itemset found
 						return betterCost;
@@ -414,7 +416,7 @@ public abstract class ItemsetMiningCore {
 	/** Evaluate a candidate itemset to see if it should be included */
 	private static TransactionDatabase evaluateCandidate(
 			final HashMap<Itemset, Double> itemsets,
-			TransactionDatabase transactions,
+			TransactionDatabase transactions, ItemsetTree tree,
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
 		// Skip empty candidates and candidates already present
@@ -423,22 +425,8 @@ public abstract class ItemsetMiningCore {
 			logger.finer("\n potential candidate: " + candidate);
 			final double noTransactions = transactions.size();
 
-			// Calculate itemset support (M-step assuming always
-			// included)
-			double p = 0;
-			if (transactions instanceof TransactionRDD) {
-				p = SparkEMStep.parallelCandidateSupport(
-						transactions.getTransactionRDD(), candidate,
-						noTransactions);
-			} else if (SERIAL) {
-				p = EMStep.serialCandidateSupport(
-						transactions.getTransactionList(), candidate,
-						noTransactions);
-			} else {
-				p = EMStep.parallelCandidateSupport(
-						transactions.getTransactionList(), candidate,
-						noTransactions);
-			}
+			// Calculate itemset support (M-step assuming always included)
+			double p = tree.getSupportOfItemset(candidate) / noTransactions;
 
 			// Find direct subsets of candidate
 			Set<Itemset> subsets = getDirectSubsets(itemsets.keySet(),
@@ -585,29 +573,15 @@ public abstract class ItemsetMiningCore {
 	 */
 	protected static HashMap<Itemset, Double> calculateInterestingness(
 			final HashMap<Itemset, Double> itemsets,
-			final TransactionDatabase transactions) {
+			final TransactionDatabase transactions, ItemsetTree tree) {
 
 		final HashMap<Itemset, Double> interestingnessMap = Maps.newHashMap();
-
-		// Calculate support (in parallel for each transaction)
-		final Multiset<Itemset> support;
-		if (transactions instanceof TransactionRDD) {
-			support = SparkEMStep.parallelSupportCount(
-					transactions.getTransactionRDD(), itemsets);
-		} else if (SERIAL) {
-			support = EMStep.serialSupportCount(
-					transactions.getTransactionList(), itemsets);
-		} else {
-			support = EMStep.parallelSupportCount(
-					transactions.getTransactionList(), itemsets);
-		}
 
 		// Calculate interestingness
 		final long noTransactions = transactions.size();
 		for (final Itemset set : itemsets.keySet()) {
-
 			final double interestingness = itemsets.get(set) * noTransactions
-					/ support.count(set);
+					/ (double) tree.getSupportOfItemset(set);
 			interestingnessMap.put(set, interestingness);
 		}
 

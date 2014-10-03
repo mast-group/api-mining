@@ -37,13 +37,13 @@ public class ItemsetMining extends ItemsetMiningCore {
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
-		final String dataset = "/disk/data1/caviar.txt";
+		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/plants.dat";
 		final boolean associationRules = false;
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
 		// Max iterations
 		final int maxStructureSteps = 100_000;
-		final int maxEMIterations = 1_000;
+		final int maxEMIterations = 5;
 
 		// Mine interesting itemsets
 		final HashMap<Itemset, Double> itemsets = mineItemsets(
@@ -101,7 +101,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 					+ Files.toString(inputFile, Charsets.UTF_8) + "\n");
 		logger.info("\n============= INTERESTING ITEMSETS =============\n");
 		final HashMap<Itemset, Double> intMap = calculateInterestingness(
-				itemsets, transactions);
+				itemsets, transactions, tree);
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 			logger.info(String.format("%s\tprob: %1.5f \tint: %1.5f %n",
 					entry.getKey(), entry.getValue(),

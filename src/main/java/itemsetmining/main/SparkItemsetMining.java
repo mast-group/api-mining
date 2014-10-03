@@ -153,7 +153,7 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 				maxEMIterations);
 		logger.info("\n============= INTERESTING ITEMSETS =============\n");
 		final HashMap<Itemset, Double> intMap = calculateInterestingness(
-				itemsets, transactions);
+				itemsets, transactions, tree);
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 			logger.info(String.format("%s\tprob: %1.5f \tint: %1.5f %n",
 					entry.getKey(), entry.getValue(),

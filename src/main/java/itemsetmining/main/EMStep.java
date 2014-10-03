@@ -4,7 +4,6 @@ import itemsetmining.itemset.Itemset;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.util.FutureThreadPool;
-import itemsetmining.util.ParallelThreadPool;
 
 import java.util.HashMap;
 import java.util.List;
@@ -140,84 +139,6 @@ public class EMStep {
 			});
 		}
 		return sum(ftp.getCompletedTasks()) / noTransactions;
-	}
-
-	/** Serial candidate probability estimation */
-	static double serialCandidateSupport(final List<Transaction> transactions,
-			final Itemset candidate, final double noTransactions) {
-
-		double p = 0;
-		for (final Transaction transaction : transactions) {
-			if (transaction.contains(candidate)) {
-				p++;
-			}
-		}
-		p = p / noTransactions;
-
-		return p;
-	}
-
-	/** Parallel candidate probability estimation */
-	static double parallelCandidateSupport(
-			final List<Transaction> transactions, final Itemset candidate,
-			final double noTransactions) {
-
-		final FutureThreadPool<Double> ftp = new FutureThreadPool<Double>();
-		for (final Transaction transaction : transactions) {
-
-			ftp.pushTask(new Callable<Double>() {
-				@Override
-				public Double call() {
-					if (transaction.contains(candidate)) {
-						return 1.0;
-					}
-					return 0.0;
-				}
-			});
-		}
-		return sum(ftp.getCompletedTasks()) / noTransactions;
-	}
-
-	/** Serial calculate support for each each itemset */
-	static Multiset<Itemset> serialSupportCount(
-			final List<Transaction> transactions,
-			final HashMap<Itemset, Double> itemsets) {
-
-		final Multiset<Itemset> support = HashMultiset.create();
-		for (final Transaction transaction : transactions) {
-
-			for (final Itemset set : itemsets.keySet()) {
-				if (transaction.contains(set))
-					support.add(set);
-			}
-
-		}
-		return support;
-	}
-
-	/** Parallel calculate support for each itemset */
-	static Multiset<Itemset> parallelSupportCount(
-			final List<Transaction> transactions,
-			final HashMap<Itemset, Double> itemsets) {
-
-		final Multiset<Itemset> support = ConcurrentHashMultiset.create();
-		final ParallelThreadPool ptp = new ParallelThreadPool();
-		for (final Transaction transaction : transactions) {
-
-			ptp.pushTask(new Runnable() {
-				@Override
-				public void run() {
-
-					for (final Itemset set : itemsets.keySet()) {
-						if (transaction.contains(set))
-							support.add(set);
-					}
-				}
-			});
-		}
-		ptp.waitForTermination();
-
-		return support;
 	}
 
 	/** Calculates the sum of a Collection */
