@@ -71,7 +71,7 @@ public class SparkCacheFunctions {
 	/** Spark parallel add itemset to Cache */
 	static TransactionDatabase parallelAddItemsetCache(
 			final TransactionDatabase transactions, final Itemset candidate,
-			final double prob, Set<Itemset> subsets) {
+			final double prob, final Set<Itemset> subsets) {
 
 		final JavaRDD<Transaction> updatedTransactions = transactions
 				.getTransactionRDD().map(

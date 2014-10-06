@@ -32,7 +32,8 @@ public class CacheFunctions {
 
 	/** Serial add itemset to Cache */
 	static void serialAddItemsetCache(final List<Transaction> transactions,
-			final Itemset candidate, final double prob, Set<Itemset> subsets) {
+			final Itemset candidate, final double prob,
+			final Set<Itemset> subsets) {
 
 		for (final Transaction transaction : transactions)
 			transaction.addItemsetCache(candidate, prob, subsets);
@@ -78,7 +79,8 @@ public class CacheFunctions {
 
 	/** Parallel add itemset to Cache */
 	static void parallelAddItemsetCache(final List<Transaction> transactions,
-			final Itemset candidate, final double prob, Set<Itemset> subsets) {
+			final Itemset candidate, final double prob,
+			final Set<Itemset> subsets) {
 
 		final ParallelThreadPool ptp = new ParallelThreadPool();
 		for (final Transaction transaction : transactions) {

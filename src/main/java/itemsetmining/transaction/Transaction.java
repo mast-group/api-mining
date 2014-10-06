@@ -38,14 +38,14 @@ public class Transaction extends AbstractItemset implements Serializable {
 	}
 
 	public void addItemsetCache(final Itemset candidate, final double prob,
-			Set<Itemset> subsets) {
+			final Set<Itemset> subsets) {
 
 		// Initialize dropped itemsets
 		droppedItemsets = Maps.newHashMap();
 
 		// Adjust probabilities for direct subsets of candidate
-		for (Itemset subset : subsets) {
-			Double oldProb = cachedItemsets.get(subset);
+		for (final Itemset subset : subsets) {
+			final Double oldProb = cachedItemsets.get(subset);
 			if (oldProb != null) { // subset supports this transaction
 				final double newProb = oldProb - prob;
 				if (newProb > 0.0) {
@@ -63,14 +63,14 @@ public class Transaction extends AbstractItemset implements Serializable {
 	}
 
 	public void removeItemsetCache(final Itemset candidate, final double prob,
-			Set<Itemset> subsets) {
+			final Set<Itemset> subsets) {
 
 		// Remove candidate
 		cachedItemsets.remove(candidate);
 
 		// Restore probabilities prior to adding candidate
-		for (Itemset subset : subsets) {
-			Double oldProb = cachedItemsets.get(subset);
+		for (final Itemset subset : subsets) {
+			final Double oldProb = cachedItemsets.get(subset);
 			if (oldProb != null) // subset supports this transaction
 				cachedItemsets.put(subset, oldProb + prob);
 		}
@@ -105,7 +105,7 @@ public class Transaction extends AbstractItemset implements Serializable {
 
 	/**
 	 * Constructor
-	 * 
+	 *
 	 * @param items
 	 *            a collection of items that should be added to the transaction
 	 */

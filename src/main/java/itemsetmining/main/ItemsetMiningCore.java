@@ -158,7 +158,7 @@ public abstract class ItemsetMiningCore {
 
 	/**
 	 * Find optimal parameters for given set of itemsets and store in itemsets
-	 * 
+	 *
 	 * @return TransactionDatabase with the average cost per transaction
 	 *         <p>
 	 *         NB. zero probability itemsets are dropped
@@ -278,7 +278,7 @@ public abstract class ItemsetMiningCore {
 	/** Generate candidate itemsets from power set */
 	private static TransactionDatabase simplifyItemsetsStep(
 			final HashMap<Itemset, Double> itemsets,
-			final TransactionDatabase transactions, ItemsetTree tree,
+			final TransactionDatabase transactions, final ItemsetTree tree,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
 
@@ -354,13 +354,13 @@ public abstract class ItemsetMiningCore {
 
 	/**
 	 * Generate candidate itemsets by combining existing sets with highest order
-	 * 
+	 *
 	 * @param itemsetOrdering
 	 *            ordering that determines which itemsets to combine first
 	 */
 	private static TransactionDatabase combineItemsetsStep(
 			final HashMap<Itemset, Double> itemsets,
-			final TransactionDatabase transactions, ItemsetTree tree,
+			final TransactionDatabase transactions, final ItemsetTree tree,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps,
 			final Ordering<Itemset> itemsetOrdering) {
@@ -416,7 +416,7 @@ public abstract class ItemsetMiningCore {
 	/** Evaluate a candidate itemset to see if it should be included */
 	private static TransactionDatabase evaluateCandidate(
 			final HashMap<Itemset, Double> itemsets,
-			TransactionDatabase transactions, ItemsetTree tree,
+			TransactionDatabase transactions, final ItemsetTree tree,
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
 		// Skip empty candidates and candidates already present
@@ -426,10 +426,11 @@ public abstract class ItemsetMiningCore {
 			final double noTransactions = transactions.size();
 
 			// Calculate itemset support (M-step assuming always included)
-			double p = tree.getSupportOfItemset(candidate) / noTransactions;
+			final double p = tree.getSupportOfItemset(candidate)
+					/ noTransactions;
 
 			// Find direct subsets of candidate
-			Set<Itemset> subsets = getDirectSubsets(itemsets.keySet(),
+			final Set<Itemset> subsets = getDirectSubsets(itemsets.keySet(),
 					candidate);
 
 			// If not using cache: Add candidate to itemsets
@@ -450,7 +451,7 @@ public abstract class ItemsetMiningCore {
 						transactions.getTransactionRDD(), inferenceAlgorithm,
 						passItemsets, transactions.size(), candidate, p,
 						subsets);
-				double curCostNoCache = SparkEMStep.parallelEMStep(
+				final double curCostNoCache = SparkEMStep.parallelEMStep(
 						transactions.getTransactionRDD(), inferenceAlgorithm,
 						itemsets, transactions.size(), candidate, p, subsets);
 				checkCacheWorks(curCost, curCostNoCache);
@@ -513,11 +514,11 @@ public abstract class ItemsetMiningCore {
 
 	public static void addCandidateItemsets(
 			final HashMap<Itemset, Double> itemsets, final Itemset candidate,
-			final double p, Set<Itemset> subsets) {
+			final double p, final Set<Itemset> subsets) {
 
 		// Adjust probabilities for direct subsets of itemset
-		for (Itemset subset : subsets) {
-			double prob = itemsets.get(subset);
+		for (final Itemset subset : subsets) {
+			final double prob = itemsets.get(subset);
 			itemsets.put(subset, prob - p);
 		}
 
@@ -527,14 +528,14 @@ public abstract class ItemsetMiningCore {
 
 	public static void removeCandidateItemsets(
 			final HashMap<Itemset, Double> itemsets, final Itemset candidate,
-			final double p, Set<Itemset> subsets) {
+			final double p, final Set<Itemset> subsets) {
 
 		// Remove itemset
 		itemsets.remove(candidate);
 
 		// and restore original probabilities
-		for (Itemset subset : subsets) {
-			double prob = itemsets.get(subset);
+		for (final Itemset subset : subsets) {
+			final double prob = itemsets.get(subset);
 			itemsets.put(subset, prob + p);
 		}
 	}
@@ -544,17 +545,17 @@ public abstract class ItemsetMiningCore {
 			final Itemset candidate) {
 
 		// Find all subsets
-		Set<Itemset> subsets = Sets.newHashSet();
-		for (Itemset set : itemsets) {
+		final Set<Itemset> subsets = Sets.newHashSet();
+		for (final Itemset set : itemsets) {
 			if (candidate.contains(set))
 				subsets.add(set);
 		}
 
 		// Remove subsets with supersets
-		Set<Itemset> directSubsets = Sets.newHashSet();
-		for (Itemset set : subsets) {
+		final Set<Itemset> directSubsets = Sets.newHashSet();
+		for (final Itemset set : subsets) {
 			boolean isDirectSubset = true;
-			for (Itemset otherSet : subsets) {
+			for (final Itemset otherSet : subsets) {
 				if (!otherSet.equals(set) && otherSet.contains(set)) {
 					isDirectSubset = false; // set has superset
 					break;
@@ -573,7 +574,7 @@ public abstract class ItemsetMiningCore {
 	 */
 	protected static HashMap<Itemset, Double> calculateInterestingness(
 			final HashMap<Itemset, Double> itemsets,
-			final TransactionDatabase transactions, ItemsetTree tree) {
+			final TransactionDatabase transactions, final ItemsetTree tree) {
 
 		final HashMap<Itemset, Double> interestingnessMap = Maps.newHashMap();
 
@@ -600,13 +601,13 @@ public abstract class ItemsetMiningCore {
 
 	/**
 	 * Algorithm to randomly subsample a set
-	 * 
+	 *
 	 * @param items
 	 *            Collection of items
 	 * @param m
 	 *            number of items to subsample
 	 * @return subsampled set
-	 * 
+	 *
 	 * @see http://eyalsch.wordpress.com/2010/04/01/random-sample/
 	 */
 	public static <T> Set<T> subSample(final Collection<T> items, int m) {

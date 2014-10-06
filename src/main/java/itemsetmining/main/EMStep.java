@@ -52,7 +52,7 @@ public class EMStep {
 			final InferenceAlgorithm inferenceAlgorithm,
 			final HashMap<Itemset, Double> itemsets,
 			final double noTransactions, final Itemset candidate,
-			final double prob, Set<Itemset> subsets) {
+			final double prob, final Set<Itemset> subsets) {
 
 		double averageCost = 0;
 		for (final Transaction transaction : transactions) {
@@ -113,7 +113,7 @@ public class EMStep {
 			final InferenceAlgorithm inferenceAlgorithm,
 			final HashMap<Itemset, Double> itemsets,
 			final double noTransactions, final Itemset candidate,
-			final double prob, Set<Itemset> subsets) {
+			final double prob, final Set<Itemset> subsets) {
 
 		// Parallel E-step and M-step combined
 		final FutureThreadPool<Double> ftp = new FutureThreadPool<Double>();
