@@ -71,7 +71,7 @@ public class SparkEMStep {
 		// Map: Parallel E-step and M-step combined
 		final JavaRDD<Double> coveringWithCost = transactions
 				.map(new Function<Transaction, Double>() {
-					private static final long serialVersionUID = -4944391752990605173L;
+					private static final long serialVersionUID = 3493612139439314721L;
 
 					@Override
 					public Double call(final Transaction transaction) {
