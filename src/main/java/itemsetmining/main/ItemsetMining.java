@@ -43,7 +43,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 		// Max iterations
 		final int maxStructureSteps = 100_000;
-		final int maxEMIterations = 5;
+		final int maxEMIterations = 10;
 
 		// Mine interesting itemsets
 		final HashMap<Itemset, Double> itemsets = mineItemsets(
@@ -151,7 +151,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 	/**
 	 * This method scans the input database to calculate the support of single
 	 * items.
-	 * 
+	 *
 	 * @param inputFile
 	 *            the input file
 	 * @return a multiset for storing the support of each item

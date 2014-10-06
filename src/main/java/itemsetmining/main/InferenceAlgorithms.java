@@ -50,12 +50,10 @@ public class InferenceAlgorithms {
 			if (itemsets == null) { // Preferably use itemset cache
 				filteredItemsets = transaction.getCachedItemsets();
 			} else { // Else filter out sets containing items not in transaction
-						// and items with nonzero cost
 				filteredItemsets = Maps.newHashMap();
 				for (final Map.Entry<Itemset, Double> entry : itemsets
 						.entrySet()) {
-					if (entry.getValue() > 0.0
-							&& transaction.contains(entry.getKey()))
+					if (transaction.contains(entry.getKey()))
 						filteredItemsets.put(entry.getKey(), entry.getValue());
 				}
 			}
@@ -123,12 +121,10 @@ public class InferenceAlgorithms {
 			if (itemsets == null) { // Preferably use itemset cache
 				filteredItemsets = transaction.getCachedItemsets();
 			} else { // Else filter out sets containing items not in transaction
-						// and items with nonzero cost
 				filteredItemsets = Maps.newHashMap();
 				for (final Map.Entry<Itemset, Double> entry : itemsets
 						.entrySet()) {
-					if (entry.getValue() > 0.0
-							&& transaction.contains(entry.getKey()))
+					if (transaction.contains(entry.getKey()))
 						filteredItemsets.put(entry.getKey(), entry.getValue());
 				}
 			}
@@ -221,14 +217,12 @@ public class InferenceAlgorithms {
 			// SolverFactory.getSolver("CPLEX");
 			// solver.printToScreen(false);
 			//
-			// // Filter out sets containing items not in transaction and items
-			// // with nonzero cost
+			// // Filter out sets containing items not in transaction
 			// final LinkedHashMap<Itemset, Double> filteredItemsets = Maps
 			// .newLinkedHashMap();
 			// for (final Map.Entry<Itemset, Double> entry :
 			// itemsets.entrySet()) {
-			// if (entry.getValue() > 0.0
-			// && transaction.contains(entry.getKey()))
+			// if (transaction.contains(entry.getKey()))
 			// filteredItemsets.put(entry.getKey(), entry.getValue());
 			// }
 			//

@@ -20,8 +20,8 @@ public class Transaction extends AbstractItemset implements Serializable {
 	/** Cached itemsets for this transaction */
 	private HashMap<Itemset, Double> cachedItemsets;
 
-	/** Cached itemsets dropped during candidate eval */
-	private HashMap<Itemset, Double> droppedItemsets;
+	/** Cached itemsets that get negative probs during candidate eval */
+	private HashMap<Itemset, Double> negativeItemsets;
 
 	public void initializeCache(final Multiset<Integer> singletons,
 			final long noTransactions) {
@@ -40,8 +40,8 @@ public class Transaction extends AbstractItemset implements Serializable {
 	public void addItemsetCache(final Itemset candidate, final double prob,
 			final Set<Itemset> subsets) {
 
-		// Initialize dropped itemsets
-		droppedItemsets = Maps.newHashMap();
+		// Initialize negative itemsets
+		negativeItemsets = Maps.newHashMap();
 
 		// Adjust probabilities for direct subsets of candidate
 		for (final Itemset subset : subsets) {
@@ -51,8 +51,8 @@ public class Transaction extends AbstractItemset implements Serializable {
 				if (newProb > 0.0) {
 					cachedItemsets.put(subset, newProb);
 				} else {
-					droppedItemsets.put(subset, oldProb);
-					cachedItemsets.remove(subset);
+					negativeItemsets.put(subset, newProb);
+					cachedItemsets.put(subset, 1e-10);
 				}
 			}
 		}
@@ -68,6 +68,9 @@ public class Transaction extends AbstractItemset implements Serializable {
 		// Remove candidate
 		cachedItemsets.remove(candidate);
 
+		// Restore negative itemsets
+		cachedItemsets.putAll(negativeItemsets);
+
 		// Restore probabilities prior to adding candidate
 		for (final Itemset subset : subsets) {
 			final Double oldProb = cachedItemsets.get(subset);
@@ -75,8 +78,6 @@ public class Transaction extends AbstractItemset implements Serializable {
 				cachedItemsets.put(subset, oldProb + prob);
 		}
 
-		// And restore dropped itemsets
-		cachedItemsets.putAll(droppedItemsets);
 	}
 
 	public void updateCacheProbabilities(
