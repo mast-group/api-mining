@@ -17,7 +17,7 @@ public class ItemsetSymmetricDistance {
 	public static void main(final String[] args) throws IOException {
 
 		// Read in interesting itemsets
-		final String logfile = "plants-CombSupp-24.09.2014-17:20:05.log";
+		final String logfile = "caviar.txt";
 		final Set<Itemset> intItemsets = ItemsetPrecisionRecall
 				.readSparkOutput(new File(LOGDIR + logfile)).keySet();
 		System.out.println("\nIIM Itemsets");
@@ -25,8 +25,12 @@ public class ItemsetSymmetricDistance {
 		System.out.println("No items: "
 				+ ItemsetScaling.countNoItems(intItemsets));
 
+		// Measure symmetric difference between the two sets of itemsets
+		double avgMinDiff = calculateRedundancy(intItemsets);
+		System.out.println("\nAvg min sym diff: " + avgMinDiff);
+
 		// Read in frequent itemsets
-		final String outFile = "plants-fim.txt";
+		final String outFile = "caviar-fim.txt";
 		final Set<Itemset> freqItemsets = FrequentItemsetMining
 				.readFrequentItemsets(new File(FIMDIR + outFile)).keySet();
 		System.out.println("\nFIM Itemsets");
@@ -35,47 +39,33 @@ public class ItemsetSymmetricDistance {
 				+ ItemsetScaling.countNoItems(freqItemsets));
 
 		// Measure symmetric difference between the two sets of itemsets
+		avgMinDiff = calculateRedundancy(freqItemsets);
+		System.out.println("\nAvg min sym diff: " + avgMinDiff);
+
+	}
+
+	private static double calculateRedundancy(final Set<Itemset> itemsets) {
+
 		int count = 0;
-		double avgMinDiff = 0;
-		for (final Itemset fset : freqItemsets) {
+		int avgMinDiff = 0;
+		for (final Itemset set1 : itemsets) {
 			count++;
-			if (count % 10000 == 0)
-				System.out
-						.println("FI " + count + " of " + freqItemsets.size());
+			if (count % 100 == 0)
+				System.out.println("Itemset " + count + " of "
+						+ itemsets.size());
 			int minDiff = Integer.MAX_VALUE;
-			for (final Itemset iset : intItemsets) {
-				final int diff = cardSymDiff(iset, fset);
-				if (diff < minDiff)
-					minDiff = diff;
+			for (final Itemset set2 : itemsets) {
+				if (!set1.equals(set2)) {
+					final int diff = cardSymDiff(set1, set2);
+					if (diff < minDiff)
+						minDiff = diff;
+				}
 			}
 			avgMinDiff += minDiff;
 		}
-		avgMinDiff /= freqItemsets.size();
-		System.out.println("Avg min sym diff: " + avgMinDiff);
+		avgMinDiff /= itemsets.size();
 
-		// Measure symmetric difference between the two sets of itemsets
-		// int count2 = 0;
-		// double avgMinDiff = 0;
-		// for (final Itemset iset : intItemsets) {
-		// count2++;
-		// System.out.println("Interesting itemset " + count2 + " of "
-		// + intItemsets.size());
-		// int count = 0;
-		// int minDiff = Integer.MAX_VALUE;
-		// for (final Itemset fset : freqItemsets) {
-		// count++;
-		// if (count % 10000 == 0)
-		// System.out.println("FI " + count + " of "
-		// + freqItemsets.size());
-		// final int diff = cardSymDiff(iset, fset);
-		// if (diff < minDiff)
-		// minDiff = diff;
-		// }
-		// avgMinDiff += minDiff;
-		// }
-		// avgMinDiff /= freqItemsets.size();
-		// System.out.println("Avg min sym diff: " + avgMinDiff);
-
+		return avgMinDiff;
 	}
 
 	private static <T> int cardSymDiff(final Collection<T> set1,
