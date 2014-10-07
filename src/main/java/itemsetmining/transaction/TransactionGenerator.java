@@ -123,15 +123,18 @@ public class TransactionGenerator {
 		final PrintWriter out = new PrintWriter(outFile, "UTF-8");
 
 		// Generate transaction database
-		for (int i = 0; i < noTransactions; i++) {
+		int count = 0;
+		while (count < noTransactions) {
 
 			// Generate transaction from distribution
 			final Transaction transaction = sampleFromDistribution(itemsets);
 			for (final int item : transaction) {
 				out.print(item + " ");
 			}
-			if (!transaction.isEmpty())
+			if (!transaction.isEmpty()) {
 				out.println();
+				count++;
+			}
 
 		}
 		out.close();

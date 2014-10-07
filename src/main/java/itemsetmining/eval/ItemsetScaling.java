@@ -68,7 +68,7 @@ public class ItemsetScaling {
 
 		generateSyntheticDatabase(
 				133,
-				35000,
+				34781,
 				new File(
 						"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/plants_synthetic.dat"));
 	}
@@ -78,7 +78,6 @@ public class ItemsetScaling {
 			InterruptedException {
 
 		final double[] time = new double[trans.length];
-		final int[] actualTrans = new int[trans.length];
 		final DecimalFormat formatter = new DecimalFormat("0.0E0");
 
 		// Save to file
@@ -115,8 +114,6 @@ public class ItemsetScaling {
 			// Generate transaction database
 			TransactionGenerator.generateTransactionDatabase(actualItemsets,
 					tran, dbFile);
-			actualTrans[i] = countNoTransactions(dbFile);
-			System.out.println("Actual transactions: " + actualTrans[i]);
 			System.out.println("Avg items per transaction: "
 					+ getAverageItemsPerTransaction(dbFile));
 
@@ -149,15 +146,13 @@ public class ItemsetScaling {
 			// Average over runs
 			time[i] /= noRuns;
 
-			// Display average precision and recall
-			System.out.println("\n========= No Transactions: "
-					+ formatter.format(actualTrans[i]));
+			// Display average time
 			System.out.printf("Average Time (s): %.2f%n", time[i]);
 		}
 
 		// Print time
 		System.out.println("\n========" + name + "========");
-		System.out.println("Transactions:" + Arrays.toString(actualTrans));
+		System.out.println("Transactions:" + Arrays.toString(trans));
 		System.out.println("Time: " + Arrays.toString(time));
 
 		// and save to file
