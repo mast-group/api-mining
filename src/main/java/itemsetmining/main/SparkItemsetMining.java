@@ -265,7 +265,7 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 		if (TIMESTAMP_LOG)
 			timeStamp = "-"
 					+ new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
-							.format(new Date()) + "-" + CANDGEN_NAME;
+							.format(new Date());
 		FileHandler handler = null;
 		try { // Limit log file to 1MB
 			handler = new FileHandler(LOG_DIR

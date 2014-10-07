@@ -23,7 +23,6 @@ import com.google.common.collect.Sets;
 public abstract class ItemsetMiningCore {
 
 	/** Main fixed settings */
-	public static final String CANDGEN_NAME = "CombSupp";
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
 	private static final int COMBINE_ITEMSETS_EVERY = 1;
 	private static final double OPTIMIZE_TOL = 1e-5;
