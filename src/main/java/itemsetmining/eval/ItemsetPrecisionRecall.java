@@ -41,10 +41,10 @@ public class ItemsetPrecisionRecall {
 	/** Itemset Distribution Settings */
 	private static final int noNoisyItemsets = 27;
 	private static final int noSpecialItemsets = 3;
-	private static final double MU = 1.72934946954;
-	private static final double SIGMA = 1.65280083046;
-	private static final double PMIN = 0.01;
-	private static final double PMAX = 0.1;
+	private static final double P = 0.305747126437;
+	private static final int NO_ITEMS = 70;
+	private static final double MU = -3.72051635628;
+	private static final double SIGMA = 0.994304782717;
 	private static final int noTransactions = 10_000;
 
 	/** Spark Settings */
@@ -106,7 +106,7 @@ public class ItemsetPrecisionRecall {
 
 			// Generate some noise
 			final HashMap<Itemset, Double> noisyItemsets = TransactionGenerator
-					.getNoisyItemsets(extraSets, MU, SIGMA, PMIN, PMAX);
+					.generateBackgroundItemsets(extraSets, P, NO_ITEMS, MU, SIGMA);
 
 			// Combine the two
 			final HashMap<Itemset, Double> actualItemsets = Maps

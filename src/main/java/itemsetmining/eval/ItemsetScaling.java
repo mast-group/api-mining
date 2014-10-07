@@ -36,10 +36,10 @@ public class ItemsetScaling {
 	private static final int noRuns = 1;
 
 	/** Itemset Distribution Settings */
-	private static final double MU = 1.72934946954;
-	private static final double SIGMA = 1.65280083046;
-	private static final double PMIN = 0.01;
-	private static final double PMAX = 0.1;
+	private static final double P = 0.305747126437;
+	private static final int NO_ITEMS = 70;
+	private static final double MU = -3.72051635628;
+	private static final double SIGMA = 0.994304782717;
 
 	/** For transaction scaling */
 	private static final int noItemsets = 10;
@@ -60,17 +60,17 @@ public class ItemsetScaling {
 		// final int[] cores = new int[] { 1, 4, 16, 64, 128 };
 		// for (final int noCores : cores)
 		// Makes sense as 10^3 * PMIN = 10
-		scalingTransactions(true, 16, new int[] { 1_000, 10_000, 100_000,
-				1_000_000, 10_000_000, 100_000_000 });
+		// scalingTransactions(true, 16, new int[] { 1_000, 10_000, 100_000,
+		// 1_000_000, 10_000_000, 100_000_000 });
 
 		// Here itemset sizes are relative
 		// scalingItemsets(true, 64, new double[] { 0.05, 0.1, 0.15, 0.2 });
 
-		// generateSyntheticDatabase(
-		// 10,
-		// 40000,
-		// new File(
-		// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/plants_synthetic.dat"));
+		generateSyntheticDatabase(
+				133,
+				35000,
+				new File(
+						"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/plants_synthetic.dat"));
 	}
 
 	public static void scalingTransactions(final boolean useSpark,
@@ -93,7 +93,7 @@ public class ItemsetScaling {
 
 		// Generate real itemsets
 		final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
-				.getNoisyItemsets(noItemsets, MU, SIGMA, PMIN, PMAX);
+				.generateBackgroundItemsets(noItemsets, P, NO_ITEMS, MU, SIGMA);
 		System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
 			System.out.print(String.format("%s\tprob: %1.5f %n",
@@ -190,7 +190,7 @@ public class ItemsetScaling {
 			System.out.println("\n========= " + noSets + " Itemsets");
 
 			final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
-					.getNoisyItemsets(noSets, MU, SIGMA, PMIN, PMAX);
+					.generateBackgroundItemsets(noSets, P, NO_ITEMS, MU, SIGMA);
 			System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 			for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
 				System.out.print(String.format("%s\tprob: %1.5f %n",
@@ -276,7 +276,7 @@ public class ItemsetScaling {
 	public static void generateSyntheticDatabase(final int noItemsets,
 			final int noTransactions, final File dbPath) throws IOException {
 		final HashMap<Itemset, Double> itemsets = TransactionGenerator
-				.getNoisyItemsets(noItemsets, MU, SIGMA, PMIN, PMAX);
+				.generateBackgroundItemsets(noItemsets, P, NO_ITEMS, MU, SIGMA);
 		System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 			System.out.print(String.format("%s\tprob: %1.5f %n",

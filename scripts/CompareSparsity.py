@@ -5,9 +5,10 @@ Compare sparsity of transaction databases
 import os
 
 f1 = open('/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Plants/plants.dat')
-f2 = open('/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/plants_synthetic.dat')
+f2 = open('/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/plants_exact_synthetic.dat')
+f3 = open('/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/plants_synthetic.dat')
 
-for f in f1,f2:
+for f in f1,f2,f3:
 
     print '\n' + os.path.basename(f.name)
     print '=============='

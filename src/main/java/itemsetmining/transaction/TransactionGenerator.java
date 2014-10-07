@@ -10,8 +10,9 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 
 import org.apache.commons.io.LineIterator;
+import org.apache.commons.math3.distribution.GeometricDistribution;
 import org.apache.commons.math3.distribution.LogNormalDistribution;
-import org.apache.commons.math3.random.RandomGenerator;
+import org.apache.commons.math3.distribution.UniformIntegerDistribution;
 import org.apache.commons.math3.random.Well19937c;
 
 import com.google.common.collect.Maps;
@@ -22,10 +23,10 @@ public class TransactionGenerator {
 
 	/**
 	 * Create interesting itemsets that highlight problems
-	 * 
+	 *
 	 * @param difficultyLevel
 	 *            An integer between 0 and 10
-	 * 
+	 *
 	 * @param noInstances
 	 *            The number of example itemset instances
 	 */
@@ -86,32 +87,31 @@ public class TransactionGenerator {
 	}
 
 	/** Generate some disjoint itemsets as background noise */
-	public static HashMap<Itemset, Double> getNoisyItemsets(
-			final int noItemsets, final double mu, final double sigma,
-			final double pmin, final double pmax) {
+	public static HashMap<Itemset, Double> generateBackgroundItemsets(
+			final int noItemsets, final double p, final int noItems,
+			final double mu, final double sigma) {
 
-		final HashMap<Itemset, Double> noisyItemsets = Maps.newHashMap();
+		final HashMap<Itemset, Double> backgroundItemsets = Maps.newHashMap();
 
-		final LogNormalDistribution dist = new LogNormalDistribution(
+		final GeometricDistribution sizeDist = new GeometricDistribution(
+				new Well19937c(1), p);
+		final UniformIntegerDistribution itemDist = new UniformIntegerDistribution(
+				20, 20 + noItems - 1);
+		final LogNormalDistribution probDist = new LogNormalDistribution(
 				new Well19937c(1), mu, sigma);
-		final RandomGenerator rand = new Well19937c(1);
 
-		int maxElement = 20;
-		for (int j = 0; j < noItemsets; j++) {
-
-			int len = -1;
-			while (len <= 0)
-				len = (int) Math.round(dist.sample());
+		while (backgroundItemsets.size() < noItemsets) {
+			final int len = sizeDist.sample() + 1; // use shifted geometric
 			final Itemset set = new Itemset();
-			for (int i = maxElement; i < maxElement + len; i++) {
-				set.add(i);
+			for (int i = 0; i < len; i++) {
+				final int samp = itemDist.sample();
+				set.add(samp);
 			}
-			final double num = pmin + (pmax - pmin) * rand.nextDouble();
-			noisyItemsets.put(set, num);
-			maxElement += len;
+			final double num = probDist.sample();
+			backgroundItemsets.put(set, num);
 		}
 
-		return noisyItemsets;
+		return backgroundItemsets;
 	}
 
 	/** Generate transactions from set of interesting itemsets */
