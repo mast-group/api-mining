@@ -7,9 +7,9 @@ import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.TransactionDatabase;
 import itemsetmining.transaction.TransactionRDD;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -68,10 +68,14 @@ public abstract class ItemsetMiningCore {
 		}
 
 		// Intialize itemsets with singleton sets and their relative support
+		// as well as supports with singletons and their actual supports
 		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
+		final HashMap<Itemset, Integer> supports = Maps.newHashMap();
 		for (final Multiset.Entry<Integer> entry : singletons.entrySet()) {
-			itemsets.put(new Itemset(entry.getElement()), entry.getCount()
-					/ (double) noTransactions);
+			final Itemset set = new Itemset(entry.getElement());
+			final int support = entry.getCount();
+			itemsets.put(set, support / (double) noTransactions);
+			supports.put(set, support);
 		}
 		logger.fine(" Initial itemsets: " + itemsets + "\n");
 
@@ -82,8 +86,7 @@ public abstract class ItemsetMiningCore {
 		final Ordering<Itemset> supportOrdering = new Ordering<Itemset>() {
 			@Override
 			public int compare(final Itemset set1, final Itemset set2) {
-				return tree.getSupportOfItemset(set2)
-						- tree.getSupportOfItemset(set1);
+				return supports.get(set2) - supports.get(set1);
 			}
 		}.compound(Ordering.usingToString());
 
@@ -97,7 +100,9 @@ public abstract class ItemsetMiningCore {
 						+ "\n");
 				transactions = combineItemsetsStep(itemsets, transactions,
 						tree, rejected_sets, inferenceAlgorithm,
-						maxStructureSteps, supportOrdering);
+						maxStructureSteps, supportOrdering, supports);
+				if (transactions.getIterationLimitExceeded())
+					breakLoop = true;
 			} else {
 				logger.finer("\n+++++ Tree Structural Optimization at Step "
 						+ iteration + "\n");
@@ -247,15 +252,20 @@ public abstract class ItemsetMiningCore {
 			final Itemset candidate = tree.randomWalk();
 			logger.finer(candidate + ", ");
 
-			// Evaluate candidate itemset
-			if (!rejected_sets.contains(candidate)) {
+			// Evaluate candidate itemset (skipping empty candidates)
+			if (!rejected_sets.contains(candidate) && !candidate.isEmpty()) {
+				// Skip candidates already present
+				if (itemsets.keySet().contains(candidate)) {
+					rejected_sets.add(candidate);
+					continue;
+				}
 				final TransactionDatabase betterCost = evaluateCandidate(
 						itemsets, transactions, tree, inferenceAlgorithm,
 						candidate);
 				if (betterCost != null) // Better itemset found
 					return betterCost;
-				else
-					rejected_sets.add(candidate); // otherwise add to rejected
+				rejected_sets.add(candidate); // otherwise add to rejected
+				logger.finer("\n Structural candidate itemsets: ");
 			}
 
 		}
@@ -277,13 +287,15 @@ public abstract class ItemsetMiningCore {
 			final TransactionDatabase transactions, final ItemsetTree tree,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps,
-			final Ordering<Itemset> itemsetOrdering) {
+			final Ordering<Itemset> itemsetOrdering,
+			final HashMap<Itemset, Integer> supports) {
 
 		// Try and find better itemset to add
 		// logger.finest(" Structural candidate itemsets: ");
 
 		// Sort itemsets according to given ordering
-		final List<Itemset> sortedItemsets = Lists.newArrayList(itemsets
+		// TODO store itemset as sorted list to prevent re-sorting?
+		final ArrayList<Itemset> sortedItemsets = Lists.newArrayList(itemsets
 				.keySet());
 		Collections.sort(sortedItemsets, itemsetOrdering);
 
@@ -295,7 +307,6 @@ public abstract class ItemsetMiningCore {
 				final Itemset itemset2 = sortedItemsets.get(j);
 
 				// Create a new candidate by combining itemsets
-				// TODO store itemset as sorted list to prevent duplicates?
 				final Itemset candidate = new Itemset();
 				candidate.add(itemset1);
 				candidate.add(itemset2);
@@ -303,14 +314,17 @@ public abstract class ItemsetMiningCore {
 
 				// Evaluate candidate itemset
 				if (!rejected_sets.contains(candidate)) {
+					rejected_sets.add(candidate); // candidate already seen
 					final TransactionDatabase betterCost = evaluateCandidate(
 							itemsets, transactions, tree, inferenceAlgorithm,
 							candidate);
-					if (betterCost != null) // Better itemset found
+					if (betterCost != null) { // Better itemset found
+						supports.put(candidate,
+								(int) (itemsets.get(candidate) * transactions
+										.size())); // update supports
 						return betterCost;
-					else
-						rejected_sets.add(candidate); // otherwise add to
-														// rejected
+					}
+					// logger.finest("\n Structural candidate itemsets: ");
 				}
 
 				iteration++;
@@ -323,7 +337,8 @@ public abstract class ItemsetMiningCore {
 		}
 
 		// No better itemset found
-		logger.finer("\n No better candidate found.\n");
+		logger.info("\n All possible candidates suggested. Exiting. \n");
+		transactions.setIterationLimitExceeded();
 		return transactions;
 	}
 
@@ -333,85 +348,76 @@ public abstract class ItemsetMiningCore {
 			TransactionDatabase transactions, final ItemsetTree tree,
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
-		// Skip empty candidates and candidates already present
-		if (!candidate.isEmpty() && !itemsets.keySet().contains(candidate)) {
+		logger.finer("\n Candidate: " + candidate);
+		final double noTransactions = transactions.size();
 
-			logger.finer("\n potential candidate: " + candidate);
-			final double noTransactions = transactions.size();
+		// Calculate itemset support (M-step assuming always included)
+		final double p = tree.getSupportOfItemset(candidate) / noTransactions;
 
-			// Calculate itemset support (M-step assuming always included)
-			final double p = tree.getSupportOfItemset(candidate)
-					/ noTransactions;
+		// Find direct subsets of candidate
+		final Set<Itemset> subsets = getDirectSubsets(itemsets.keySet(),
+				candidate);
 
-			// Find direct subsets of candidate
-			final Set<Itemset> subsets = getDirectSubsets(itemsets.keySet(),
-					candidate);
+		// If not using cache: Add candidate to itemsets
+		HashMap<Itemset, Double> negativeItemsets;
+		if (!ITEMSET_CACHE)
+			negativeItemsets = addCandidateItemsets(itemsets, candidate, p,
+					subsets);
 
-			// If not using cache: Add candidate to itemsets
-			HashMap<Itemset, Double> negativeItemsets;
-			if (!ITEMSET_CACHE)
-				negativeItemsets = addCandidateItemsets(itemsets, candidate, p,
-						subsets);
+		// Use cache in inference algorithm by not passing itemsets
+		final HashMap<Itemset, Double> passItemsets;
+		if (ITEMSET_CACHE)
+			passItemsets = null;
+		else
+			passItemsets = itemsets;
 
-			// Use cache in inference algorithm by not passing itemsets
-			final HashMap<Itemset, Double> passItemsets;
-			if (ITEMSET_CACHE)
-				passItemsets = null;
-			else
-				passItemsets = itemsets;
+		// Find cost in parallel
+		double curCost = 0;
+		if (transactions instanceof TransactionRDD) {
+			curCost = SparkEMStep.parallelEMStep(
+					transactions.getTransactionRDD(), inferenceAlgorithm,
+					passItemsets, noTransactions, candidate, p, subsets);
+		} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
+			curCost = EMStep.serialEMStep(transactions.getTransactionList(),
+					inferenceAlgorithm, passItemsets, noTransactions,
+					candidate, p, subsets);
+		} else {
+			curCost = EMStep.parallelEMStep(transactions.getTransactionList(),
+					inferenceAlgorithm, passItemsets, noTransactions,
+					candidate, p, subsets);
+			// checkCacheWorks(curCost, curCostNoCache);
+		}
+		logger.finer(String.format(", cost: %.2f", curCost));
 
-			// Find cost in parallel
-			double curCost = 0;
-			if (transactions instanceof TransactionRDD) {
-				curCost = SparkEMStep.parallelEMStep(
-						transactions.getTransactionRDD(), inferenceAlgorithm,
-						passItemsets, transactions.size(), candidate, p,
-						subsets);
-			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
-				curCost = EMStep.serialEMStep(
-						transactions.getTransactionList(), inferenceAlgorithm,
-						passItemsets, noTransactions, candidate, p, subsets);
-			} else {
-				curCost = EMStep.parallelEMStep(
-						transactions.getTransactionList(), inferenceAlgorithm,
-						passItemsets, noTransactions, candidate, p, subsets);
-				// checkCacheWorks(curCost, curCostNoCache);
-			}
-			logger.finer(String.format(", cost: %.2f", curCost));
-
-			// Return if better set of itemsets found
-			if (curCost < transactions.getAverageCost()) {
-				logger.finer("\n Candidate Accepted.\n");
-				if (ITEMSET_CACHE) {
-					// Update cache with candidate
-					if (transactions instanceof TransactionRDD) {
-						transactions = SparkCacheFunctions
-								.parallelAddItemsetCache(transactions,
-										candidate, p, subsets);
-					} else if (SERIAL) {
-						CacheFunctions.serialAddItemsetCache(
-								transactions.getTransactionList(), candidate,
-								p, subsets);
-					} else {
-						CacheFunctions.parallelAddItemsetCache(
-								transactions.getTransactionList(), candidate,
-								p, subsets);
-					}
-					// Update itemsets with candidate
-					addAcceptedCandidateItemsets(itemsets, candidate, p,
+		// Return if better set of itemsets found
+		if (curCost < transactions.getAverageCost()) {
+			logger.finer("\n Candidate Accepted.\n");
+			if (ITEMSET_CACHE) {
+				// Update cache with candidate
+				if (transactions instanceof TransactionRDD) {
+					transactions = SparkCacheFunctions.parallelAddItemsetCache(
+							transactions, candidate, p, subsets);
+				} else if (SERIAL) {
+					CacheFunctions.serialAddItemsetCache(
+							transactions.getTransactionList(), candidate, p,
+							subsets);
+				} else {
+					CacheFunctions.parallelAddItemsetCache(
+							transactions.getTransactionList(), candidate, p,
 							subsets);
 				}
-				transactions.setAverageCost(curCost);
-				return transactions;
-			} // otherwise keep trying
+				// Update itemsets with candidate
+				addAcceptedCandidateItemsets(itemsets, candidate, p, subsets);
+			}
+			transactions.setAverageCost(curCost);
+			return transactions;
+		} // otherwise keep trying
 
-			// If not using cache: Remove candidate from itemsets
-			if (!ITEMSET_CACHE)
-				removeCandidateItemsets(itemsets, candidate, p, subsets,
-						negativeItemsets);
+		// If not using cache: Remove candidate from itemsets
+		if (!ITEMSET_CACHE)
+			removeCandidateItemsets(itemsets, candidate, p, subsets,
+					negativeItemsets);
 
-			logger.finer("\n Structural candidate itemsets: ");
-		}
 		// No better candidate found
 		return null;
 	}
