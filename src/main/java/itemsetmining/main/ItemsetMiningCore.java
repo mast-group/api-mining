@@ -280,7 +280,7 @@ public abstract class ItemsetMiningCore {
 			final Ordering<Itemset> itemsetOrdering) {
 
 		// Try and find better itemset to add
-		logger.finer(" Structural candidate itemsets: ");
+		// logger.finest(" Structural candidate itemsets: ");
 
 		// Sort itemsets according to given ordering
 		final List<Itemset> sortedItemsets = Lists.newArrayList(itemsets
@@ -300,6 +300,7 @@ public abstract class ItemsetMiningCore {
 				final Itemset candidate = new Itemset();
 				candidate.add(itemset1);
 				candidate.add(itemset2);
+				// logger.finest(candidate + ", ");
 
 				// Evaluate candidate itemset
 				if (!rejected_sets.contains(candidate)) {
