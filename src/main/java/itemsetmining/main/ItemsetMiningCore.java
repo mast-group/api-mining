@@ -85,7 +85,7 @@ public abstract class ItemsetMiningCore {
 				return tree.getSupportOfItemset(set2)
 						- tree.getSupportOfItemset(set1);
 			}
-		};
+		}.compound(Ordering.usingToString());
 
 		// Structural EM
 		boolean breakLoop = false;
@@ -285,8 +285,7 @@ public abstract class ItemsetMiningCore {
 		// Sort itemsets according to given ordering
 		final List<Itemset> sortedItemsets = Lists.newArrayList(itemsets
 				.keySet());
-		Collections.sort(sortedItemsets,
-				itemsetOrdering.compound((Ordering.usingToString())));
+		Collections.sort(sortedItemsets, itemsetOrdering);
 
 		// Suggest supersets for all itemsets
 		int iteration = 0;
