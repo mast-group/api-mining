@@ -134,4 +134,23 @@ public class ItemsetMiningTest {
 		assertEquals(expectedDirectSubsets, actualDirectSubsets);
 	}
 
+	// @Test
+	// public void testCombLoop() {
+	//
+	// final int len = 10;
+	// for (int k = 0; k < 2 * len - 2; k++) {
+	// System.out.println("\nStep " + k);
+	//
+	// for (int i = 0; i < len && i < k + 1; i++) {
+	// System.out.println();
+	// for (int j = i + 1; j < len && i + j < k + 1; j++) {
+	// if (k <= i + j)
+	// System.out.println(i + " " + j);
+	// }
+	// }
+	//
+	// }
+	//
+	// }
+
 }

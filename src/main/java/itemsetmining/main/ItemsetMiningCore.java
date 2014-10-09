@@ -301,38 +301,41 @@ public abstract class ItemsetMiningCore {
 
 		// Suggest supersets for all itemsets
 		int iteration = 0;
-		for (int i = 0; i < sortedItemsets.size(); i++) {
-			final Itemset itemset1 = sortedItemsets.get(i);
-			for (int j = i + 1; j < sortedItemsets.size(); j++) {
-				final Itemset itemset2 = sortedItemsets.get(j);
+		final int len = sortedItemsets.size();
+		for (int k = 0; k < 2 * len - 2; k++) {
+			for (int i = 0; i < len && i < k + 1; i++) {
+				for (int j = i + 1; j < len && i + j < k + 1; j++) {
+					if (k <= i + j) {
 
-				// Create a new candidate by combining itemsets
-				final Itemset candidate = new Itemset();
-				candidate.add(itemset1);
-				candidate.add(itemset2);
-				// logger.finest(candidate + ", ");
+						// Create a new candidate by combining itemsets
+						final Itemset candidate = new Itemset();
+						candidate.add(sortedItemsets.get(i));
+						candidate.add(sortedItemsets.get(j));
+						// logger.finest(candidate + ", ");
 
-				// Evaluate candidate itemset
-				if (!rejected_sets.contains(candidate)) {
-					rejected_sets.add(candidate); // candidate already seen
-					final TransactionDatabase betterCost = evaluateCandidate(
-							itemsets, transactions, tree, inferenceAlgorithm,
-							candidate);
-					if (betterCost != null) { // Better itemset found
-						supports.put(candidate,
-								(int) (itemsets.get(candidate) * transactions
-										.size())); // update supports
-						return betterCost;
+						// Evaluate candidate itemset
+						if (!rejected_sets.contains(candidate)) {
+							rejected_sets.add(candidate); // candidate seen
+							final TransactionDatabase betterCost = evaluateCandidate(
+									itemsets, transactions, tree,
+									inferenceAlgorithm, candidate);
+							if (betterCost != null) { // Better itemset found
+								// update supports
+								supports.put(candidate, (int) (itemsets
+										.get(candidate) * transactions.size()));
+								return betterCost;
+							}
+							// logger.finest("\n Structural candidate itemsets: ");
+						}
+
+						iteration++;
+						if (iteration > maxSteps) { // Iteration limit exceeded
+							logger.warning("\n Combine iteration limit exceeded.\n");
+							return transactions; // No better itemset found
+						}
+
 					}
-					// logger.finest("\n Structural candidate itemsets: ");
 				}
-
-				iteration++;
-				if (iteration > maxSteps) { // Iteration limit exceeded
-					logger.warning("\n Combine iteration limit exceeded.\n");
-					return transactions; // No better itemset found
-				}
-
 			}
 		}
 
