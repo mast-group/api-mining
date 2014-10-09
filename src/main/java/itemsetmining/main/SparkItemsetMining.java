@@ -267,10 +267,10 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 					+ new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
 							.format(new Date());
 		FileHandler handler = null;
-		try { // Limit log file to 1MB
+		try { // Limit log file to 100MB
 			handler = new FileHandler(LOG_DIR
 					+ FilenameUtils.getBaseName(dataset.getName()) + timeStamp
-					+ ".log", 1048576, 1);
+					+ ".log", 104857600, 1);
 		} catch (final IOException e) {
 			e.printStackTrace();
 		}

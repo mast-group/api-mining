@@ -33,7 +33,7 @@ public class ItemsetPrecisionRecall {
 			"/disk/data1/jfowkes/itemset.txt");
 	private static final File logDir = new File(
 			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/");
-	private static final File saveDir = new File("/tmp/");
+	private static final File saveDir = new File("/disk/data1/jfowkes/logs/");
 	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
 	private static final boolean useFIM = false;
 	private static final int noRuns = 1;
@@ -106,7 +106,8 @@ public class ItemsetPrecisionRecall {
 
 			// Generate some noise
 			final HashMap<Itemset, Double> noisyItemsets = TransactionGenerator
-					.generateBackgroundItemsets(extraSets, P, NO_ITEMS, MU, SIGMA);
+					.generateBackgroundItemsets(extraSets, P, NO_ITEMS, MU,
+							SIGMA);
 
 			// Combine the two
 			final HashMap<Itemset, Double> actualItemsets = Maps

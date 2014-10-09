@@ -32,7 +32,7 @@ public class ItemsetScaling {
 	/** Main Settings */
 	private static final File dbFile = new File(
 			"/disk/data1/jfowkes/itemset.txt");
-	private static final File saveDir = new File("/tmp/");
+	private static final File saveDir = new File("/disk/data1/jfowkes/logs/");
 	private static final int noRuns = 1;
 
 	/** Itemset Distribution Settings */
