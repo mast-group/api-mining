@@ -124,7 +124,7 @@ public class ItemsetScaling {
 
 	private static void runSpark(final int noCores) {
 		final String cmd[] = new String[8];
-		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/run-spark.sh";
+		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/itemset-mining/run-spark.sh";
 		cmd[1] = "-f " + dbFile;
 		cmd[2] = " -s " + maxStructureSteps;
 		cmd[3] = " -i " + maxEMIterations;

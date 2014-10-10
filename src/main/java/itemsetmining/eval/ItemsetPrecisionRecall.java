@@ -132,7 +132,7 @@ public class ItemsetPrecisionRecall {
 	private static HashMap<Itemset, Double> runSpark(final int noCores,
 			final int noIterations) throws IOException {
 		final String cmd[] = new String[8];
-		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/run-spark.sh";
+		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/itemset-mining/run-spark.sh";
 		cmd[1] = "-f " + dbFile;
 		cmd[2] = " -s " + maxStructureSteps;
 		cmd[3] = " -i " + noIterations;
