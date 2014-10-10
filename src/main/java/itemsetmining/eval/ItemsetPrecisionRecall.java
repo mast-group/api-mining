@@ -28,186 +28,114 @@ import com.google.common.io.Files;
 public class ItemsetPrecisionRecall {
 
 	/** Main Settings */
-	private static final String name = "caviar";
 	private static final File dbFile = new File(
 			"/disk/data1/jfowkes/itemset.txt");
 	private static final File logDir = new File(
 			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/");
 	private static final File saveDir = new File("/disk/data1/jfowkes/logs/");
 	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
-	private static final boolean useFIM = false;
-	private static final int noRuns = 1;
 
-	/** Itemset Distribution Settings */
-	private static final int noNoisyItemsets = 27;
-	private static final int noSpecialItemsets = 3;
-	private static final double P = 0.305747126437;
-	private static final int NO_ITEMS = 70;
-	private static final double MU = -3.72051635628;
-	private static final double SIGMA = 0.994304782717;
-	private static final int noTransactions = 10_000;
+	/** Previously mined Itemsets to use for background distribution */
+	private static final String name = "plants-based";
+	private static final File itemsetLog = new File(
+			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/plants-09.10.2014-16:45:44.log");
+	private static final int noTransactions = 34781;
 
 	/** Spark Settings */
-	private static final boolean useSpark = true;
+	private static final boolean useSpark = false;
 	private static final int sparkCores = 64;
 	private static final Level LOG_LEVEL = Level.FINE;
-	private static final long MAX_RUNTIME = 2 * 60; // 1hr
-	private static final int maxStructureSteps = 10_000;
-	private static final int maxEMIterations = 100;
+	private static final long MAX_RUNTIME = 12 * 60; // 12hrs
+	private static final int maxStructureSteps = 100_000;
 
 	public static void main(final String[] args) throws IOException {
 
-		precisionRecall("difficulty", new int[] { 0, 5, 10 });
-		// precisionRecall("robustness", 20);
+		precisionRecall(new int[] { 100 });
 
 	}
 
-	public static void precisionRecall(final String type, final int[] levels)
+	public static void precisionRecall(final int[] iterations)
 			throws IOException {
 
-		final int noLevels = levels.length;
-		final double[] time = new double[noLevels];
-		final double[] precision = new double[noLevels];
-		final double[] recall = new double[noLevels];
-		final double[] accuracy = new double[noLevels];
+		final int lenIterations = iterations.length;
+		final double[] time = new double[lenIterations];
+		final double[] precision = new double[lenIterations];
+		final double[] recall = new double[lenIterations];
 
 		String prefix = "";
-		if (useFIM)
-			prefix += "mtv_";
 		if (useSpark)
 			prefix += "spark_";
 		final FileOutputStream outFile = new FileOutputStream(saveDir + "/"
-				+ prefix + name + "_" + type + ".txt");
+				+ prefix + name + "_pr.txt");
 		final TeeOutputStream out = new TeeOutputStream(System.out, outFile);
 		final PrintStream ps = new PrintStream(out);
 		System.setOut(ps);
 
-		for (int i = 0; i < noLevels; i++) {
+		for (int i = 0; i < lenIterations; i++) {
+			final int noIterations = iterations[i];
 
-			int difficultyLevel;
-			int extraSets;
-			if (type.equals("difficulty")) {
-				difficultyLevel = levels[i];
-				extraSets = noNoisyItemsets;
-				System.out.println("\n========= Difficulty level "
-						+ difficultyLevel + " from " + Arrays.toString(levels));
-			} else if (type.equals("robustness")) {
-				difficultyLevel = 0;
-				extraSets = levels[i];
-				System.out.println("\n========= No. Noisy Itemsets: "
-						+ extraSets);
-			} else
-				throw new RuntimeException("Incorrect argument.");
-
-			// Generate real itemsets
-			final HashMap<Itemset, Double> exampleItemsets = TransactionGenerator
-					.generateExampleItemsets(name, noSpecialItemsets,
-							difficultyLevel);
-
-			// Generate some noise
-			final HashMap<Itemset, Double> noisyItemsets = TransactionGenerator
-					.generateBackgroundItemsets(extraSets, P, NO_ITEMS, MU,
-							SIGMA);
-
-			// Combine the two
-			final HashMap<Itemset, Double> actualItemsets = Maps
-					.newHashMap(exampleItemsets);
-			actualItemsets.putAll(noisyItemsets);
+			// Read in previously mined itemsets
+			final HashMap<Itemset, Double> itemsets = readSparkOutput(itemsetLog);
 
 			System.out.print("\n============= ACTUAL ITEMSETS =============\n");
-			for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
+			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 				System.out.print(String.format("%s\tprob: %1.5f %n",
 						entry.getKey(), entry.getValue()));
 			}
-			System.out.print("\n");
+			System.out.println("\nNo itemsets: " + itemsets.size());
+			System.out.println("No items: "
+					+ ItemsetScaling.countNoItems(itemsets.keySet()));
 
 			// Generate transaction database
-			TransactionGenerator.generateTransactionDatabase(actualItemsets,
+			TransactionGenerator.generateTransactionDatabase(itemsets,
 					noTransactions, dbFile);
+			ItemsetScaling.printTransactionDBStats(dbFile);
 
-			for (int run = 0; run < noRuns; run++) {
-				System.out.println("\n========= Run " + (run + 1) + " of "
-						+ noRuns);
+			// Mine itemsets
+			HashMap<Itemset, Double> minedItemsets = null;
+			final long startTime = System.currentTimeMillis();
+			if (useSpark) {
+				minedItemsets = runSpark(sparkCores, noIterations);
+			} else
+				minedItemsets = ItemsetMining.mineItemsets(dbFile,
+						inferenceAlg, maxStructureSteps, noIterations);
+			final long endTime = System.currentTimeMillis();
+			final double tim = (endTime - startTime) / (double) 1000;
+			time[i] += tim;
 
-				// Mine itemsets
-				HashMap<Itemset, Double> minedItemsets = null;
-				final long startTime = System.currentTimeMillis();
-				if (useFIM)
-					minedItemsets = MTVItemsetMining.mineItemsets(dbFile, 0,
-							actualItemsets.size() + 5);
-				else if (useSpark) {
-					minedItemsets = runSpark(sparkCores);
-				} else
-					minedItemsets = ItemsetMining.mineItemsets(dbFile,
-							inferenceAlg, maxStructureSteps, maxEMIterations);
-				final long endTime = System.currentTimeMillis();
-				final double tim = (endTime - startTime) / (double) 1000;
-				time[i] += tim;
+			// Calculate precision and recall
+			final double noInBoth = Sets.intersection(itemsets.keySet(),
+					minedItemsets.keySet()).size();
+			final double pr = noInBoth / (double) minedItemsets.size();
+			final double rec = noInBoth / (double) itemsets.size();
+			precision[i] += pr;
+			recall[i] += rec;
 
-				// Calculate precision and recall
-				final double noInBoth = Sets.intersection(
-						actualItemsets.keySet(), minedItemsets.keySet()).size();
-				final double noExamplesInBoth = Sets.intersection(
-						exampleItemsets.keySet(), minedItemsets.keySet())
-						.size();
-				final double pr = noInBoth / (double) minedItemsets.size();
-				final double rec = noInBoth / (double) actualItemsets.size();
-				final double acc = noExamplesInBoth
-						/ (double) exampleItemsets.size();
-				precision[i] += pr;
-				recall[i] += rec;
-				accuracy[i] += acc;
+			// Display precision and recall
+			System.out.printf("Precision: %.2f%n", pr);
+			System.out.printf("Recall: %.2f%n", rec);
+			System.out.printf("Time (s): %.2f%n", tim);
 
-				// Display precision and recall
-				System.out.printf("Precision All: %.2f%n", pr);
-				System.out.printf("Recall All: %.2f%n", rec);
-				System.out.printf("Accuracy Special: %.2f%n", acc);
-				System.out.printf("Time (s): %.2f%n", tim);
-			}
-		}
-
-		for (int i = 0; i < noLevels; i++) {
-
-			// Average over runs
-			precision[i] /= noRuns;
-			recall[i] /= noRuns;
-			accuracy[i] /= noRuns;
-			time[i] /= noRuns;
-
-			// Display average precision and recall
-			if (type.equals("difficulty"))
-				System.out
-						.println("\n========= Difficulty Level: " + levels[i]);
-			if (type.equals("robustness"))
-				System.out.println("\n========= Extra Sets: " + levels[i]);
-			System.out.printf("Average Precision All: %.2f%n", precision[i]);
-			System.out.printf("Average Recall All: %.2f%n", recall[i]);
-			System.out.printf("Average Acccuracy Special: %.2f%n", accuracy[i]);
-			System.out.printf("Average Time (s): %.2f%n", time[i]);
 		}
 
 		// Output precision and recall
-		if (type.equals("difficulty"))
-			System.out.println("Levels: " + Arrays.toString(levels));
-		if (type.equals("robustness"))
-			System.out.println("No extra sets -1: " + Arrays.toString(levels));
 		System.out.println("\n======== " + name + " ========");
+		System.out.println("Iterations: " + Arrays.toString(iterations));
 		System.out.println("Time: " + Arrays.toString(time));
-		System.out.println("Precision All: " + Arrays.toString(precision));
-		System.out.println("Recall All: " + Arrays.toString(recall));
-		System.out.println("Accuracy Special: " + Arrays.toString(accuracy));
+		System.out.println("Precision: " + Arrays.toString(precision));
+		System.out.println("Recall: " + Arrays.toString(recall));
 
 		// and save to file
 		out.close();
 	}
 
-	private static HashMap<Itemset, Double> runSpark(final int noCores)
-			throws IOException {
+	private static HashMap<Itemset, Double> runSpark(final int noCores,
+			final int noIterations) throws IOException {
 		final String cmd[] = new String[8];
 		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/miltository/projects/itemset-mining/run-spark.sh";
 		cmd[1] = "-f " + dbFile;
 		cmd[2] = " -s " + maxStructureSteps;
-		cmd[3] = " -i " + maxEMIterations;
+		cmd[3] = " -i " + noIterations;
 		cmd[4] = " -c " + noCores;
 		cmd[5] = " -l " + LOG_LEVEL;
 		cmd[6] = " -r " + MAX_RUNTIME;

@@ -7,11 +7,8 @@ import itemsetmining.transaction.TransactionGenerator;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.LineNumberReader;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.text.DecimalFormat;
 import java.util.Arrays;
@@ -23,7 +20,6 @@ import java.util.logging.Level;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.commons.io.output.TeeOutputStream;
-import org.apache.commons.io.output.WriterOutputStream;
 
 import com.beust.jcommander.internal.Sets;
 
@@ -33,44 +29,30 @@ public class ItemsetScaling {
 	private static final File dbFile = new File(
 			"/disk/data1/jfowkes/itemset.txt");
 	private static final File saveDir = new File("/disk/data1/jfowkes/logs/");
-	private static final int noRuns = 1;
 
-	/** Itemset Distribution Settings */
-	private static final double P = 0.305747126437;
-	private static final int NO_ITEMS = 70;
-	private static final double MU = -3.72051635628;
-	private static final double SIGMA = 0.994304782717;
-
-	/** For transaction scaling */
-	private static final int noItemsets = 10;
-
-	/** For itemset scaling */
-	private static final int noTransactions = 1_000;
+	/** Set of mined itemsets to use for background */
+	private static final File itemsetLog = new File(
+			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/plants-09.10.2014-16:45:44.log");
 
 	/** Spark Settings */
 	private static final Level LOG_LEVEL = Level.FINE;
 	private static final long MAX_RUNTIME = 6 * 60; // 6hrs
-	private static final int maxStructureSteps = 10_000;
+	private static final int maxStructureSteps = 100_000;
 	private static final int maxEMIterations = 100;
 
 	public static void main(final String[] args) throws IOException,
 			InterruptedException {
 
 		// Run with spark
-		// final int[] cores = new int[] { 1, 4, 16, 64, 128 };
-		// for (final int noCores : cores)
-		// Makes sense as 10^3 * PMIN = 10
-		// scalingTransactions(true, 16, new int[] { 1_000, 10_000, 100_000,
-		// 1_000_000, 10_000_000, 100_000_000 });
+		final int[] cores = new int[] { 1, 4, 16, 64 };
+		for (final int noCores : cores)
+			scalingTransactions(true, noCores, new int[] { 1_000, 10_000,
+					100_000, 1_000_000, 10_000_000, 100_000_000 });
 
-		// Here itemset sizes are relative
-		// scalingItemsets(true, 64, new double[] { 0.05, 0.1, 0.15, 0.2 });
-
-		generateSyntheticDatabase(
-				133,
-				34781,
-				new File(
-						"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/plants_synthetic.dat"));
+		// generateSyntheticDatabase(
+		// 34781,
+		// new File(
+		// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/plants_synthetic.dat"));
 	}
 
 	public static void scalingTransactions(final boolean useSpark,
@@ -90,20 +72,16 @@ public class ItemsetScaling {
 		final PrintStream ps = new PrintStream(out);
 		System.setOut(ps);
 
-		// Generate real itemsets
-		final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
-				.generateBackgroundItemsets(noItemsets, P, NO_ITEMS, MU, SIGMA);
+		// Read in previously mined itemsets
+		final HashMap<Itemset, Double> itemsets = ItemsetPrecisionRecall
+				.readSparkOutput(itemsetLog);
 		System.out.print("\n============= ACTUAL ITEMSETS =============\n");
-		for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
+		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 			System.out.print(String.format("%s\tprob: %1.5f %n",
 					entry.getKey(), entry.getValue()));
 		}
-		System.out.print("\n");
-
-		// Itemset stats
-		System.out.println("No itemsets: " + actualItemsets.size());
-		System.out
-				.println("No items: " + countNoItems(actualItemsets.keySet()));
+		System.out.println("\nNo itemsets: " + itemsets.size());
+		System.out.println("No items: " + countNoItems(itemsets.keySet()));
 
 		transloop: for (int i = 0; i < trans.length; i++) {
 
@@ -112,42 +90,27 @@ public class ItemsetScaling {
 					+ " Transactions");
 
 			// Generate transaction database
-			TransactionGenerator.generateTransactionDatabase(actualItemsets,
-					tran, dbFile);
-			System.out.println("Avg items per transaction: "
-					+ getAverageItemsPerTransaction(dbFile));
+			TransactionGenerator.generateTransactionDatabase(itemsets, tran,
+					dbFile);
+			printTransactionDBStats(dbFile);
 
-			for (int run = 0; run < noRuns; run++) {
-				System.out.println("\n========= Run " + (run + 1) + " of "
-						+ noRuns);
+			// Mine itemsets
+			final long startTime = System.currentTimeMillis();
+			if (useSpark)
+				runSpark(noCores);
+			else
+				ItemsetMining.mineItemsets(dbFile, new InferGreedy(),
+						maxStructureSteps, maxEMIterations);
 
-				// Mine itemsets
-				final long startTime = System.currentTimeMillis();
-				if (useSpark)
-					runSpark(noCores);
-				else
-					ItemsetMining.mineItemsets(dbFile, new InferGreedy(),
-							maxStructureSteps, maxEMIterations);
+			final long endTime = System.currentTimeMillis();
+			final double tim = (endTime - startTime) / (double) 1000;
+			time[i] += tim;
 
-				final long endTime = System.currentTimeMillis();
-				final double tim = (endTime - startTime) / (double) 1000;
-				time[i] += tim;
+			System.out.printf("Time (s): %.2f%n", tim);
 
-				System.out.printf("Time (s): %.2f%n", tim);
+			if (tim > MAX_RUNTIME * 60 * 60)
+				break transloop;
 
-				if (tim > MAX_RUNTIME * 60 * 60)
-					break transloop;
-
-			}
-		}
-
-		for (int i = 0; i < trans.length; i++) {
-
-			// Average over runs
-			time[i] /= noRuns;
-
-			// Display average time
-			System.out.printf("Average Time (s): %.2f%n", time[i]);
 		}
 
 		// Print time
@@ -157,102 +120,6 @@ public class ItemsetScaling {
 
 		// and save to file
 		out.close();
-	}
-
-	public static void scalingItemsets(final boolean useSpark,
-			final int noCores, final double[] relItemsets) throws IOException {
-
-		final int itemsets[] = new int[relItemsets.length];
-		for (int i = 0; i < relItemsets.length; i++)
-			itemsets[i] = (int) (relItemsets[i] * noTransactions);
-		final double[] time = new double[itemsets.length];
-
-		// Save to file
-		String name = InetAddress.getLocalHost().getHostName();
-		if (useSpark)
-			name = "Spark";
-		final PrintWriter outFile = new PrintWriter(new FileOutputStream(
-				saveDir + "/" + name + "_scaling.txt"), true);
-		final TeeOutputStream out = new TeeOutputStream(System.out,
-				new WriterOutputStream(outFile));
-		final PrintStream ps = new PrintStream(out);
-		System.setOut(ps);
-
-		// Generate real itemsets
-		for (int i = 0; i < itemsets.length; i++) {
-
-			final int noSets = itemsets[i];
-			System.out.println("\n========= " + noSets + " Itemsets");
-
-			final HashMap<Itemset, Double> actualItemsets = TransactionGenerator
-					.generateBackgroundItemsets(noSets, P, NO_ITEMS, MU, SIGMA);
-			System.out.print("\n============= ACTUAL ITEMSETS =============\n");
-			for (final Entry<Itemset, Double> entry : actualItemsets.entrySet()) {
-				System.out.print(String.format("%s\tprob: %1.5f %n",
-						entry.getKey(), entry.getValue()));
-			}
-			System.out.print("\n");
-
-			// Generate transaction database
-			TransactionGenerator.generateTransactionDatabase(actualItemsets,
-					noTransactions, dbFile);
-
-			// Get sparsity ratio of database
-			final double ratio = getSparsityRatio(dbFile);
-			System.out.println("Average items per transactions: " + ratio);
-
-			for (int run = 0; run < noRuns; run++) {
-				System.out.println("\n========= Run " + (run + 1) + " of "
-						+ noRuns);
-
-				// Mine itemsets
-				final long startTime = System.currentTimeMillis();
-				if (useSpark)
-					runSpark(noCores);
-				else
-					ItemsetMining.mineItemsets(dbFile, new InferGreedy(),
-							maxStructureSteps, maxEMIterations);
-
-				final long endTime = System.currentTimeMillis();
-				final double tim = (endTime - startTime) / (double) 1000;
-				time[i] += tim;
-
-				System.out.printf("Time (s): %.2f%n", tim);
-			}
-		}
-
-		for (int i = 0; i < itemsets.length; i++) {
-
-			// Average over runs
-			time[i] /= noRuns;
-
-			// Display
-			System.out.println("\n========= No Itemsets: " + itemsets[i]);
-			System.out.printf("Average Time (s): %.2f%n", time[i]);
-		}
-
-		// Print time
-		System.out.println("\n========" + name + "========");
-		System.out.println("Itemsets: " + Arrays.toString(itemsets));
-		System.out.println("Time: " + Arrays.toString(time));
-
-		// and save to file
-		out.close();
-	}
-
-	/** Get sparsity ration (avg. no. items per transaction) for transaction db */
-	private static double getSparsityRatio(final File dbase) throws IOException {
-
-		final String[] lines = FileUtils.readFileToString(dbase).split("\n");
-
-		double sparsity = 0;
-		for (final String line : lines) {
-			final String[] items = line.trim().split(" ");
-			sparsity += items.length;
-		}
-		sparsity /= lines.length;
-
-		return sparsity;
 	}
 
 	private static void runSpark(final int noCores) {
@@ -268,23 +135,23 @@ public class ItemsetScaling {
 		MTVItemsetMining.runScript(cmd);
 	}
 
-	public static void generateSyntheticDatabase(final int noItemsets,
-			final int noTransactions, final File dbPath) throws IOException {
-		final HashMap<Itemset, Double> itemsets = TransactionGenerator
-				.generateBackgroundItemsets(noItemsets, P, NO_ITEMS, MU, SIGMA);
+	public static void generateSyntheticDatabase(final int noTransactions,
+			final File dbPath) throws IOException {
+
+		final HashMap<Itemset, Double> itemsets = ItemsetPrecisionRecall
+				.readSparkOutput(itemsetLog);
 		System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 			System.out.print(String.format("%s\tprob: %1.5f %n",
 					entry.getKey(), entry.getValue()));
 		}
+
 		System.out.print("\n");
 		System.out.println("No itemsets: " + itemsets.size());
-		System.out.println("No items: " + countNoItems(itemsets.keySet()));
 		TransactionGenerator.generateTransactionDatabase(itemsets,
 				noTransactions, dbPath);
-		System.out.println("No transactions: " + countNoTransactions(dbPath));
-		System.out.println("Avg items per transaction: "
-				+ getAverageItemsPerTransaction(dbPath));
+		printTransactionDBStats(dbPath);
+
 	}
 
 	/**
@@ -299,29 +166,29 @@ public class ItemsetScaling {
 		return items.size();
 	}
 
-	/** Count the number of transactions in the database */
-	public static int countNoTransactions(final File dbFile) throws IOException {
-		final LineNumberReader lnr = new LineNumberReader(
-				new FileReader(dbFile));
-		lnr.skip(Long.MAX_VALUE);
-		final int noLines = lnr.getLineNumber();
-		lnr.close();
-		return noLines;
-	}
-
-	/** Get the average number of items per transaction in the database */
-	public static double getAverageItemsPerTransaction(final File dbFile)
+	/** Print useful statistics for the transaction database */
+	public static void printTransactionDBStats(final File dbFile)
 			throws IOException {
 
-		double sparsity = 0, noLines = 0;
+		int noTransactions = 0;
+		double sparsity = 0;
+		final Set<Integer> singletons = Sets.newHashSet();
 		final LineIterator it = FileUtils.lineIterator(dbFile, "UTF-8");
 		while (it.hasNext()) {
 			final String[] items = it.nextLine().trim().split(" ");
+			for (final String item : items)
+				singletons.add(Integer.parseInt(item));
 			sparsity += items.length;
-			noLines++;
+			noTransactions++;
 		}
 		LineIterator.closeQuietly(it);
-		return sparsity /= noLines;
+
+		System.out.println("\nDatabase: " + dbFile);
+		System.out.println("Items: " + singletons.size());
+		System.out.println("Transactions: " + noTransactions);
+		System.out.println("Avg. items per transaction: " + sparsity
+				/ noTransactions + "\n");
+
 	}
 
 }
