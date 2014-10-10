@@ -44,6 +44,7 @@ import com.google.common.collect.Multiset;
 public class SparkItemsetMining extends ItemsetMiningCore {
 
 	private static final boolean USE_KRYO = true;
+	private static final short MACHINES_IN_CLUSTER = 1;
 
 	/** Main function parameters */
 	public static class Parameters {
@@ -111,11 +112,11 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 		setUpFileLogger(inputFile);
 
 		// Copy transaction database to hdfs
-		final String datasetPath = "hdfs://cup04.inf.ed.ac.uk:54310/"
+		final String datasetPath = "hdfs://salmon.inf.ed.ac.uk:54310/"
 				+ inputFile.getName();
 		hdfs.copyFromLocalFile(new Path(inputFile.getAbsolutePath()), new Path(
 				datasetPath));
-		hdfs.setReplication(new Path(datasetPath), (short) 8);
+		hdfs.setReplication(new Path(datasetPath), MACHINES_IN_CLUSTER);
 		try { // Wait for file to replicate
 			Thread.sleep(10 * 1000);
 		} catch (final InterruptedException e) {
@@ -169,7 +170,7 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 			final int noCores) {
 
 		final SparkConf conf = new SparkConf();
-		conf.setMaster("spark://cup04.inf.ed.ac.uk:7077")
+		conf.setMaster("spark://salmon.inf.ed.ac.uk:7077")
 				.setAppName("Itemset Mining: " + dataset)
 				.setSparkHome("/disk/data1/jfowkes/spark-1.1.0-bin-hadoop1")
 				.setJars(
@@ -188,8 +189,7 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 		}
 
 		final JavaSparkContext sc = new JavaSparkContext(conf);
-		sc.setCheckpointDir("hdfs://cup04.inf.ed.ac.uk:54310/checkpoint/");
-
+		sc.setCheckpointDir("hdfs://salmon.inf.ed.ac.uk:54310/checkpoint/");
 		return sc;
 	}
 
