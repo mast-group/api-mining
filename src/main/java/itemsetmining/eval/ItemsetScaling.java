@@ -108,7 +108,7 @@ public class ItemsetScaling {
 
 			System.out.printf("Time (s): %.2f%n", tim);
 
-			if (tim > MAX_RUNTIME * 60 * 60)
+			if (tim > MAX_RUNTIME * 60)
 				break transloop;
 
 		}
