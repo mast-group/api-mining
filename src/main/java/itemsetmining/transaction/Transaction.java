@@ -17,6 +17,10 @@ import com.google.common.collect.Multiset;
 public class Transaction extends AbstractItemset implements Serializable {
 	private static final long serialVersionUID = 3327396055332538091L;
 
+	/** Cached transaction cost */
+	private double cachedCost;
+	private double prevCachedCost;
+
 	/** Cached itemsets for this transaction */
 	private HashMap<Itemset, Double> cachedItemsets;
 
@@ -26,10 +30,14 @@ public class Transaction extends AbstractItemset implements Serializable {
 	public void initializeCache(final Multiset<Integer> singletons,
 			final long noTransactions) {
 		cachedItemsets = Maps.newHashMap();
+		cachedCost = 0;
 		for (final Multiset.Entry<Integer> entry : singletons.entrySet()) {
-			if (this.contains(entry.getElement()))
-				cachedItemsets.put(new Itemset(entry.getElement()),
-						entry.getCount() / (double) noTransactions);
+			if (this.contains(entry.getElement())) {
+				final double support = entry.getCount()
+						/ (double) noTransactions;
+				cachedItemsets.put(new Itemset(entry.getElement()), support);
+				cachedCost -= Math.log(support);
+			}
 		}
 	}
 
@@ -37,16 +45,18 @@ public class Transaction extends AbstractItemset implements Serializable {
 		return cachedItemsets;
 	}
 
-	public void addItemsetCache(final Itemset candidate, final double prob,
+	public boolean addItemsetCache(final Itemset candidate, final double prob,
 			final Set<Itemset> subsets) {
 
 		// Initialize negative itemsets
 		negativeItemsets = Maps.newHashMap();
 
 		// Adjust probabilities for direct subsets of candidate
+		boolean hasChanged = false;
 		for (final Itemset subset : subsets) {
 			final Double oldProb = cachedItemsets.get(subset);
 			if (oldProb != null) { // subset supports this transaction
+				hasChanged = true;
 				final double newProb = oldProb - prob;
 				if (newProb > 0.0) {
 					cachedItemsets.put(subset, newProb);
@@ -58,12 +68,22 @@ public class Transaction extends AbstractItemset implements Serializable {
 		}
 
 		// Add candidate if it supports this transaction
-		if (this.contains(candidate))
+		if (this.contains(candidate)) {
+			hasChanged = true;
 			cachedItemsets.put(candidate, prob);
+		}
+
+		if (hasChanged)
+			prevCachedCost = cachedCost;
+
+		return hasChanged;
 	}
 
 	public void removeItemsetCache(final Itemset candidate, final double prob,
 			final Set<Itemset> subsets) {
+
+		// Restore cached cost
+		cachedCost = prevCachedCost;
 
 		// Remove candidate
 		cachedItemsets.remove(candidate);
@@ -95,6 +115,14 @@ public class Transaction extends AbstractItemset implements Serializable {
 
 		}
 
+	}
+
+	public void setCost(final double cost) {
+		cachedCost = cost;
+	}
+
+	public double getCost() {
+		return cachedCost;
 	}
 
 	/**

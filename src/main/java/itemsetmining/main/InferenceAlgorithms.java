@@ -97,6 +97,10 @@ public class InferenceAlgorithms {
 				totalCost += -Math.log(1 - filteredItemsets.get(set));
 			}
 
+			// Cache cost
+			if (itemsets == null)
+				transaction.setCost(totalCost);
+
 			return totalCost;
 		}
 
@@ -188,6 +192,10 @@ public class InferenceAlgorithms {
 					covering)) {
 				totalCost += -Math.log(1 - filteredItemsets.get(set));
 			}
+
+			// Cache cost
+			if (itemsets == null)
+				transaction.setCost(totalCost);
 
 			return totalCost;
 		}

@@ -57,16 +57,22 @@ public class EMStep {
 		double averageCost = 0;
 		for (final Transaction transaction : transactions) {
 
-			if (itemsets == null)
-				transaction.addItemsetCache(candidate, prob, subsets);
-
+			double cost;
 			final Set<Itemset> covering = Sets.newHashSet();
-			final double cost = inferenceAlgorithm.infer(covering, itemsets,
-					transaction);
+			if (itemsets == null) { // use cache
+				final boolean hasChanged = transaction.addItemsetCache(
+						candidate, prob, subsets);
+				if (hasChanged) {
+					cost = inferenceAlgorithm.infer(covering, itemsets,
+							transaction);
+					transaction.removeItemsetCache(candidate, prob, subsets);
+				} else
+					cost = transaction.getCost(); // use cached cost
+			} else {
+				cost = inferenceAlgorithm
+						.infer(covering, itemsets, transaction);
+			}
 			averageCost += cost;
-
-			if (itemsets == null)
-				transaction.removeItemsetCache(candidate, prob, subsets);
 
 		}
 		averageCost = averageCost / noTransactions;
@@ -123,18 +129,24 @@ public class EMStep {
 				@Override
 				public Double call() {
 
-					if (itemsets == null)
-						transaction.addItemsetCache(candidate, prob, subsets);
-
+					double cost;
 					final Set<Itemset> covering = Sets.newHashSet();
-					final double cost = inferenceAlgorithm.infer(covering,
-							itemsets, transaction);
-
-					if (itemsets == null)
-						transaction
-								.removeItemsetCache(candidate, prob, subsets);
-
+					if (itemsets == null) { // use cache
+						final boolean hasChanged = transaction.addItemsetCache(
+								candidate, prob, subsets);
+						if (hasChanged) {
+							cost = inferenceAlgorithm.infer(covering, itemsets,
+									transaction);
+							transaction.removeItemsetCache(candidate, prob,
+									subsets);
+						} else
+							cost = transaction.getCost(); // use cached cost
+					} else {
+						cost = inferenceAlgorithm.infer(covering, itemsets,
+								transaction);
+					}
 					return cost;
+
 				}
 			});
 		}

@@ -76,16 +76,23 @@ public class SparkEMStep {
 					@Override
 					public Double call(final Transaction transaction) {
 
-						if (itemsets == null)
-							transaction.addItemsetCache(candidate, prob,
-									subsets);
-
+						double cost;
 						final Set<Itemset> covering = Sets.newHashSet();
-						final double cost = inferenceAlgorithm.infer(covering,
-								itemsets, transaction);
-
-						// No need for cache remove as RDD is immutable
+						if (itemsets == null) { // use cache
+							final boolean hasChanged = transaction
+									.addItemsetCache(candidate, prob, subsets);
+							if (hasChanged)
+								cost = inferenceAlgorithm.infer(covering,
+										itemsets, transaction);
+							// No need for cache remove as RDD is immutable
+							else
+								cost = transaction.getCost(); // use cached cost
+						} else {
+							cost = inferenceAlgorithm.infer(covering, itemsets,
+									transaction);
+						}
 						return cost;
+
 					}
 				});
 
