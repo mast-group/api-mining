@@ -90,6 +90,10 @@ public abstract class ItemsetMiningCore {
 			}
 		}.compound(Ordering.usingToString());
 
+		// Initialize average cost per transaction for singletons
+		transactions = expectationMaximizationStep(itemsets, transactions,
+				inferenceAlgorithm);
+
 		// Structural EM
 		boolean breakLoop = false;
 		for (int iteration = 1; iteration <= maxEMIterations; iteration++) {
