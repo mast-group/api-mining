@@ -44,7 +44,8 @@ import com.google.common.collect.Multiset;
 public class SparkItemsetMining extends ItemsetMiningCore {
 
 	private static final boolean USE_KRYO = true;
-	private static final short MACHINES_IN_CLUSTER = 1;
+	private static final String MASTER = "cup04";
+	private static final short MACHINES_IN_CLUSTER = 8;
 
 	/** Main function parameters */
 	public static class Parameters {
@@ -112,7 +113,7 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 		setUpFileLogger(inputFile);
 
 		// Copy transaction database to hdfs
-		final String datasetPath = "hdfs://salmon.inf.ed.ac.uk:54310/"
+		final String datasetPath = "hdfs://" + MASTER + ".inf.ed.ac.uk:54310/"
 				+ inputFile.getName();
 		hdfs.copyFromLocalFile(new Path(inputFile.getAbsolutePath()), new Path(
 				datasetPath));
@@ -170,13 +171,13 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 			final int noCores) {
 
 		final SparkConf conf = new SparkConf();
-		conf.setMaster("spark://salmon.inf.ed.ac.uk:7077")
+		conf.setMaster("spark://" + MASTER + ".inf.ed.ac.uk:7077")
 				.setAppName("Itemset Mining: " + dataset)
 				.setSparkHome("/disk/data1/jfowkes/spark-1.1.0-bin-hadoop1")
 				.setJars(
 						new String[] { "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/itemset-mining/target/itemset-mining-1.1-SNAPSHOT.jar" });
 		conf.set("spark.cores.max", Integer.toString(noCores));
-		conf.set("spark.executor.memory", "20g");
+		conf.set("spark.executor.memory", "60g");
 		conf.set("spark.default.parallelism", "8");
 		conf.set("spark.shuffle.manager", "SORT");
 		// conf.set("spark.eventLog.enabled", "true"); uses GB of space!!!
@@ -189,7 +190,8 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 		}
 
 		final JavaSparkContext sc = new JavaSparkContext(conf);
-		sc.setCheckpointDir("hdfs://salmon.inf.ed.ac.uk:54310/checkpoint/");
+		sc.setCheckpointDir("hdfs://" + MASTER
+				+ ".inf.ed.ac.uk:54310/checkpoint/");
 		return sc;
 	}
 
