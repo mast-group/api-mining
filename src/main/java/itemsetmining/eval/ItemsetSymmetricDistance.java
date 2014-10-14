@@ -17,7 +17,7 @@ public class ItemsetSymmetricDistance {
 	public static void main(final String[] args) throws IOException {
 
 		// Read in interesting itemsets
-		final String logfile = "caviar.txt";
+		final String logfile = "plants-09.10.2014-16:45:44.log";
 		final Set<Itemset> intItemsets = ItemsetPrecisionRecall
 				.readSparkOutput(new File(LOGDIR + logfile)).keySet();
 		System.out.println("\nIIM Itemsets");
@@ -30,7 +30,7 @@ public class ItemsetSymmetricDistance {
 		System.out.println("\nAvg min sym diff: " + avgMinDiff);
 
 		// Read in frequent itemsets
-		final String outFile = "caviar-fim.txt";
+		final String outFile = "plants-fim.txt";
 		final Set<Itemset> freqItemsets = FrequentItemsetMining
 				.readFrequentItemsets(new File(FIMDIR + outFile)).keySet();
 		System.out.println("\nFIM Itemsets");
@@ -55,7 +55,8 @@ public class ItemsetSymmetricDistance {
 						+ itemsets.size());
 			int minDiff = Integer.MAX_VALUE;
 			for (final Itemset set2 : itemsets) {
-				if (!set1.equals(set2)) {
+				if ((!set1.equals(set2))
+						&& (set1.size() == 1 || set2.size() == 1)) {
 					final int diff = cardSymDiff(set1, set2);
 					if (diff < minDiff)
 						minDiff = diff;

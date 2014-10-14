@@ -22,7 +22,7 @@ public class FrequentItemsetMining {
 
 		// FIM parameters
 		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/plants.dat";
-		final double minSupp = 0.05750265949; // relative support
+		final double minSupp = 0.111; // relative support
 		final String saveFile = "/tmp/plants-fim.txt";
 
 		mineFrequentItemsetsFPGrowth(dataset, saveFile, minSupp);

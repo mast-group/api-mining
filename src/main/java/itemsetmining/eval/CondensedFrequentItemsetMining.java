@@ -13,10 +13,11 @@ public class CondensedFrequentItemsetMining {
 
 		// FPGrowth parameters
 		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/plants.dat";
-		final double minSupp = 0.05750265949; // relative support
-		final String saveFile = "/tmp/plants-maximal-fim.txt";
+		final double minSupp = 0.111; // relative support
+		final String saveFile = "/tmp/plants-closed-fim.txt";
 
-		mineMaximalFrequentItemsetsCharm(dataset, saveFile, minSupp);
+		mineClosedFrequentItemsetsCharm(dataset, saveFile, minSupp);
+		// mineMaximalFrequentItemsetsCharm(dataset, saveFile, minSupp);
 
 	}
 
