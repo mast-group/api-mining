@@ -14,8 +14,19 @@ import com.google.common.collect.Maps;
 
 public class MTVItemsetMining {
 
+	public static void main(final String[] args) throws IOException {
+
+		// MTV Parameters
+		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/abstracts.dat";
+		final double minSupp = 0.01164144353; // relative support
+		final int noItemsets = 10;
+
+		mineItemsets(new File(dataset), minSupp, noItemsets);
+
+	}
+
 	public static HashMap<Itemset, Double> mineItemsets(final File dbfile,
-			final double minsup, final int sumItemsets) throws IOException {
+			final double minsup, final int noItemsets) throws IOException {
 
 		final HashMap<Itemset, Double> minedItemsets = Maps.newHashMap();
 
@@ -24,7 +35,7 @@ public class MTVItemsetMining {
 		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Packages/mtv/mtv.sh";
 		cmd[1] = "-f " + dbfile;
 		cmd[2] = "-s " + minsup;
-		cmd[3] = "-k " + sumItemsets;
+		cmd[3] = "-k " + noItemsets;
 		cmd[4] = "-o /tmp/mtv-log.txt";
 		cmd[5] = "-q";
 		runScript(cmd);
