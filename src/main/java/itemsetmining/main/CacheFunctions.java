@@ -13,33 +13,6 @@ import com.google.common.collect.Multiset;
 /** Class to hold the various serial/parallel itemset cache functions */
 public class CacheFunctions {
 
-	/** Serial initialize Cache */
-	static void serialInitializeCache(final List<Transaction> transactions,
-			final long noTransactions, final Multiset<Integer> singletons) {
-
-		for (final Transaction transaction : transactions)
-			transaction.initializeCache(singletons, noTransactions);
-	}
-
-	/** Serial update Cache probabilities */
-	static void serialUpdateCacheProbabilities(
-			final List<Transaction> transactions,
-			final HashMap<Itemset, Double> newItemsets) {
-
-		for (final Transaction transaction : transactions)
-			transaction.updateCacheProbabilities(newItemsets);
-	}
-
-	/** Serial add itemset to Cache */
-	static void serialAddItemsetCache(final List<Transaction> transactions,
-			final Itemset candidate, final double prob,
-			final Set<Itemset> subsets) {
-
-		for (final Transaction transaction : transactions)
-			transaction.addItemsetCache(candidate, prob, subsets);
-
-	}
-
 	/** Parallel initialize Cache */
 	static void parallelInitializeCache(final List<Transaction> transactions,
 			final long noTransactions, final Multiset<Integer> singletons) {

@@ -2,7 +2,6 @@ package itemsetmining.main;
 
 import itemsetmining.itemset.Itemset;
 import itemsetmining.itemset.ItemsetTree;
-import itemsetmining.main.InferenceAlgorithms.InferILP;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.TransactionDatabase;
 import itemsetmining.transaction.TransactionRDD;
@@ -28,7 +27,6 @@ public abstract class ItemsetMiningCore {
 	private static final double OPTIMIZE_TOL = 1e-5;
 
 	private static final boolean ITEMSET_CACHE = true;
-	private static final boolean SERIAL = false;
 	protected static final Logger logger = Logger
 			.getLogger(ItemsetMiningCore.class.getName());
 	public static final String LOG_DIR = "/disk/data1/jfowkes/logs/";
@@ -56,10 +54,6 @@ public abstract class ItemsetMiningCore {
 			if (transactions instanceof TransactionRDD) {
 				transactions = SparkCacheFunctions.parallelInitializeCache(
 						transactions, singletons);
-			} else if (SERIAL) {
-				CacheFunctions.serialInitializeCache(
-						transactions.getTransactionList(), noTransactions,
-						singletons);
 			} else {
 				CacheFunctions.parallelInitializeCache(
 						transactions.getTransactionList(), noTransactions,
@@ -196,13 +190,6 @@ public abstract class ItemsetMiningCore {
 					transactions = SparkCacheFunctions
 							.parallelUpdateCacheProbabilities(transactions,
 									newItemsets);
-			} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
-				averageCost = EMStep.serialEMStep(
-						transactions.getTransactionList(), inferenceAlgorithm,
-						passItemsets, noTransactions, newItemsets);
-				if (ITEMSET_CACHE)
-					CacheFunctions.serialUpdateCacheProbabilities(
-							transactions.getTransactionList(), newItemsets);
 			} else {
 				averageCost = EMStep.parallelEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm,
@@ -384,10 +371,6 @@ public abstract class ItemsetMiningCore {
 			curCost = SparkEMStep.parallelEMStep(
 					transactions.getTransactionRDD(), inferenceAlgorithm,
 					passItemsets, noTransactions, candidate, p, subsets);
-		} else if (SERIAL || inferenceAlgorithm instanceof InferILP) {
-			curCost = EMStep.serialEMStep(transactions.getTransactionList(),
-					inferenceAlgorithm, passItemsets, noTransactions,
-					candidate, p, subsets);
 		} else {
 			curCost = EMStep.parallelEMStep(transactions.getTransactionList(),
 					inferenceAlgorithm, passItemsets, noTransactions,
@@ -404,10 +387,6 @@ public abstract class ItemsetMiningCore {
 				if (transactions instanceof TransactionRDD) {
 					transactions = SparkCacheFunctions.parallelAddItemsetCache(
 							transactions, candidate, p, subsets);
-				} else if (SERIAL) {
-					CacheFunctions.serialAddItemsetCache(
-							transactions.getTransactionList(), candidate, p,
-							subsets);
 				} else {
 					CacheFunctions.parallelAddItemsetCache(
 							transactions.getTransactionList(), candidate, p,
