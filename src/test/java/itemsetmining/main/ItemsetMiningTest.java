@@ -74,7 +74,7 @@ public class ItemsetMiningTest {
 		// Test greedy
 		final InferenceAlgorithm inferGreedy = new InferGreedy();
 		actual.clear();
-		actualCost = inferGreedy.infer(actual, itemsets, transaction1234);
+		inferGreedy.infer(actual, itemsets, transaction1234);
 		assertEquals(expected1234, actual);
 		assertEquals(expectedCost1234, actualCost, 1e-15);
 
@@ -111,27 +111,6 @@ public class ItemsetMiningTest {
 		// assertEquals(expected234, actual);
 		// assertEquals(expectedCost234, actualCost, 1e-15);
 
-	}
-
-	@Test
-	public void testDirectSubsets() {
-
-		final Set<Itemset> itemsets = Sets.newHashSet();
-		itemsets.add(new Itemset(1, 2));
-		itemsets.add(new Itemset(17));
-		itemsets.add(new Itemset(18));
-		itemsets.add(new Itemset(33));
-		itemsets.add(new Itemset(39));
-		itemsets.add(new Itemset(33, 39));
-		itemsets.add(new Itemset(18, 33, 39));
-
-		final Set<Itemset> expectedDirectSubsets = Sets.newHashSet();
-		expectedDirectSubsets.add(new Itemset(17));
-		expectedDirectSubsets.add(new Itemset(18, 33, 39));
-
-		final Set<Itemset> actualDirectSubsets = ItemsetMiningCore
-				.getDirectSubsets(itemsets, new Itemset(17, 18, 33, 39));
-		assertEquals(expectedDirectSubsets, actualDirectSubsets);
 	}
 
 	// @Test

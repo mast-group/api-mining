@@ -1,103 +1,134 @@
 package itemsetmining.main;
 
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.counting;
+import static java.util.stream.Collectors.groupingBy;
 import itemsetmining.itemset.Itemset;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
-import itemsetmining.util.FutureThreadPool;
 
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.Callable;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.Multiset;
-import com.google.common.collect.Sets;
 
-/** Class to hold the various serial/parallel transaction EM Steps */
+/** Class to hold the various transaction EM Steps */
 public class EMStep {
 
-	/** Parallel E-step and M-step combined */
-	static double parallelEMStep(final List<Transaction> transactions,
-			final InferenceAlgorithm inferenceAlgorithm,
-			final HashMap<Itemset, Double> itemsets,
-			final double noTransactions,
-			final HashMap<Itemset, Double> newItemsets) {
-
-		final Multiset<Itemset> allCoverings = ConcurrentHashMultiset.create();
-
-		// Parallel E-step and M-step combined
-		final FutureThreadPool<Double> ftp = new FutureThreadPool<Double>();
-		for (final Transaction transaction : transactions) {
-
-			ftp.pushTask(new Callable<Double>() {
-				@Override
-				public Double call() {
-					final Set<Itemset> covering = Sets.newHashSet();
-					final double cost = inferenceAlgorithm.infer(covering,
-							itemsets, transaction);
-					allCoverings.addAll(covering);
-					return cost;
-				}
-			});
-		}
-		// Wait for tasks to finish
-		final List<Double> costs = ftp.getCompletedTasks();
-
-		// Normalise probabilities
-		for (final Itemset set : allCoverings.elementSet()) {
-			newItemsets.put(set, allCoverings.count(set) / noTransactions);
-		}
-
-		return sum(costs) / noTransactions;
+	/** Initialize cached itemsets */
+	static void parallelInitializeCachedItemsets(
+			final List<Transaction> transactions,
+			final Multiset<Integer> singletons) {
+		transactions.parallelStream()
+				.forEach(
+						t -> t.initializeCachedItemsets(singletons,
+								transactions.size()));
 	}
 
-	/** Parallel E-step and M-step combined (without covering, just cost) */
+	/** EM-step for hard EM */
+	static Map<Itemset, Double> parallelEMStep(
+			final List<Transaction> transactions,
+			final InferenceAlgorithm inferenceAlgorithm) {
+
+		// E-step
+		final Map<Itemset, Long> coveringWithCounts = transactions
+				.parallelStream()
+				.map(t -> {
+					final HashSet<Itemset> covering = inferenceAlgorithm
+							.infer(t);
+					t.setCachedCovering(covering);
+					return covering;
+				}).flatMap(HashSet::stream)
+				.collect(groupingBy(identity(), counting()));
+
+		// M-step
+		final Map<Itemset, Double> newItemsets = coveringWithCounts
+				.entrySet()
+				.parallelStream()
+				.collect(
+						Collectors.toMap(Map.Entry::getKey, v -> v.getValue()
+								/ (double) transactions.size()));
+
+		// Update cached itemsets
+		transactions.parallelStream().forEach(
+				t -> t.updateCachedItemsets(newItemsets));
+
+		return newItemsets;
+	}
+
+	/** Get average cost of last EM-step */
+	static double getAverageCost(final List<Transaction> transactions) {
+		final double averageCost = transactions.parallelStream()
+				.map(Transaction::getCachedCost)
+				.reduce(0., (sum, c) -> sum += c, (sum1, sum2) -> sum1 + sum2);
+		return averageCost;
+	}
+
+	/** EM-step for structural EM */
 	static double parallelEMStep(final List<Transaction> transactions,
-			final InferenceAlgorithm inferenceAlgorithm,
-			final HashMap<Itemset, Double> itemsets,
-			final double noTransactions, final Itemset candidate,
-			final double prob, final Set<Itemset> subsets) {
+			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
-		// Parallel E-step and M-step combined
-		final FutureThreadPool<Double> ftp = new FutureThreadPool<Double>();
-		for (final Transaction transaction : transactions) {
-
-			ftp.pushTask(new Callable<Double>() {
-				@Override
-				public Double call() {
-
-					double cost;
-					final Set<Itemset> covering = Sets.newHashSet();
-					if (itemsets == null) { // use cache
-						final boolean hasChanged = transaction.addItemsetCache(
-								candidate, prob, subsets);
-						if (hasChanged) {
-							cost = inferenceAlgorithm.infer(covering, itemsets,
-									transaction);
-							transaction.removeItemsetCache(candidate, prob,
-									subsets);
-						} else
-							cost = transaction.getCost(); // use cached cost
-					} else {
-						cost = inferenceAlgorithm.infer(covering, itemsets,
-								transaction);
+		// E-step (adding candidate to transactions that support it)
+		final Map<Itemset, Long> coveringWithCounts = transactions
+				.parallelStream()
+				.map(t -> {
+					if (t.contains(candidate)) {
+						t.addItemsetCache(candidate, 1.0);
+						final HashSet<Itemset> covering = inferenceAlgorithm
+								.infer(t);
+						t.setTempCachedCovering(covering);
+						return covering;
 					}
-					return cost;
+					return t.getCachedCovering();
+				}).flatMap(HashSet::stream)
+				.collect(groupingBy(identity(), counting()));
 
-				}
-			});
-		}
-		return sum(ftp.getCompletedTasks()) / noTransactions;
+		// M-step
+		final Map<Itemset, Double> newItemsets = coveringWithCounts
+				.entrySet()
+				.parallelStream()
+				.collect(
+						Collectors.toMap(Map.Entry::getKey, v -> v.getValue()
+								/ (double) transactions.size()));
+
+		// Get average cost (removing candidate from supported transactions)
+		final double averageCost = transactions.parallelStream().map(t -> {
+			final double cost = t.getCachedCost(newItemsets);
+			t.removeItemsetCache(candidate);
+			return cost;
+		}).reduce(0., (sum, c) -> sum += c, (sum1, sum2) -> sum1 + sum2);
+
+		return averageCost;
 	}
 
-	/** Calculates the sum of a Collection */
-	static double sum(final Iterable<Double> values) {
-		double sum = 0;
-		for (final Double element : values) {
-			sum += element;
-		}
-		return sum;
+	/** Add accepted candidate itemset to cache */
+	static Map<Itemset, Double> parallelAddAcceptedItemsetCache(
+			final List<Transaction> transactions, final Itemset candidate) {
+
+		// Cached E-step
+		final Map<Itemset, Long> coveringWithCounts = transactions
+				.parallelStream().map(t -> {
+					if (t.contains(candidate))
+						return t.getTempCachedCovering();
+					return t.getCachedCovering();
+				}).flatMap(HashSet::stream)
+				.collect(groupingBy(identity(), counting()));
+
+		// M-step
+		final Map<Itemset, Double> newItemsets = coveringWithCounts
+				.entrySet()
+				.parallelStream()
+				.collect(
+						Collectors.toMap(Map.Entry::getKey, v -> v.getValue()
+								/ (double) transactions.size()));
+
+		// Update cached itemsets
+		transactions.parallelStream().forEach(
+				t -> t.updateCachedItemsets(newItemsets));
+
+		return newItemsets;
 	}
 
 	private EMStep() {

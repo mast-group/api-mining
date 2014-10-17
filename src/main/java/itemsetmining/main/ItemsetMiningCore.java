@@ -9,6 +9,7 @@ import itemsetmining.transaction.TransactionRDD;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,7 +27,6 @@ public abstract class ItemsetMiningCore {
 	private static final int COMBINE_ITEMSETS_EVERY = 1;
 	private static final double OPTIMIZE_TOL = 1e-5;
 
-	private static final boolean ITEMSET_CACHE = true;
 	protected static final Logger logger = Logger
 			.getLogger(ItemsetMiningCore.class.getName());
 	public static final String LOG_DIR = "/disk/data1/jfowkes/logs/";
@@ -50,15 +50,12 @@ public abstract class ItemsetMiningCore {
 
 		// Initialize itemset cache
 		final long noTransactions = transactions.size();
-		if (ITEMSET_CACHE) {
-			if (transactions instanceof TransactionRDD) {
-				transactions = SparkCacheFunctions.parallelInitializeCache(
-						transactions, singletons);
-			} else {
-				CacheFunctions.parallelInitializeCache(
-						transactions.getTransactionList(), noTransactions,
-						singletons);
-			}
+		if (transactions instanceof TransactionRDD) {
+			transactions = SparkCacheFunctions.parallelInitializeCache(
+					transactions, singletons);
+		} else {
+			EMStep.parallelInitializeCachedItemsets(
+					transactions.getTransactionList(), singletons);
 		}
 
 		// Intialize itemsets with singleton sets and their relative support
@@ -97,8 +94,8 @@ public abstract class ItemsetMiningCore {
 				logger.finer("\n----- Itemset Combination at Step " + iteration
 						+ "\n");
 				transactions = combineItemsetsStep(itemsets, transactions,
-						tree, rejected_sets, inferenceAlgorithm,
-						maxStructureSteps, supportOrdering, supports);
+						rejected_sets, inferenceAlgorithm, maxStructureSteps,
+						supportOrdering, supports);
 				if (transactions.getIterationLimitExceeded())
 					breakLoop = true;
 			} else {
@@ -164,40 +161,26 @@ public abstract class ItemsetMiningCore {
 
 		logger.fine(" Structure Optimal Itemsets: " + itemsets + "\n");
 
-		double averageCost = 0;
-		HashMap<Itemset, Double> prevItemsets = itemsets;
+		Map<Itemset, Double> prevItemsets = itemsets;
 		final double noTransactions = transactions.size();
 
 		double norm = 1;
 		while (norm > OPTIMIZE_TOL) {
 
-			// Use cache in inference algorithm by not passing prevItemsets
-			final HashMap<Itemset, Double> passItemsets;
-			if (ITEMSET_CACHE)
-				passItemsets = null;
-			else
-				passItemsets = prevItemsets;
-
 			// Set up storage
-			final HashMap<Itemset, Double> newItemsets = Maps.newHashMap();
+			final Map<Itemset, Double> newItemsets;
 
 			// Parallel E-step and M-step combined
 			if (transactions instanceof TransactionRDD) {
-				averageCost = SparkEMStep.parallelEMStep(
-						transactions.getTransactionRDD(), inferenceAlgorithm,
-						passItemsets, noTransactions, newItemsets);
-				if (ITEMSET_CACHE)
-					transactions = SparkCacheFunctions
-							.parallelUpdateCacheProbabilities(transactions,
-									newItemsets);
+				newItemsets = Maps.newHashMap();
+				SparkEMStep.parallelEMStep(transactions.getTransactionRDD(),
+						inferenceAlgorithm, noTransactions, newItemsets);
+				transactions = SparkCacheFunctions
+						.parallelUpdateCacheProbabilities(transactions,
+								newItemsets);
 			} else {
-				averageCost = EMStep.parallelEMStep(
-						transactions.getTransactionList(), inferenceAlgorithm,
-						passItemsets, noTransactions, newItemsets);
-				if (ITEMSET_CACHE)
-					CacheFunctions.parallelUpdateCacheProbabilities(
-							transactions.getTransactionList(), newItemsets);
-				// checkCacheWorks(averageCost, averageCostNoCache);
+				newItemsets = EMStep.parallelEMStep(
+						transactions.getTransactionList(), inferenceAlgorithm);
 			}
 
 			// If set has stabilised calculate norm(p_prev - p_new)
@@ -211,6 +194,15 @@ public abstract class ItemsetMiningCore {
 			}
 
 			prevItemsets = newItemsets;
+		}
+
+		// Calculate average cost of last covering
+		double averageCost;
+		if (transactions instanceof TransactionRDD) {
+			// FIXME implement
+		} else {
+			averageCost = EMStep.getAverageCost(transactions
+					.getTransactionList());
 		}
 
 		itemsets.clear();
@@ -251,8 +243,7 @@ public abstract class ItemsetMiningCore {
 					continue;
 				}
 				final TransactionDatabase betterCost = evaluateCandidate(
-						itemsets, transactions, tree, inferenceAlgorithm,
-						candidate);
+						itemsets, transactions, inferenceAlgorithm, candidate);
 				if (betterCost != null) // Better itemset found
 					return betterCost;
 				rejected_sets.add(candidate); // otherwise add to rejected
@@ -275,7 +266,7 @@ public abstract class ItemsetMiningCore {
 	 */
 	private static TransactionDatabase combineItemsetsStep(
 			final HashMap<Itemset, Double> itemsets,
-			final TransactionDatabase transactions, final ItemsetTree tree,
+			final TransactionDatabase transactions,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps,
 			final Ordering<Itemset> itemsetOrdering,
@@ -285,7 +276,6 @@ public abstract class ItemsetMiningCore {
 		// logger.finest(" Structural candidate itemsets: ");
 
 		// Sort itemsets according to given ordering
-		// TODO store itemset as sorted list to prevent re-sorting?
 		final ArrayList<Itemset> sortedItemsets = Lists.newArrayList(itemsets
 				.keySet());
 		Collections.sort(sortedItemsets, itemsetOrdering);
@@ -308,8 +298,8 @@ public abstract class ItemsetMiningCore {
 						if (!rejected_sets.contains(candidate)) {
 							rejected_sets.add(candidate); // candidate seen
 							final TransactionDatabase betterCost = evaluateCandidate(
-									itemsets, transactions, tree,
-									inferenceAlgorithm, candidate);
+									itemsets, transactions, inferenceAlgorithm,
+									candidate);
 							if (betterCost != null) { // Better itemset found
 								// update supports
 								supports.put(candidate, (int) (itemsets
@@ -339,172 +329,45 @@ public abstract class ItemsetMiningCore {
 	/** Evaluate a candidate itemset to see if it should be included */
 	private static TransactionDatabase evaluateCandidate(
 			final HashMap<Itemset, Double> itemsets,
-			TransactionDatabase transactions, final ItemsetTree tree,
+			TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
 		logger.finer("\n Candidate: " + candidate);
 		final double noTransactions = transactions.size();
-
-		// Calculate itemset support (M-step assuming always included)
-		final double p = tree.getSupportOfItemset(candidate) / noTransactions;
-
-		// Find direct subsets of candidate
-		final Set<Itemset> subsets = getDirectSubsets(itemsets.keySet(),
-				candidate);
-
-		// If not using cache: Add candidate to itemsets
-		HashMap<Itemset, Double> negativeItemsets;
-		if (!ITEMSET_CACHE)
-			negativeItemsets = addCandidateItemsets(itemsets, candidate, p,
-					subsets);
-
-		// Use cache in inference algorithm by not passing itemsets
-		final HashMap<Itemset, Double> passItemsets;
-		if (ITEMSET_CACHE)
-			passItemsets = null;
-		else
-			passItemsets = itemsets;
 
 		// Find cost in parallel
 		double curCost = 0;
 		if (transactions instanceof TransactionRDD) {
 			curCost = SparkEMStep.parallelEMStep(
 					transactions.getTransactionRDD(), inferenceAlgorithm,
-					passItemsets, noTransactions, candidate, p, subsets);
+					noTransactions, candidate);
 		} else {
 			curCost = EMStep.parallelEMStep(transactions.getTransactionList(),
-					inferenceAlgorithm, passItemsets, noTransactions,
-					candidate, p, subsets);
-			// checkCacheWorks(curCost, curCostNoCache);
+					inferenceAlgorithm, candidate);
 		}
 		logger.finer(String.format(", cost: %.2f", curCost));
 
 		// Return if better set of itemsets found
 		if (curCost < transactions.getAverageCost()) {
 			logger.finer("\n Candidate Accepted.\n");
-			if (ITEMSET_CACHE) {
-				// Update cache with candidate
-				if (transactions instanceof TransactionRDD) {
-					transactions = SparkCacheFunctions.parallelAddItemsetCache(
-							transactions, candidate, p, subsets);
-				} else {
-					CacheFunctions.parallelAddItemsetCache(
-							transactions.getTransactionList(), candidate, p,
-							subsets);
-				}
-				// Update itemsets with candidate
-				addAcceptedCandidateItemsets(itemsets, candidate, p, subsets);
+			// Update cache with candidate
+			Map<Itemset, Double> newItemsets;
+			if (transactions instanceof TransactionRDD) {
+				transactions = SparkCacheFunctions.parallelAddItemsetCache(
+						transactions, candidate);
+			} else {
+				newItemsets = EMStep.parallelAddAcceptedItemsetCache(
+						transactions.getTransactionList(), candidate);
 			}
+			// Update itemsets with newly inferred itemsets
+			itemsets.clear();
+			itemsets.putAll(newItemsets);
 			transactions.setAverageCost(curCost);
 			return transactions;
 		} // otherwise keep trying
 
-		// If not using cache: Remove candidate from itemsets
-		if (!ITEMSET_CACHE)
-			removeCandidateItemsets(itemsets, candidate, p, subsets,
-					negativeItemsets);
-
 		// No better candidate found
 		return null;
-	}
-
-	/** Very useful for debugging */
-	@SuppressWarnings("unused")
-	private static void checkCacheWorks(final double curCost,
-			final double curCostNoCache) {
-
-		if (Math.abs(curCost - curCostNoCache) > 1e-12)
-			logger.severe("\nCosts do not match!! N.C: " + curCostNoCache
-					+ " C:" + curCost);
-		else
-			logger.info("\nCosts match.");
-	}
-
-	public static void addAcceptedCandidateItemsets(
-			final HashMap<Itemset, Double> itemsets, final Itemset candidate,
-			final double p, final Set<Itemset> subsets) {
-
-		// Adjust probabilities for direct subsets of itemset
-		for (final Itemset subset : subsets) {
-			final double newProb = itemsets.get(subset) - p;
-			if (newProb > 0.0)
-				itemsets.put(subset, newProb);
-			else
-				itemsets.put(subset, 1e-10);
-		}
-
-		// Add candidate
-		itemsets.put(candidate, p);
-	}
-
-	public static HashMap<Itemset, Double> addCandidateItemsets(
-			final HashMap<Itemset, Double> itemsets, final Itemset candidate,
-			final double p, final Set<Itemset> subsets) {
-
-		// Storage for negative probabilities
-		final HashMap<Itemset, Double> negativeItemsets = Maps.newHashMap();
-
-		// Adjust probabilities for direct subsets of itemset
-		for (final Itemset subset : subsets) {
-			final double newProb = itemsets.get(subset) - p;
-			if (newProb > 0.0) {
-				itemsets.put(subset, newProb);
-			} else {
-				negativeItemsets.put(subset, newProb);
-				itemsets.put(subset, 1e-10);
-			}
-		}
-
-		// Add candidate
-		itemsets.put(candidate, p);
-
-		return negativeItemsets;
-	}
-
-	public static void removeCandidateItemsets(
-			final HashMap<Itemset, Double> itemsets, final Itemset candidate,
-			final double p, final Set<Itemset> subsets,
-			final HashMap<Itemset, Double> negativeItemsets) {
-
-		// Remove candidate
-		itemsets.remove(candidate);
-
-		// Restore negative probs
-		itemsets.putAll(negativeItemsets);
-
-		// and restore original probabilities
-		for (final Itemset subset : subsets) {
-			final double prob = itemsets.get(subset);
-			itemsets.put(subset, prob + p);
-		}
-	}
-
-	/** Find all itemsets that are direct subsets of candidate itemset */
-	static Set<Itemset> getDirectSubsets(final Set<Itemset> itemsets,
-			final Itemset candidate) {
-
-		// Find all subsets
-		final Set<Itemset> subsets = Sets.newHashSet();
-		for (final Itemset set : itemsets) {
-			if (candidate.contains(set))
-				subsets.add(set);
-		}
-
-		// Remove subsets with supersets
-		final Set<Itemset> directSubsets = Sets.newHashSet();
-		for (final Itemset set : subsets) {
-			boolean isDirectSubset = true;
-			for (final Itemset otherSet : subsets) {
-				if (!otherSet.equals(set) && otherSet.contains(set)) {
-					isDirectSubset = false; // set has superset
-					break;
-				}
-			}
-			if (isDirectSubset)
-				directSubsets.add(set);
-		}
-
-		return directSubsets;
 	}
 
 	/**

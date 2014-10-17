@@ -6,9 +6,10 @@ import itemsetmining.itemset.Itemset;
 import java.io.Serializable;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
@@ -17,27 +18,20 @@ import com.google.common.collect.Multiset;
 public class Transaction extends AbstractItemset implements Serializable {
 	private static final long serialVersionUID = 3327396055332538091L;
 
-	/** Cached transaction cost */
-	private double cachedCost;
-	private double prevCachedCost;
-
 	/** Cached itemsets for this transaction */
 	private HashMap<Itemset, Double> cachedItemsets;
 
-	/** Cached itemsets that get negative probs during candidate eval */
-	private HashMap<Itemset, Double> negativeItemsets;
+	/** Cached covering for this transaction */
+	private HashSet<Itemset> cachedCovering;
+	private HashSet<Itemset> tempCachedCovering;
 
-	public void initializeCache(final Multiset<Integer> singletons,
+	public void initializeCachedItemsets(final Multiset<Integer> singletons,
 			final long noTransactions) {
 		cachedItemsets = Maps.newHashMap();
-		cachedCost = 0;
 		for (final Multiset.Entry<Integer> entry : singletons.entrySet()) {
-			if (this.contains(entry.getElement())) {
-				final double support = entry.getCount()
-						/ (double) noTransactions;
-				cachedItemsets.put(new Itemset(entry.getElement()), support);
-				cachedCost -= Math.log(support);
-			}
+			if (this.contains(entry.getElement()))
+				cachedItemsets.put(new Itemset(entry.getElement()),
+						entry.getCount() / (double) noTransactions);
 		}
 	}
 
@@ -45,84 +39,68 @@ public class Transaction extends AbstractItemset implements Serializable {
 		return cachedItemsets;
 	}
 
-	public boolean addItemsetCache(final Itemset candidate, final double prob,
-			final Set<Itemset> subsets) {
-
-		// Initialize negative itemsets
-		negativeItemsets = Maps.newHashMap();
-
-		// Adjust probabilities for direct subsets of candidate
-		boolean hasChanged = false;
-		for (final Itemset subset : subsets) {
-			final Double oldProb = cachedItemsets.get(subset);
-			if (oldProb != null) { // subset supports this transaction
-				hasChanged = true;
-				final double newProb = oldProb - prob;
-				if (newProb > 0.0) {
-					cachedItemsets.put(subset, newProb);
-				} else {
-					negativeItemsets.put(subset, newProb);
-					cachedItemsets.put(subset, 1e-10);
-				}
-			}
-		}
-
-		// Add candidate if it supports this transaction
-		if (this.contains(candidate)) {
-			hasChanged = true;
-			cachedItemsets.put(candidate, prob);
-		}
-
-		if (hasChanged)
-			prevCachedCost = cachedCost;
-
-		return hasChanged;
+	public void addItemsetCache(final Itemset candidate, final double prob) {
+		cachedItemsets.put(candidate, prob);
 	}
 
-	public void removeItemsetCache(final Itemset candidate, final double prob,
-			final Set<Itemset> subsets) {
-
-		// Restore cached cost
-		cachedCost = prevCachedCost;
-
-		// Remove candidate
+	public void removeItemsetCache(final Itemset candidate) {
 		cachedItemsets.remove(candidate);
-
-		// Restore negative itemsets
-		cachedItemsets.putAll(negativeItemsets);
-
-		// Restore probabilities prior to adding candidate
-		for (final Itemset subset : subsets) {
-			final Double oldProb = cachedItemsets.get(subset);
-			if (oldProb != null) // subset supports this transaction
-				cachedItemsets.put(subset, oldProb + prob);
-		}
-
 	}
 
-	public void updateCacheProbabilities(
-			final HashMap<Itemset, Double> newItemsets) {
-
+	public void updateCachedItemsets(final Map<Itemset, Double> newItemsets) {
 		for (final Iterator<Entry<Itemset, Double>> it = cachedItemsets
 				.entrySet().iterator(); it.hasNext();) {
-
 			final Entry<Itemset, Double> entry = it.next();
 			final Double newProb = newItemsets.get(entry.getKey());
 			if (newProb != null)
 				entry.setValue(newProb);
 			else
 				it.remove();
-
 		}
-
 	}
 
-	public void setCost(final double cost) {
-		cachedCost = cost;
+	/** Get cost of cached covering for hard EM-step */
+	public double getCachedCost() {
+		double totalCost = 0;
+		for (final Entry<Itemset, Double> entry : cachedItemsets.entrySet()) {
+			if (cachedCovering.contains(entry.getKey()))
+				totalCost += -Math.log(entry.getValue());
+			else
+				totalCost += -Math.log(1 - entry.getValue());
+		}
+		return totalCost;
 	}
 
-	public double getCost() {
-		return cachedCost;
+	/** Get the cost of cached covering for structural EM-step */
+	public double getCachedCost(final Map<Itemset, Double> itemsets) {
+		double totalCost = 0;
+		for (final Entry<Itemset, Double> entry : cachedItemsets.entrySet()) {
+			final Itemset set = entry.getKey();
+			final Double prob = itemsets.get(set);
+			if (prob != null) {
+				if (tempCachedCovering.contains(set))
+					totalCost += -Math.log(prob);
+				else
+					totalCost += -Math.log(1 - prob);
+			}
+		}
+		return totalCost;
+	}
+
+	public void setCachedCovering(final HashSet<Itemset> covering) {
+		cachedCovering = covering;
+	}
+
+	public HashSet<Itemset> getCachedCovering() {
+		return cachedCovering;
+	}
+
+	public void setTempCachedCovering(final HashSet<Itemset> covering) {
+		tempCachedCovering = covering;
+	}
+
+	public HashSet<Itemset> getTempCachedCovering() {
+		return tempCachedCovering;
 	}
 
 	/**
