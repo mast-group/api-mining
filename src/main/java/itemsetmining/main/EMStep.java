@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.groupingBy;
 import itemsetmining.itemset.Itemset;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
+import itemsetmining.transaction.TransactionDatabase;
 
 import java.util.HashSet;
 import java.util.List;
@@ -19,9 +20,10 @@ public class EMStep {
 
 	/** Initialize cached itemsets */
 	static void parallelInitializeCachedItemsets(
-			final List<Transaction> transactions,
-			final Multiset<Integer> singletons) {
-		transactions.parallelStream()
+			TransactionDatabase transactions, final Multiset<Integer> singletons) {
+		transactions
+				.getTransactionList()
+				.parallelStream()
 				.forEach(
 						t -> t.initializeCachedItemsets(singletons,
 								transactions.size()));
@@ -59,19 +61,21 @@ public class EMStep {
 	}
 
 	/** Get average cost of last EM-step */
-	static double getAverageCost(final List<Transaction> transactions) {
-		final double averageCost = transactions.parallelStream()
-				.map(Transaction::getCachedCost)
-				.reduce(0., (sum, c) -> sum += c, (sum1, sum2) -> sum1 + sum2);
-		return averageCost;
+	static void calculateAndSetAverageCost(TransactionDatabase transactions) {
+		final double averageCost = transactions.getTransactionList()
+				.parallelStream().map(Transaction::getCachedCost)
+				.reduce(0., (sum, c) -> sum += c, (sum1, sum2) -> sum1 + sum2)
+				/ (double) transactions.size();
+		transactions.setAverageCost(averageCost);
 	}
 
 	/** EM-step for structural EM */
-	static double parallelEMStep(final List<Transaction> transactions,
+	static double parallelEMStep(TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
 		// E-step (adding candidate to transactions that support it)
 		final Map<Itemset, Long> coveringWithCounts = transactions
+				.getTransactionList()
 				.parallelStream()
 				.map(t -> {
 					if (t.contains(candidate)) {
@@ -94,22 +98,25 @@ public class EMStep {
 								/ (double) transactions.size()));
 
 		// Get average cost (removing candidate from supported transactions)
-		final double averageCost = transactions.parallelStream().map(t -> {
-			final double cost = t.getCachedCost(newItemsets);
-			t.removeItemsetCache(candidate);
-			return cost;
-		}).reduce(0., (sum, c) -> sum += c, (sum1, sum2) -> sum1 + sum2);
+		final double averageCost = transactions.getTransactionList()
+				.parallelStream().map(t -> {
+					final double cost = t.getCachedCost(newItemsets);
+					t.removeItemsetCache(candidate);
+					return cost;
+				})
+				.reduce(0., (sum, c) -> sum += c, (sum1, sum2) -> sum1 + sum2)
+				/ (double) transactions.size();
 
 		return averageCost;
 	}
 
 	/** Add accepted candidate itemset to cache */
 	static Map<Itemset, Double> parallelAddAcceptedItemsetCache(
-			final List<Transaction> transactions, final Itemset candidate) {
+			final TransactionDatabase transactions, final Itemset candidate) {
 
 		// Cached E-step
 		final Map<Itemset, Long> coveringWithCounts = transactions
-				.parallelStream().map(t -> {
+				.getTransactionList().parallelStream().map(t -> {
 					if (t.contains(candidate))
 						return t.getTempCachedCovering();
 					return t.getCachedCovering();
@@ -125,8 +132,8 @@ public class EMStep {
 								/ (double) transactions.size()));
 
 		// Update cached itemsets
-		transactions.parallelStream().forEach(
-				t -> t.updateCachedItemsets(newItemsets));
+		transactions.getTransactionList().parallelStream()
+				.forEach(t -> t.updateCachedItemsets(newItemsets));
 
 		return newItemsets;
 	}

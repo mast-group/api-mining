@@ -27,10 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.Function2;
-import org.apache.spark.api.java.function.PairFunction;
 
 import scala.Tuple2;
 
@@ -131,10 +128,9 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 				.map(new ParseTransaction()).cache();
 
 		// Determine most frequent singletons
-		final Map<Integer, Integer> singletonsMap = db
-				.flatMap(new GetTransactionItems())
-				.mapToPair(new PairItemCount())
-				.reduceByKey(new SparkEMStep.SumCounts()).collectAsMap();
+		final Map<Integer, Integer> singletonsMap = db.flatMap(t -> t)
+				.mapToPair(i -> new Tuple2<Integer, Integer>(i, 1))
+				.reduceByKey((a, b) -> a + b).collectAsMap();
 
 		// Convert singletons map to Multiset (as Spark map is not serializable)
 		final Multiset<Integer> singletons = HashMultiset.create();
@@ -202,37 +198,6 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 		final Configuration conf = new Configuration();
 		conf.addResource(new Path(hdfsConfFile));
 		return FileSystem.get(conf);
-	}
-
-	/** Add together itemset costs */
-	static class SumCost implements Function2<Double, Double, Double> {
-		private static final long serialVersionUID = -6157566765215482009L;
-
-		@Override
-		public Double call(final Double a, final Double b) {
-			return a + b;
-		}
-	}
-
-	private static class PairItemCount implements
-			PairFunction<Integer, Integer, Integer> {
-		private static final long serialVersionUID = 8400960661406105632L;
-
-		@Override
-		public Tuple2<Integer, Integer> call(final Integer item) {
-			return new Tuple2<Integer, Integer>(item, 1);
-		}
-	}
-
-	private static class GetTransactionItems implements
-			FlatMapFunction<Transaction, Integer> {
-		private static final long serialVersionUID = -7433022039627649227L;
-
-		@Override
-		public Iterable<Integer> call(final Transaction transaction)
-				throws Exception {
-			return transaction;
-		}
 	}
 
 	/** Read in transactions */

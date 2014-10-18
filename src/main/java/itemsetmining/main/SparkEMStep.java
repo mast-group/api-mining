@@ -3,135 +3,174 @@ package itemsetmining.main;
 import itemsetmining.itemset.Itemset;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
+import itemsetmining.transaction.TransactionDatabase;
 
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.function.FlatMapFunction;
-import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.Function2;
-import org.apache.spark.api.java.function.PairFunction;
 
 import scala.Tuple2;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.Multiset;
 
-/** Class to hold the various parallel transaction EM Steps for Spark */
+/** Class to hold the various transaction EM Steps for Spark */
 public class SparkEMStep {
 
-	/** Spark parallel E-step and M-step combined */
-	static double parallelEMStep(final JavaRDD<Transaction> transactions,
-			final InferenceAlgorithm inferenceAlgorithm,
-			final HashMap<Itemset, Double> itemsets,
-			final double noTransactions,
-			final HashMap<Itemset, Double> newItemsets) {
+	/** Initialize cached itemsets */
+	static void parallelInitializeCachedItemsets(
+			TransactionDatabase transactions, final Multiset<Integer> singletons) {
+		JavaRDD<Transaction> updatedTransactions = transactions
+				.getTransactionRDD().map(
+						t -> {
+							t.initializeCachedItemsets(singletons,
+									transactions.size());
+							return t;
+						});
 
-		// Map: Parallel E-step and M-step combined
-		final JavaPairRDD<Set<Itemset>, Double> coveringWithCost = transactions
-				.mapToPair(new PairFunction<Transaction, Set<Itemset>, Double>() {
-					private static final long serialVersionUID = -4944391752990605173L;
+		// Update cache reference
+		transactions.updateTransactionCache(updatedTransactions);
+	}
 
-					@Override
-					public Tuple2<Set<Itemset>, Double> call(
-							final Transaction transaction) {
-						final Set<Itemset> covering = Sets.newHashSet();
-						final double cost = inferenceAlgorithm.infer(covering,
-								itemsets, transaction);
-						return new Tuple2<Set<Itemset>, Double>(covering, cost);
-					}
+	/** EM-step for hard EM */
+	static Map<Itemset, Double> parallelEMStep(
+			final TransactionDatabase transactions,
+			final InferenceAlgorithm inferenceAlgorithm) {
+
+		// E-step: map and cache covering
+		JavaPairRDD<Transaction, Set<Itemset>> transactionWithCovering = transactions
+				.getTransactionRDD()
+				.mapToPair(
+						t -> {
+							final HashSet<Itemset> covering = inferenceAlgorithm
+									.infer(t);
+							t.setCachedCovering(covering);
+							return new Tuple2<Transaction, Set<Itemset>>(t,
+									covering);
+						});
+
+		// E-step: reduce and get itemset counts
+		List<Tuple2<Itemset, Integer>> coveringWithCounts = transactionWithCovering
+				.values().flatMap(s -> s)
+				.mapToPair(s -> new Tuple2<Itemset, Integer>(s, 1))
+				.reduceByKey((a, b) -> a + b).collect();
+
+		// M-step
+		final Map<Itemset, Double> newItemsets = coveringWithCounts
+				.parallelStream().collect(
+						Collectors.toMap(Tuple2::_1, t -> t._2
+								/ (double) transactions.size()));
+
+		// Update cached itemsets
+		JavaRDD<Transaction> updatedTransactions = transactionWithCovering
+				.keys().map(t -> {
+					t.updateCachedItemsets(newItemsets);
+					return t;
 				});
 
-		// Reduce: get Itemset counts
-		final List<Tuple2<Itemset, Integer>> coveringWithCounts = coveringWithCost
-				.keys().flatMap(new GetItemSets())
-				.mapToPair(new PairItemsetCount()).reduceByKey(new SumCounts())
-				.collect();
+		// Update cache reference
+		transactions.updateTransactionCache(updatedTransactions);
 
-		// Normalise probabilities
-		for (final Tuple2<Itemset, Integer> tuple : coveringWithCounts) {
-			newItemsets.put(tuple._1, tuple._2 / noTransactions);
-		}
-
-		// Reduce: sum Itemset costs
-		return coveringWithCost.values().reduce(
-				new SparkItemsetMining.SumCost())
-				/ noTransactions;
+		return newItemsets;
 	}
 
-	/** Spark parallel E-step and M-step combined (without covering, just cost) */
-	static double parallelEMStep(final JavaRDD<Transaction> transactions,
-			final InferenceAlgorithm inferenceAlgorithm,
-			final HashMap<Itemset, Double> itemsets,
-			final double noTransactions, final Itemset candidate,
-			final double prob) {
+	/** Get average cost of last EM-step */
+	static void calculateAndSetAverageCost(
+			final TransactionDatabase transactions) {
+		final double averageCost = transactions.getTransactionRDD()
+				.map(Transaction::getCachedCost).reduce((a, b) -> a + b)
+				/ (double) transactions.size();
+		transactions.setAverageCost(averageCost);
+	}
 
-		// Map: Parallel E-step and M-step combined
-		final JavaRDD<Double> coveringWithCost = transactions
-				.map(new Function<Transaction, Double>() {
-					private static final long serialVersionUID = 3493612139439314721L;
+	/** EM-step for structural EM */
+	static double parallelEMStep(final TransactionDatabase transactions,
+			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
-					@Override
-					public Double call(final Transaction transaction) {
+		// E-step: map candidate to supported transactions and cache covering
+		JavaPairRDD<Transaction, Set<Itemset>> transactionWithCovering = transactions
+				.getTransactionRDD()
+				.mapToPair(
+						t -> {
+							if (t.contains(candidate)) {
+								t.addItemsetCache(candidate, 1.0);
+								final HashSet<Itemset> covering = inferenceAlgorithm
+										.infer(t);
+								t.setTempCachedCovering(covering);
+								return new Tuple2<Transaction, Set<Itemset>>(t,
+										covering);
+							}
+							return new Tuple2<Transaction, Set<Itemset>>(t, t
+									.getCachedCovering());
+						});
 
-						double cost;
-						final Set<Itemset> covering = Sets.newHashSet();
-						if (itemsets == null) { // use cache
-							final boolean hasChanged = transaction
-									.addItemsetCache(candidate, prob, subsets);
-							if (hasChanged)
-								cost = inferenceAlgorithm.infer(covering,
-										itemsets, transaction);
-							// No need for cache remove as RDD is immutable
-							else
-								cost = transaction.getCost(); // use cached cost
-						} else {
-							cost = inferenceAlgorithm.infer(covering, itemsets,
-									transaction);
-						}
-						return cost;
+		// E-step: reduce and get itemset counts
+		List<Tuple2<Itemset, Integer>> coveringWithCounts = transactionWithCovering
+				.values().flatMap(s -> s)
+				.mapToPair(s -> new Tuple2<Itemset, Integer>(s, 1))
+				.reduceByKey((a, b) -> a + b).collect();
 
-					}
+		// M-step
+		final Map<Itemset, Double> newItemsets = coveringWithCounts
+				.parallelStream().collect(
+						Collectors.toMap(Tuple2::_1, t -> t._2
+								/ (double) transactions.size()));
+
+		// Get cost per transaction
+		JavaPairRDD<Transaction, Double> transactionWithCost = transactionWithCovering
+				.keys().mapToPair(t -> {
+					final double cost = t.getCachedCost(newItemsets);
+					t.removeItemsetCache(candidate);
+					return new Tuple2<Transaction, Double>(t, cost);
 				});
 
-		// Reduce: sum Itemset costs
-		return coveringWithCost.reduce(new SparkItemsetMining.SumCost())
-				/ noTransactions;
+		// Get average cost
+		double averageCost = transactionWithCost.values().reduce(
+				(a, b) -> a + b)
+				/ (double) transactions.size();
+		transactions.setAverageCost(averageCost);
+
+		// Update cache reference
+		transactions.updateTransactionCache(transactionWithCost.keys());
+
+		return averageCost;
 	}
 
-	/** Pair itemsets with counts */
-	private static class PairItemsetCount implements
-			PairFunction<Itemset, Itemset, Integer> {
-		private static final long serialVersionUID = 2455054429227183005L;
+	/** Add accepted candidate itemset to cache */
+	static Map<Itemset, Double> parallelAddAcceptedItemsetCache(
+			final TransactionDatabase transactions, final Itemset candidate) {
 
-		@Override
-		public Tuple2<Itemset, Integer> call(final Itemset set) {
-			return new Tuple2<Itemset, Integer>(set, 1);
-		}
-	}
+		// Cached E-step
+		List<Tuple2<Itemset, Integer>> coveringWithCounts = transactions
+				.getTransactionRDD().map(t -> {
+					if (t.contains(candidate))
+						return t.getTempCachedCovering();
+					return t.getCachedCovering();
+				}).flatMap(s -> s)
+				.mapToPair(s -> new Tuple2<Itemset, Integer>(s, 1))
+				.reduceByKey((a, b) -> a + b).collect();
 
-	/** Get itemsets from a set of itemsets */
-	private static class GetItemSets implements
-			FlatMapFunction<Set<Itemset>, Itemset> {
-		private static final long serialVersionUID = -1372354921360086260L;
+		// M-step
+		Map<Itemset, Double> newItemsets = coveringWithCounts.parallelStream()
+				.collect(
+						Collectors.toMap(Tuple2::_1, t -> t._2
+								/ (double) transactions.size()));
 
-		@Override
-		public Iterable<Itemset> call(final Set<Itemset> itemset)
-				throws Exception {
-			return itemset;
-		}
-	}
+		// Update cached itemsets
+		JavaRDD<Transaction> updatedTransactions = transactions
+				.getTransactionRDD().map(t -> {
+					t.updateCachedItemsets(newItemsets);
+					return t;
+				});
 
-	/** Add together counts */
-	static class SumCounts implements Function2<Integer, Integer, Integer> {
-		private static final long serialVersionUID = 2511101612333272343L;
+		// Update cache reference
+		transactions.updateTransactionCache(updatedTransactions);
 
-		@Override
-		public Integer call(final Integer a, final Integer b) {
-			return a + b;
-		}
+		return newItemsets;
 	}
 
 	private SparkEMStep() {

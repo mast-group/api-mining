@@ -51,11 +51,10 @@ public abstract class ItemsetMiningCore {
 		// Initialize itemset cache
 		final long noTransactions = transactions.size();
 		if (transactions instanceof TransactionRDD) {
-			transactions = SparkCacheFunctions.parallelInitializeCache(
-					transactions, singletons);
+			SparkEMStep.parallelInitializeCachedItemsets(transactions,
+					singletons);
 		} else {
-			EMStep.parallelInitializeCachedItemsets(
-					transactions.getTransactionList(), singletons);
+			EMStep.parallelInitializeCachedItemsets(transactions, singletons);
 		}
 
 		// Intialize itemsets with singleton sets and their relative support
@@ -162,7 +161,6 @@ public abstract class ItemsetMiningCore {
 		logger.fine(" Structure Optimal Itemsets: " + itemsets + "\n");
 
 		Map<Itemset, Double> prevItemsets = itemsets;
-		final double noTransactions = transactions.size();
 
 		double norm = 1;
 		while (norm > OPTIMIZE_TOL) {
@@ -171,17 +169,12 @@ public abstract class ItemsetMiningCore {
 			final Map<Itemset, Double> newItemsets;
 
 			// Parallel E-step and M-step combined
-			if (transactions instanceof TransactionRDD) {
-				newItemsets = Maps.newHashMap();
-				SparkEMStep.parallelEMStep(transactions.getTransactionRDD(),
-						inferenceAlgorithm, noTransactions, newItemsets);
-				transactions = SparkCacheFunctions
-						.parallelUpdateCacheProbabilities(transactions,
-								newItemsets);
-			} else {
+			if (transactions instanceof TransactionRDD)
+				newItemsets = SparkEMStep.parallelEMStep(transactions,
+						inferenceAlgorithm);
+			else
 				newItemsets = EMStep.parallelEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm);
-			}
 
 			// If set has stabilised calculate norm(p_prev - p_new)
 			if (prevItemsets.keySet().equals(newItemsets.keySet())) {
@@ -197,23 +190,18 @@ public abstract class ItemsetMiningCore {
 		}
 
 		// Calculate average cost of last covering
-		double averageCost;
-		if (transactions instanceof TransactionRDD) {
-			// FIXME implement
-		} else {
-			averageCost = EMStep.getAverageCost(transactions
-					.getTransactionList());
-		}
+		if (transactions instanceof TransactionRDD)
+			SparkEMStep.calculateAndSetAverageCost(transactions);
+		else
+			EMStep.calculateAndSetAverageCost(transactions);
 
 		itemsets.clear();
 		itemsets.putAll(prevItemsets);
 		logger.fine(" Parameter Optimal Itemsets: " + itemsets + "\n");
+		double averageCost = transactions.getAverageCost();
 		logger.fine(String.format(" Average cost: %.2f%n", averageCost));
 		assert !Double.isNaN(averageCost);
 		assert !Double.isInfinite(averageCost);
-
-		// Update average cost for transactions
-		transactions.setAverageCost(averageCost);
 
 		return transactions;
 	}
@@ -333,17 +321,15 @@ public abstract class ItemsetMiningCore {
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
 		logger.finer("\n Candidate: " + candidate);
-		final double noTransactions = transactions.size();
 
 		// Find cost in parallel
-		double curCost = 0;
+		double curCost;
 		if (transactions instanceof TransactionRDD) {
-			curCost = SparkEMStep.parallelEMStep(
-					transactions.getTransactionRDD(), inferenceAlgorithm,
-					noTransactions, candidate);
-		} else {
-			curCost = EMStep.parallelEMStep(transactions.getTransactionList(),
+			curCost = SparkEMStep.parallelEMStep(transactions,
 					inferenceAlgorithm, candidate);
+		} else {
+			curCost = EMStep.parallelEMStep(transactions, inferenceAlgorithm,
+					candidate);
 		}
 		logger.finer(String.format(", cost: %.2f", curCost));
 
@@ -353,11 +339,11 @@ public abstract class ItemsetMiningCore {
 			// Update cache with candidate
 			Map<Itemset, Double> newItemsets;
 			if (transactions instanceof TransactionRDD) {
-				transactions = SparkCacheFunctions.parallelAddItemsetCache(
+				newItemsets = SparkEMStep.parallelAddAcceptedItemsetCache(
 						transactions, candidate);
 			} else {
 				newItemsets = EMStep.parallelAddAcceptedItemsetCache(
-						transactions.getTransactionList(), candidate);
+						transactions, candidate);
 			}
 			// Update itemsets with newly inferred itemsets
 			itemsets.clear();

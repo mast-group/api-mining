@@ -4,7 +4,6 @@ import itemsetmining.itemset.Itemset;
 import itemsetmining.itemset.ItemsetTree;
 import itemsetmining.itemset.Rule;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
-import itemsetmining.main.InferenceAlgorithms.InferILP;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionList;
@@ -73,9 +72,6 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 		// Set up logging
 		setUpConsoleLogger();
-
-		if (inferenceAlgorithm instanceof InferILP)
-			logger.warning(" Reverting to Serial for ILP...");
 
 		// Read in transaction database
 		final TransactionList transactions = readTransactions(inputFile);
