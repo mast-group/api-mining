@@ -114,8 +114,12 @@ public class EMStep {
 				.reduce(0., (sum, c) -> sum += c, (sum1, sum2) -> sum1 + sum2)
 				/ (double) transactions.size();
 
-		return new Tuple2<Double, Double>(averageCost,
-				newItemsets.get(candidate));
+		// Get candidate prob
+		Double prob = newItemsets.get(candidate);
+		if (prob == null)
+			prob = 0.;
+
+		return new Tuple2<Double, Double>(averageCost, prob);
 	}
 
 	/** Add accepted candidate itemset to cache */

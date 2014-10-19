@@ -88,7 +88,8 @@ public class SparkEMStep {
 	}
 
 	/** EM-step for structural EM */
-	static Tuple2<Double, Double> parallelEMStep(final TransactionDatabase transactions,
+	static Tuple2<Double, Double> parallelEMStep(
+			final TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
 		// E-step: map candidate to supported transactions and cache covering
@@ -141,18 +142,23 @@ public class SparkEMStep {
 		// Update cache reference
 		transactions.updateTransactionCache(transactionWithCost.keys());
 
-		return new Tuple2<Double, Double>(averageCost,
-				newItemsets.get(candidate));
+		// Get candidate prob
+		Double prob = newItemsets.get(candidate);
+		if (prob == null)
+			prob = 0.;
+
+		return new Tuple2<Double, Double>(averageCost, prob);
 	}
 
 	/** Add accepted candidate itemset to cache */
 	static Map<Itemset, Double> parallelAddAcceptedItemsetCache(
-			final TransactionDatabase transactions, final Itemset candidate, final double prob) {
+			final TransactionDatabase transactions, final Itemset candidate,
+			final double prob) {
 
 		// Cached E-step
 		List<Tuple2<Itemset, Integer>> coveringWithCounts = transactions
 				.getTransactionRDD().map(t -> {
-					if (t.contains(candidate)){
+					if (t.contains(candidate)) {
 						t.addItemsetCache(candidate, prob);
 						return t.getTempCachedCovering();
 					}
