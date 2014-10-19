@@ -42,7 +42,7 @@ public abstract class ItemsetMiningCore {
 	 * Learn itemsets model using structural EM
 	 */
 	protected static HashMap<Itemset, Double> structuralEM(
-			TransactionDatabase transactions,
+			final TransactionDatabase transactions,
 			final Multiset<Integer> singletons, final ItemsetTree tree,
 			final InferenceAlgorithm inferenceAlgorithm,
 			final int maxStructureSteps, final int maxEMIterations) {
@@ -51,7 +51,6 @@ public abstract class ItemsetMiningCore {
 		final long startTime = System.currentTimeMillis();
 
 		// Initialize itemset cache
-		final long noTransactions = transactions.size();
 		if (transactions instanceof TransactionRDD) {
 			SparkEMStep.parallelInitializeCachedItemsets(transactions,
 					singletons);
@@ -66,7 +65,7 @@ public abstract class ItemsetMiningCore {
 		for (final Multiset.Entry<Integer> entry : singletons.entrySet()) {
 			final Itemset set = new Itemset(entry.getElement());
 			final int support = entry.getCount();
-			itemsets.put(set, support / (double) noTransactions);
+			itemsets.put(set, support / (double) transactions.size());
 			supports.put(set, support);
 		}
 		logger.fine(" Initial itemsets: " + itemsets + "\n");
@@ -83,8 +82,7 @@ public abstract class ItemsetMiningCore {
 		}.compound(Ordering.usingToString());
 
 		// Initialize average cost per transaction for singletons
-		transactions = expectationMaximizationStep(itemsets, transactions,
-				inferenceAlgorithm);
+		expectationMaximizationStep(itemsets, transactions, inferenceAlgorithm);
 
 		// Structural EM
 		boolean breakLoop = false;
@@ -94,7 +92,7 @@ public abstract class ItemsetMiningCore {
 			if (iteration % COMBINE_ITEMSETS_EVERY == 0) {
 				logger.finer("\n----- Itemset Combination at Step " + iteration
 						+ "\n");
-				transactions = combineItemsetsStep(itemsets, transactions,
+				combineItemsetsStep(itemsets, transactions, tree,
 						rejected_sets, inferenceAlgorithm, maxStructureSteps,
 						supportOrdering, supports);
 				if (transactions.getIterationLimitExceeded())
@@ -102,8 +100,8 @@ public abstract class ItemsetMiningCore {
 			} else {
 				logger.finer("\n+++++ Tree Structural Optimization at Step "
 						+ iteration + "\n");
-				transactions = learnStructureStep(itemsets, transactions, tree,
-						rejected_sets, inferenceAlgorithm, maxStructureSteps);
+				learnStructureStep(itemsets, transactions, tree, rejected_sets,
+						inferenceAlgorithm, maxStructureSteps);
 				if (transactions.getIterationLimitExceeded())
 					breakLoop = true;
 			}
@@ -115,8 +113,8 @@ public abstract class ItemsetMiningCore {
 					|| iteration == maxEMIterations || breakLoop == true) {
 				logger.fine("\n***** Parameter Optimization at Step "
 						+ iteration + "\n");
-				transactions = expectationMaximizationStep(itemsets,
-						transactions, inferenceAlgorithm);
+				expectationMaximizationStep(itemsets, transactions,
+						inferenceAlgorithm);
 			}
 
 			// Break loop if requested
@@ -155,9 +153,9 @@ public abstract class ItemsetMiningCore {
 	 *         <p>
 	 *         NB. zero probability itemsets are dropped
 	 */
-	private static TransactionDatabase expectationMaximizationStep(
+	private static void expectationMaximizationStep(
 			final HashMap<Itemset, Double> itemsets,
-			TransactionDatabase transactions,
+			final TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm) {
 
 		logger.fine(" Structure Optimal Itemsets: " + itemsets + "\n");
@@ -200,16 +198,12 @@ public abstract class ItemsetMiningCore {
 		itemsets.clear();
 		itemsets.putAll(prevItemsets);
 		logger.fine(" Parameter Optimal Itemsets: " + itemsets + "\n");
-		double averageCost = transactions.getAverageCost();
-		logger.fine(String.format(" Average cost: %.2f%n", averageCost));
-		assert !Double.isNaN(averageCost);
-		assert !Double.isInfinite(averageCost);
-
-		return transactions;
+		logger.fine(String.format(" Average cost: %.2f%n",
+				transactions.getAverageCost()));
 	}
 
 	/** Generate candidate itemsets from Itemset tree */
-	private static TransactionDatabase learnStructureStep(
+	private static void learnStructureStep(
 			final HashMap<Itemset, Double> itemsets,
 			final TransactionDatabase transactions, final ItemsetTree tree,
 			final Set<Itemset> rejected_sets,
@@ -232,10 +226,10 @@ public abstract class ItemsetMiningCore {
 					rejected_sets.add(candidate);
 					continue;
 				}
-				final TransactionDatabase betterCost = evaluateCandidate(
-						itemsets, transactions, inferenceAlgorithm, candidate);
-				if (betterCost != null) // Better itemset found
-					return betterCost;
+				final boolean accepted = evaluateCandidate(itemsets,
+						transactions, inferenceAlgorithm, candidate);
+				if (accepted == true) // Better itemset found
+					return;
 				rejected_sets.add(candidate); // otherwise add to rejected
 				logger.finer("\n Structural candidate itemsets: ");
 			}
@@ -245,7 +239,6 @@ public abstract class ItemsetMiningCore {
 		// No better itemset found
 		logger.warning("\n\n Structure iteration limit exceeded. No better candidate found.\n");
 		transactions.setIterationLimitExceeded();
-		return transactions;
 	}
 
 	/**
@@ -254,9 +247,9 @@ public abstract class ItemsetMiningCore {
 	 * @param itemsetOrdering
 	 *            ordering that determines which itemsets to combine first
 	 */
-	private static TransactionDatabase combineItemsetsStep(
+	private static void combineItemsetsStep(
 			final HashMap<Itemset, Double> itemsets,
-			final TransactionDatabase transactions,
+			final TransactionDatabase transactions, final ItemsetTree tree,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps,
 			final Ordering<Itemset> itemsetOrdering,
@@ -287,14 +280,14 @@ public abstract class ItemsetMiningCore {
 						// Evaluate candidate itemset
 						if (!rejected_sets.contains(candidate)) {
 							rejected_sets.add(candidate); // candidate seen
-							final TransactionDatabase betterCost = evaluateCandidate(
+							final boolean accepted = evaluateCandidate(
 									itemsets, transactions, inferenceAlgorithm,
 									candidate);
-							if (betterCost != null) { // Better itemset found
+							if (accepted == true) { // Better itemset found
 								// update supports
-								supports.put(candidate, (int) (itemsets
-										.get(candidate) * transactions.size()));
-								return betterCost;
+								supports.put(candidate,
+										tree.getSupportOfItemset(candidate));
+								return;
 							}
 							// logger.finest("\n Structural candidate itemsets: ");
 						}
@@ -302,7 +295,7 @@ public abstract class ItemsetMiningCore {
 						iteration++;
 						if (iteration > maxSteps) { // Iteration limit exceeded
 							logger.warning("\n Combine iteration limit exceeded.\n");
-							return transactions; // No better itemset found
+							return; // No better itemset found
 						}
 
 					}
@@ -313,13 +306,12 @@ public abstract class ItemsetMiningCore {
 		// No better itemset found
 		logger.info("\n All possible candidates suggested. Exiting. \n");
 		transactions.setIterationLimitExceeded();
-		return transactions;
 	}
 
 	/** Evaluate a candidate itemset to see if it should be included */
-	private static TransactionDatabase evaluateCandidate(
+	private static boolean evaluateCandidate(
 			final HashMap<Itemset, Double> itemsets,
-			TransactionDatabase transactions,
+			final TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
 		logger.finer("\n Candidate: " + candidate);
@@ -333,8 +325,8 @@ public abstract class ItemsetMiningCore {
 			costAndProb = EMStep.parallelEMStep(transactions,
 					inferenceAlgorithm, candidate);
 		}
-		double curCost = costAndProb._1;
-		double prob = costAndProb._2;
+		final double curCost = costAndProb._1;
+		final double prob = costAndProb._2;
 		logger.finer(String.format(", cost: %.2f", curCost));
 
 		// Return if better set of itemsets found
@@ -353,11 +345,11 @@ public abstract class ItemsetMiningCore {
 			itemsets.clear();
 			itemsets.putAll(newItemsets);
 			transactions.setAverageCost(curCost);
-			return transactions;
+			return true;
 		} // otherwise keep trying
 
 		// No better candidate found
-		return null;
+		return false;
 	}
 
 	/**
