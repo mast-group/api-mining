@@ -88,7 +88,7 @@ public class SparkEMStep {
 	}
 
 	/** EM-step for structural EM */
-	static double parallelEMStep(final TransactionDatabase transactions,
+	static Tuple2<Double, Double> parallelEMStep(final TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
 		// E-step: map candidate to supported transactions and cache covering
@@ -123,7 +123,11 @@ public class SparkEMStep {
 		// Get cost per transaction
 		JavaPairRDD<Transaction, Double> transactionWithCost = transactionWithCovering
 				.keys().mapToPair(t -> {
-					final double cost = t.getCachedCost(newItemsets);
+					double cost;
+					if (t.contains(candidate))
+						cost = t.getTempCachedCost(newItemsets);
+					else
+						cost = t.getCachedCost(newItemsets);
 					t.removeItemsetCache(candidate);
 					return new Tuple2<Transaction, Double>(t, cost);
 				});
@@ -137,18 +141,21 @@ public class SparkEMStep {
 		// Update cache reference
 		transactions.updateTransactionCache(transactionWithCost.keys());
 
-		return averageCost;
+		return new Tuple2<Double, Double>(averageCost,
+				newItemsets.get(candidate));
 	}
 
 	/** Add accepted candidate itemset to cache */
 	static Map<Itemset, Double> parallelAddAcceptedItemsetCache(
-			final TransactionDatabase transactions, final Itemset candidate) {
+			final TransactionDatabase transactions, final Itemset candidate, final double prob) {
 
 		// Cached E-step
 		List<Tuple2<Itemset, Integer>> coveringWithCounts = transactions
 				.getTransactionRDD().map(t -> {
-					if (t.contains(candidate))
+					if (t.contains(candidate)){
+						t.addItemsetCache(candidate, prob);
 						return t.getTempCachedCovering();
+					}
 					return t.getCachedCovering();
 				}).flatMap(s -> s)
 				.mapToPair(s -> new Tuple2<Itemset, Integer>(s, 1))

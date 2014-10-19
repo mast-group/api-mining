@@ -14,6 +14,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import scala.Tuple2;
+
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
@@ -323,14 +325,16 @@ public abstract class ItemsetMiningCore {
 		logger.finer("\n Candidate: " + candidate);
 
 		// Find cost in parallel
-		double curCost;
+		Tuple2<Double, Double> costAndProb;
 		if (transactions instanceof TransactionRDD) {
-			curCost = SparkEMStep.parallelEMStep(transactions,
+			costAndProb = SparkEMStep.parallelEMStep(transactions,
 					inferenceAlgorithm, candidate);
 		} else {
-			curCost = EMStep.parallelEMStep(transactions, inferenceAlgorithm,
-					candidate);
+			costAndProb = EMStep.parallelEMStep(transactions,
+					inferenceAlgorithm, candidate);
 		}
+		double curCost = costAndProb._1;
+		double prob = costAndProb._2;
 		logger.finer(String.format(", cost: %.2f", curCost));
 
 		// Return if better set of itemsets found
@@ -340,10 +344,10 @@ public abstract class ItemsetMiningCore {
 			Map<Itemset, Double> newItemsets;
 			if (transactions instanceof TransactionRDD) {
 				newItemsets = SparkEMStep.parallelAddAcceptedItemsetCache(
-						transactions, candidate);
+						transactions, candidate, prob);
 			} else {
 				newItemsets = EMStep.parallelAddAcceptedItemsetCache(
-						transactions, candidate);
+						transactions, candidate, prob);
 			}
 			// Update itemsets with newly inferred itemsets
 			itemsets.clear();

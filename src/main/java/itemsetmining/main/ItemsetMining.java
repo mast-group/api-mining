@@ -36,7 +36,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
-		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/retail.dat";
+		final String dataset = "/home/jari/plants.dat";
 		final boolean associationRules = false;
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 

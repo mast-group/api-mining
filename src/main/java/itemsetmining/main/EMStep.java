@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import scala.Tuple2;
+
 import com.google.common.collect.Multiset;
 
 /** Class to hold the various transaction EM Steps */
@@ -70,7 +72,8 @@ public class EMStep {
 	}
 
 	/** EM-step for structural EM */
-	static double parallelEMStep(TransactionDatabase transactions,
+	static Tuple2<Double, Double> parallelEMStep(
+			TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 
 		// E-step (adding candidate to transactions that support it)
@@ -100,25 +103,33 @@ public class EMStep {
 		// Get average cost (removing candidate from supported transactions)
 		final double averageCost = transactions.getTransactionList()
 				.parallelStream().map(t -> {
-					final double cost = t.getCachedCost(newItemsets);
+					double cost;
+					if (t.contains(candidate))
+						cost = t.getTempCachedCost(newItemsets);
+					else
+						cost = t.getCachedCost(newItemsets);
 					t.removeItemsetCache(candidate);
 					return cost;
 				})
 				.reduce(0., (sum, c) -> sum += c, (sum1, sum2) -> sum1 + sum2)
 				/ (double) transactions.size();
 
-		return averageCost;
+		return new Tuple2<Double, Double>(averageCost,
+				newItemsets.get(candidate));
 	}
 
 	/** Add accepted candidate itemset to cache */
 	static Map<Itemset, Double> parallelAddAcceptedItemsetCache(
-			final TransactionDatabase transactions, final Itemset candidate) {
+			final TransactionDatabase transactions, final Itemset candidate,
+			final double prob) {
 
-		// Cached E-step
+		// Cached E-step (adding candidate to transactions that support it)
 		final Map<Itemset, Long> coveringWithCounts = transactions
 				.getTransactionList().parallelStream().map(t -> {
-					if (t.contains(candidate))
+					if (t.contains(candidate)) {
+						t.addItemsetCache(candidate, prob);
 						return t.getTempCachedCovering();
+					}
 					return t.getCachedCovering();
 				}).flatMap(HashSet::stream)
 				.collect(groupingBy(identity(), counting()));

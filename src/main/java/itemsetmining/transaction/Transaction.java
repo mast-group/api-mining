@@ -71,14 +71,25 @@ public class Transaction extends AbstractItemset implements Serializable {
 		return totalCost;
 	}
 
-	/** Get the cost of cached covering for structural EM-step */
+	/** Get cost of cached covering for structural EM-step */
 	public double getCachedCost(final Map<Itemset, Double> itemsets) {
+		return calculateCachedCost(itemsets, cachedCovering);
+	}
+
+	/** Get cost of temp. cached covering for structural EM-step */
+	public double getTempCachedCost(final Map<Itemset, Double> itemsets) {
+		return calculateCachedCost(itemsets, tempCachedCovering);
+	}
+
+	/** Calculate cached cost for structural EM-step */
+	private double calculateCachedCost(final Map<Itemset, Double> itemsets,
+			HashSet<Itemset> covering) {
 		double totalCost = 0;
 		for (final Entry<Itemset, Double> entry : cachedItemsets.entrySet()) {
 			final Itemset set = entry.getKey();
 			final Double prob = itemsets.get(set);
 			if (prob != null) {
-				if (tempCachedCovering.contains(set))
+				if (covering.contains(set))
 					totalCost += -Math.log(prob);
 				else
 					totalCost += -Math.log(1 - prob);
