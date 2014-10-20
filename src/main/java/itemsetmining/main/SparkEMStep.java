@@ -22,7 +22,7 @@ import com.google.common.collect.Multiset;
 public class SparkEMStep {
 
 	/** Initialize cached itemsets */
-	static void parallelInitializeCachedItemsets(
+	static void initializeCachedItemsets(
 			final TransactionDatabase transactions,
 			final Multiset<Integer> singletons) {
 		final long noTransactions = transactions.size();
@@ -37,7 +37,7 @@ public class SparkEMStep {
 	}
 
 	/** EM-step for hard EM */
-	static Map<Itemset, Double> parallelEMStep(
+	static Map<Itemset, Double> hardEMStep(
 			final TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm) {
 		final double noTransactions = transactions.size();
@@ -90,7 +90,7 @@ public class SparkEMStep {
 	}
 
 	/** EM-step for structural EM */
-	static Tuple2<Double, Double> parallelEMStep(
+	static Tuple2<Double, Double> structuralEMStep(
 			final TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
 		final double noTransactions = transactions.size();
@@ -153,7 +153,7 @@ public class SparkEMStep {
 	}
 
 	/** Add accepted candidate itemset to cache */
-	static Map<Itemset, Double> parallelAddAcceptedItemsetCache(
+	static Map<Itemset, Double> addAcceptedCandidateCache(
 			final TransactionDatabase transactions, final Itemset candidate,
 			final double prob) {
 		final double noTransactions = transactions.size();

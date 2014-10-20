@@ -52,10 +52,10 @@ public abstract class ItemsetMiningCore {
 
 		// Initialize itemset cache
 		if (transactions instanceof TransactionRDD) {
-			SparkEMStep.parallelInitializeCachedItemsets(transactions,
+			SparkEMStep.initializeCachedItemsets(transactions,
 					singletons);
 		} else {
-			EMStep.parallelInitializeCachedItemsets(transactions, singletons);
+			EMStep.initializeCachedItemsets(transactions, singletons);
 		}
 
 		// Intialize itemsets with singleton sets and their relative support
@@ -170,10 +170,10 @@ public abstract class ItemsetMiningCore {
 
 			// Parallel E-step and M-step combined
 			if (transactions instanceof TransactionRDD)
-				newItemsets = SparkEMStep.parallelEMStep(transactions,
+				newItemsets = SparkEMStep.hardEMStep(transactions,
 						inferenceAlgorithm);
 			else
-				newItemsets = EMStep.parallelEMStep(
+				newItemsets = EMStep.hardEMStep(
 						transactions.getTransactionList(), inferenceAlgorithm);
 
 			// If set has stabilised calculate norm(p_prev - p_new)
@@ -319,10 +319,10 @@ public abstract class ItemsetMiningCore {
 		// Find cost in parallel
 		Tuple2<Double, Double> costAndProb;
 		if (transactions instanceof TransactionRDD) {
-			costAndProb = SparkEMStep.parallelEMStep(transactions,
+			costAndProb = SparkEMStep.structuralEMStep(transactions,
 					inferenceAlgorithm, candidate);
 		} else {
-			costAndProb = EMStep.parallelEMStep(transactions,
+			costAndProb = EMStep.structuralEMStep(transactions,
 					inferenceAlgorithm, candidate);
 		}
 		final double curCost = costAndProb._1;
@@ -335,10 +335,10 @@ public abstract class ItemsetMiningCore {
 			// Update cache with candidate
 			Map<Itemset, Double> newItemsets;
 			if (transactions instanceof TransactionRDD) {
-				newItemsets = SparkEMStep.parallelAddAcceptedItemsetCache(
+				newItemsets = SparkEMStep.addAcceptedCandidateCache(
 						transactions, candidate, prob);
 			} else {
-				newItemsets = EMStep.parallelAddAcceptedItemsetCache(
+				newItemsets = EMStep.addAcceptedCandidateCache(
 						transactions, candidate, prob);
 			}
 			// Update itemsets with newly inferred itemsets
