@@ -9,7 +9,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.net.InetAddress;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -31,10 +30,12 @@ public class ItemsetScaling {
 	private static final File saveDir = new File("/disk/data1/jfowkes/logs/");
 
 	/** Set of mined itemsets to use for background */
+	private static final String name = "plants-based";
 	private static final File itemsetLog = new File(
-			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/plants-09.10.2014-16:45:44.log");
+			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/plants-20.10.2014-11:12:45.log");
 
 	/** Spark Settings */
+	private static final boolean useSpark = false;
 	private static final Level LOG_LEVEL = Level.FINE;
 	private static final long MAX_RUNTIME = 6 * 60; // 6hrs
 	private static final int maxStructureSteps = 100_000;
@@ -43,11 +44,9 @@ public class ItemsetScaling {
 	public static void main(final String[] args) throws IOException,
 			InterruptedException {
 
-		// Run with spark
-		final int[] cores = new int[] { 1, 4, 16, 64 };
-		for (final int noCores : cores)
-			scalingTransactions(true, noCores, new int[] { 1_000, 10_000,
-					100_000, 1_000_000, 10_000_000, 100_000_000 });
+		// Run
+		scalingTransactions(64, new int[] { 1_000, 10_000, 100_000, 1_000_000,
+				10_000_000, 100_000_000 });
 
 		// generateSyntheticDatabase(
 		// 34781,
@@ -55,19 +54,18 @@ public class ItemsetScaling {
 		// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/plants_synthetic.dat"));
 	}
 
-	public static void scalingTransactions(final boolean useSpark,
-			final int noCores, final int[] trans) throws IOException,
-			InterruptedException {
+	public static void scalingTransactions(final int noCores, final int[] trans)
+			throws IOException, InterruptedException {
 
 		final double[] time = new double[trans.length];
 		final DecimalFormat formatter = new DecimalFormat("0.0E0");
 
 		// Save to file
-		String name = InetAddress.getLocalHost().getHostName();
+		String prefix = "";
 		if (useSpark)
-			name = "Spark";
+			prefix = "spark_";
 		final FileOutputStream outFile = new FileOutputStream(saveDir + "/"
-				+ name + "_scaling_" + noCores + ".txt");
+				+ prefix + name + "_scaling_" + noCores + ".txt");
 		final TeeOutputStream out = new TeeOutputStream(System.out, outFile);
 		final PrintStream ps = new PrintStream(out);
 		System.setOut(ps);

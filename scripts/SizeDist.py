@@ -7,7 +7,7 @@ import re
 ''' Get size distribution for itemsets '''
 
 logdir = '/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/'
-logfile = logdir + 'plants-09.10.2014-16:45:44.log'
+logfile = logdir + 'plants-20.10.2014-11:12:45.log'
 
 f = open(logfile,'r')
 

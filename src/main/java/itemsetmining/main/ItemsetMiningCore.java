@@ -36,7 +36,7 @@ public abstract class ItemsetMiningCore {
 	/** Variable settings */
 	protected static Level LOG_LEVEL = Level.FINE;
 	protected static boolean TIMESTAMP_LOG = true;
-	protected static long MAX_RUNTIME = 12 * 60 * 60 * 1_000; // 12hrs
+	protected static long MAX_RUNTIME = 6 * 60 * 60 * 1_000; // 6hrs
 
 	/**
 	 * Learn itemsets model using structural EM
@@ -52,8 +52,7 @@ public abstract class ItemsetMiningCore {
 
 		// Initialize itemset cache
 		if (transactions instanceof TransactionRDD) {
-			SparkEMStep.initializeCachedItemsets(transactions,
-					singletons);
+			SparkEMStep.initializeCachedItemsets(transactions, singletons);
 		} else {
 			EMStep.initializeCachedItemsets(transactions, singletons);
 		}
@@ -338,8 +337,8 @@ public abstract class ItemsetMiningCore {
 				newItemsets = SparkEMStep.addAcceptedCandidateCache(
 						transactions, candidate, prob);
 			} else {
-				newItemsets = EMStep.addAcceptedCandidateCache(
-						transactions, candidate, prob);
+				newItemsets = EMStep.addAcceptedCandidateCache(transactions,
+						candidate, prob);
 			}
 			// Update itemsets with newly inferred itemsets
 			itemsets.clear();

@@ -2,7 +2,6 @@ package itemsetmining.eval;
 
 import itemsetmining.itemset.Itemset;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
-import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.main.ItemsetMining;
 import itemsetmining.transaction.TransactionGenerator;
 
@@ -33,7 +32,6 @@ public class ItemsetPrecisionRecall {
 	private static final File logDir = new File(
 			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/");
 	private static final File saveDir = new File("/disk/data1/jfowkes/logs/");
-	private static final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
 	/** Previously mined Itemsets to use for background distribution */
 	private static final String name = "plants-based";
@@ -98,7 +96,7 @@ public class ItemsetPrecisionRecall {
 				minedItemsets = runSpark(sparkCores, noIterations);
 			} else
 				minedItemsets = ItemsetMining.mineItemsets(dbFile,
-						inferenceAlg, maxStructureSteps, noIterations);
+						new InferGreedy(), maxStructureSteps, noIterations);
 			final long endTime = System.currentTimeMillis();
 			final double tim = (endTime - startTime) / (double) 1000;
 			time[i] += tim;

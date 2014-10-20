@@ -69,7 +69,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 		// Set up logging
 		final String logFile = Logging.getLogFileName(TIMESTAMP_LOG, LOG_DIR,
 				inputFile);
-		Logging.setUpConsoleAndFileLogger(logger, LOG_LEVEL, logFile);
+		Logging.setUpFileLogger(logger, LOG_LEVEL, logFile);
 
 		// Read in transaction database
 		final TransactionList transactions = readTransactions(inputFile);
