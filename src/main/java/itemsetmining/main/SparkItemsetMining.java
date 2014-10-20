@@ -6,21 +6,15 @@ import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionRDD;
+import itemsetmining.util.Logging;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.logging.FileHandler;
-import java.util.logging.Formatter;
 import java.util.logging.Level;
-import java.util.logging.LogManager;
-import java.util.logging.LogRecord;
 
-import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -107,7 +101,9 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 			final int maxEMIterations) throws IOException {
 
 		// Set up logging
-		setUpFileLogger(inputFile);
+		final String logFile = Logging.getLogFileName(TIMESTAMP_LOG, LOG_DIR,
+				inputFile);
+		Logging.setUpFileLogger(logger, LOG_LEVEL, logFile);
 
 		// Copy transaction database to hdfs
 		final String datasetPath = "hdfs://" + MASTER + ".inf.ed.ac.uk:54310/"
@@ -222,34 +218,6 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 
 			return transaction;
 		}
-	}
-
-	/** Set up logging to file */
-	protected static void setUpFileLogger(final File dataset) {
-		LogManager.getLogManager().reset();
-		logger.setLevel(LOG_LEVEL);
-		String timeStamp = "";
-		if (TIMESTAMP_LOG)
-			timeStamp = "-"
-					+ new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
-							.format(new Date());
-		FileHandler handler = null;
-		try { // Limit log file to 100MB
-			handler = new FileHandler(LOG_DIR
-					+ FilenameUtils.getBaseName(dataset.getName()) + timeStamp
-					+ ".log", 104857600, 1);
-		} catch (final IOException e) {
-			e.printStackTrace();
-		}
-		handler.setLevel(Level.ALL);
-		final Formatter formatter = new Formatter() {
-			@Override
-			public String format(final LogRecord record) {
-				return record.getMessage();
-			}
-		};
-		handler.setFormatter(formatter);
-		logger.addHandler(handler);
 	}
 
 	/** Convert string level to level class */

@@ -7,19 +7,15 @@ import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionList;
+import itemsetmining.util.Logging;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Formatter;
 import java.util.logging.Level;
-import java.util.logging.LogManager;
-import java.util.logging.LogRecord;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
@@ -71,7 +67,9 @@ public class ItemsetMining extends ItemsetMiningCore {
 			throws IOException {
 
 		// Set up logging
-		setUpConsoleLogger();
+		final String logFile = Logging.getLogFileName(TIMESTAMP_LOG, LOG_DIR,
+				inputFile);
+		Logging.setUpConsoleAndFileLogger(logger, LOG_LEVEL, logFile);
 
 		// Read in transaction database
 		final TransactionList transactions = readTransactions(inputFile);
@@ -221,31 +219,6 @@ public class ItemsetMining extends ItemsetMiningCore {
 			recursiveGenRules(rules, newAntecedent, newConsequent, prob);
 		}
 
-	}
-
-	/** Handler for the console logger */
-	public static class Handler extends ConsoleHandler {
-		@Override
-		protected void setOutputStream(final OutputStream out)
-				throws SecurityException {
-			super.setOutputStream(System.out);
-		}
-	}
-
-	/** Set up logging to console */
-	protected static void setUpConsoleLogger() {
-		LogManager.getLogManager().reset();
-		logger.setLevel(LOG_LEVEL);
-		final ConsoleHandler handler = new Handler();
-		handler.setLevel(Level.ALL);
-		final Formatter formatter = new Formatter() {
-			@Override
-			public String format(final LogRecord record) {
-				return record.getMessage();
-			}
-		};
-		handler.setFormatter(formatter);
-		logger.addHandler(handler);
 	}
 
 }
