@@ -164,8 +164,11 @@ public class SparkEMStep {
 						t -> {
 							if (t.contains(candidate)) {
 								t.addItemsetCache(candidate, prob);
+								final HashSet<Itemset> covering = t
+										.getTempCachedCovering();
+								t.setCachedCovering(covering);
 								return new Tuple2<Transaction, Set<Itemset>>(t,
-										t.getTempCachedCovering());
+										covering);
 							}
 							return new Tuple2<Transaction, Set<Itemset>>(t, t
 									.getCachedCovering());

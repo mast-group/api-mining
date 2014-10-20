@@ -136,10 +136,15 @@ public class EMStep {
 
 		// Cached E-step (adding candidate to transactions that support it)
 		final Map<Itemset, Long> coveringWithCounts = transactions
-				.getTransactionList().parallelStream().map(t -> {
+				.getTransactionList()
+				.parallelStream()
+				.map(t -> {
 					if (t.contains(candidate)) {
 						t.addItemsetCache(candidate, prob);
-						return t.getTempCachedCovering();
+						final HashSet<Itemset> covering = t
+								.getTempCachedCovering();
+						t.setCachedCovering(covering);
+						return covering;
 					}
 					return t.getCachedCovering();
 				}).flatMap(HashSet::stream)
