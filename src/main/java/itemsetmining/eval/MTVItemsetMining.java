@@ -37,7 +37,8 @@ public class MTVItemsetMining {
 		cmd[2] = "-s " + minsup;
 		cmd[3] = "-k " + noItemsets;
 		cmd[4] = "-o /tmp/mtv-log.txt";
-		cmd[5] = "-q";
+		cmd[5] = "-g 10"; // Max items per group (for efficiency)
+		// cmd[6] = "-q" // Quiet mode
 		runScript(cmd);
 
 		System.out.println("SUMMARY:");

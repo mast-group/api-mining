@@ -36,7 +36,7 @@ public class ItemsetPrecisionRecall {
 	/** Previously mined Itemsets to use for background distribution */
 	private static final String name = "plants-based";
 	private static final File itemsetLog = new File(
-			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/plants-09.10.2014-16:45:44.log");
+			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/plants-20.10.2014-11:12:45.log");
 	private static final int noTransactions = 34781;
 
 	/** Spark Settings */

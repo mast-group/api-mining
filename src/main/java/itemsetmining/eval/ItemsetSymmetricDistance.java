@@ -17,7 +17,7 @@ public class ItemsetSymmetricDistance {
 	public static void main(final String[] args) throws IOException {
 
 		// Read in interesting itemsets
-		final String logfile = "plants-09.10.2014-16:45:44.log";
+		final String logfile = "plants-20.10.2014-11:12:45.log";
 		final Set<Itemset> intItemsets = ItemsetPrecisionRecall
 				.readSparkOutput(new File(LOGDIR + logfile)).keySet();
 		System.out.println("\nIIM Itemsets");

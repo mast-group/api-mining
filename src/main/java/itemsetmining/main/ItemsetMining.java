@@ -32,15 +32,15 @@ public class ItemsetMining extends ItemsetMiningCore {
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
-		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/plants.dat";
+		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/mammals.dat";
 		final boolean associationRules = false;
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
 		// Max iterations
-		final int maxStructureSteps = 100_000;
+		final int maxStructureSteps = 100_000_000;
 		final int maxEMIterations = 1_000;
-		MAX_RUNTIME = 2 * 60 * 60 * 1_000; // 2hrs
-		LOG_LEVEL = Level.FINER;
+		MAX_RUNTIME = 12 * 60 * 60 * 1_000; // 12hrs
+		LOG_LEVEL = Level.FINE;
 
 		// Mine interesting itemsets
 		final HashMap<Itemset, Double> itemsets = mineItemsets(
