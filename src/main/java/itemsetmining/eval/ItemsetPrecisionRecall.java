@@ -37,28 +37,16 @@ public class ItemsetPrecisionRecall {
 	private static final String name = "plants-based";
 	private static final File itemsetLog = new File(
 			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/plants-20.10.2014-11:12:45.log");
-	private static final int noTransactions = 34781;
+	private static final int noTransactions = 100_000;
 
 	/** Spark Settings */
 	private static final boolean useSpark = false;
 	private static final int sparkCores = 64;
 	private static final Level LOG_LEVEL = Level.FINE;
 	private static final long MAX_RUNTIME = 12 * 60; // 12hrs
-	private static final int maxStructureSteps = 100_000;
+	private static final int maxStructureSteps = 100_000_000;
 
 	public static void main(final String[] args) throws IOException {
-
-		precisionRecall(new int[] { 100 });
-
-	}
-
-	public static void precisionRecall(final int[] iterations)
-			throws IOException {
-
-		final int lenIterations = iterations.length;
-		final double[] time = new double[lenIterations];
-		final double[] precision = new double[lenIterations];
-		final double[] recall = new double[lenIterations];
 
 		String prefix = "";
 		if (useSpark)
@@ -69,25 +57,25 @@ public class ItemsetPrecisionRecall {
 		final PrintStream ps = new PrintStream(out);
 		System.setOut(ps);
 
+		final HashMap<Itemset, Double> itemsets = generateSyntheticDatabase(
+				noTransactions, dbFile);
+		precisionRecall(itemsets, new int[] { 50, 100, 150, 200, 250, 300, 350,
+				400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950,
+				1000 });
+
+	}
+
+	public static void precisionRecall(final HashMap<Itemset, Double> itemsets,
+			final int[] iterations) throws IOException {
+
+		final int lenIterations = iterations.length;
+		final double[] time = new double[lenIterations];
+		final double[] precision = new double[lenIterations];
+		final double[] recall = new double[lenIterations];
+
 		for (int i = 0; i < lenIterations; i++) {
 			final int noIterations = iterations[i];
-
-			// Read in previously mined itemsets
-			final HashMap<Itemset, Double> itemsets = readSparkOutput(itemsetLog);
-
-			System.out.print("\n============= ACTUAL ITEMSETS =============\n");
-			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-				System.out.print(String.format("%s\tprob: %1.5f %n",
-						entry.getKey(), entry.getValue()));
-			}
-			System.out.println("\nNo itemsets: " + itemsets.size());
-			System.out.println("No items: "
-					+ ItemsetScaling.countNoItems(itemsets.keySet()));
-
-			// Generate transaction database
-			TransactionGenerator.generateTransactionDatabase(itemsets,
-					noTransactions, dbFile);
-			ItemsetScaling.printTransactionDBStats(dbFile);
+			System.out.println("Iterations: " + noIterations + '\n');
 
 			// Mine itemsets
 			HashMap<Itemset, Double> minedItemsets = null;
@@ -123,8 +111,6 @@ public class ItemsetPrecisionRecall {
 		System.out.println("Precision: " + Arrays.toString(precision));
 		System.out.println("Recall: " + Arrays.toString(recall));
 
-		// and save to file
-		out.close();
 	}
 
 	private static HashMap<Itemset, Double> runSpark(final int noCores,
@@ -180,6 +166,26 @@ public class ItemsetPrecisionRecall {
 			if (line.contains("INTERESTING ITEMSETS"))
 				found = true;
 		}
+		return itemsets;
+	}
+
+	public static HashMap<Itemset, Double> generateSyntheticDatabase(
+			final int noTransactions, final File dbPath) throws IOException {
+
+		final HashMap<Itemset, Double> minedItemsets = ItemsetPrecisionRecall
+				.readSparkOutput(itemsetLog);
+		final HashMap<Itemset, Double> itemsets = TransactionGenerator
+				.generateTransactionDatabase(minedItemsets, noTransactions,
+						dbPath);
+		System.out.print("\n============= ACTUAL ITEMSETS =============\n");
+		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+			System.out.print(String.format("%s\tprob: %1.5f %n",
+					entry.getKey(), entry.getValue()));
+		}
+		System.out.print("\n");
+		System.out.println("No itemsets: " + itemsets.size());
+		ItemsetScaling.printTransactionDBStats(dbPath);
+
 		return itemsets;
 	}
 

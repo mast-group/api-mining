@@ -114,10 +114,17 @@ public class TransactionGenerator {
 		return backgroundItemsets;
 	}
 
-	/** Generate transactions from set of interesting itemsets */
-	public static void generateTransactionDatabase(
+	/**
+	 * Generate transactions from set of interesting itemsets
+	 * 
+	 * @return set of itemsets added to transaction
+	 */
+	public static HashMap<Itemset, Double> generateTransactionDatabase(
 			final HashMap<Itemset, Double> itemsets, final int noTransactions,
 			final File outFile) throws IOException {
+
+		// Storage for itemsets actually added
+		final HashMap<Itemset, Double> addedItemsets = Maps.newHashMap();
 
 		// Set output file
 		final PrintWriter out = new PrintWriter(outFile, "UTF-8");
@@ -127,7 +134,8 @@ public class TransactionGenerator {
 		while (count < noTransactions) {
 
 			// Generate transaction from distribution
-			final Transaction transaction = sampleFromDistribution(itemsets);
+			final Transaction transaction = sampleFromDistribution(itemsets,
+					addedItemsets);
 			for (final int item : transaction) {
 				out.print(item + " ");
 			}
@@ -148,16 +156,20 @@ public class TransactionGenerator {
 			}
 			LineIterator.closeQuietly(it);
 		}
+
+		return addedItemsets;
 	}
 
 	/** Randomly generate itemset with its probability */
 	private static Transaction sampleFromDistribution(
-			final HashMap<Itemset, Double> itemsets) {
+			final HashMap<Itemset, Double> itemsets,
+			final HashMap<Itemset, Double> addedItemsets) {
 
 		final Transaction transaction = new Transaction();
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 			if (Math.random() < entry.getValue()) {
 				transaction.add(entry.getKey());
+				addedItemsets.put(entry.getKey(), entry.getValue());
 			}
 		}
 
