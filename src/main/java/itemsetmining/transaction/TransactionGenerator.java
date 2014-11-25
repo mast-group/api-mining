@@ -38,11 +38,11 @@ public class TransactionGenerator {
 		// Difficulty scaling (times 10^0 to 10^-1)
 		final double scaling = Math.pow(10, -difficultyLevel / 10.);
 
-		int maxElement = 0;
+		int maxElement = 80;
 		for (int j = 0; j < noInstances; j++) {
 
-			// Here [1 2] is the champagne & caviar problem
-			// (not generated when support is too high)
+			// Here [1, 2] is the champagne & caviar problem
+			// (not retrieved when support is too high)
 			if (name.equals("caviar")) {
 
 				// Champagne & Caviar
@@ -52,31 +52,25 @@ public class TransactionGenerator {
 				maxElement += 2;
 
 			}
-			// Here [1 2 3] would be seen as a frequent itemset
-			// as both [1 2] and [3] are frequent
+			// Here [B, 1] would be seen as a frequent itemset
+			// if both [B] and [1] have sufficiently high support
 			else if (name.equals("freerider")) {
 
-				final Itemset s12 = new Itemset(maxElement + 1, maxElement + 2);
-				final Itemset s3 = new Itemset(maxElement + 3);
-				final double p12 = 0.5 * scaling;
-				final double p3 = 0.5 * scaling;
-				itemsets.put(s12, p12);
-				itemsets.put(s3, p3);
-				maxElement += 3;
+				final Itemset s1 = new Itemset(maxElement + 1);
+				final double p1 = 0.5 * scaling;
+				itemsets.put(s1, p1);
+				maxElement += 1;
 
 			}
-			// Here [1 2 3] is known as a cross-support pattern
+			// Here [1, B] is known as a cross-support pattern
+			// if [1] has high support and [B] low support
 			// (spuriously generated when support is too low)
 			else if (name.equals("cross-supp")) {
 
 				final Itemset s1 = new Itemset(maxElement + 1);
 				final double p1 = 0.95 * scaling;
 				itemsets.put(s1, p1);
-
-				final Itemset s2 = new Itemset(maxElement + 2, maxElement + 3);
-				final double p2 = 0.2 * scaling;
-				itemsets.put(s2, p2);
-				maxElement += 3;
+				maxElement += 1;
 
 			} else
 				throw new IllegalArgumentException("Incorrect problem name.");
@@ -116,7 +110,7 @@ public class TransactionGenerator {
 
 	/**
 	 * Generate transactions from set of interesting itemsets
-	 * 
+	 *
 	 * @return set of itemsets added to transaction
 	 */
 	public static HashMap<Itemset, Double> generateTransactionDatabase(

@@ -5,6 +5,7 @@ import itemsetmining.itemset.Itemset;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 
@@ -30,27 +31,29 @@ public class FrequentItemsetMining {
 	}
 
 	/** Run FPGrowth algorithm */
-	public static Itemsets mineFrequentItemsetsFPGrowth(final String dataset,
-			final String saveFile, final double minSupp) throws IOException {
+	public static HashMap<Itemset, Integer> mineFrequentItemsetsFPGrowth(
+			final String dataset, final String saveFile, final double minSupp)
+			throws IOException {
 
 		final AlgoFPGrowth algo = new AlgoFPGrowth();
 		final Itemsets patterns = algo.runAlgorithm(dataset, saveFile, minSupp);
 		// algo.printStats();
 		// patterns.printItemsets(algo.getDatabaseSize());
 
-		return patterns;
+		return toMap(patterns);
 	}
 
 	/** Run Apriori algorithm */
-	public static Itemsets mineFrequentItemsetsApriori(final String dataset,
-			final String saveFile, final double minSupp) throws IOException {
+	public static HashMap<Itemset, Integer> mineFrequentItemsetsApriori(
+			final String dataset, final String saveFile, final double minSupp)
+			throws IOException {
 
 		final AlgoApriori algo = new AlgoApriori();
 		final Itemsets patterns = algo.runAlgorithm(minSupp, dataset, saveFile);
 		// algo.printStats();
 		// patterns.printItemsets(algo.getDatabaseSize());
 
-		return patterns;
+		return toMap(patterns);
 	}
 
 	/** Generate association rules from FIM itemsets */
@@ -65,6 +68,18 @@ public class FrequentItemsetMining {
 			rules.printRulesWithLift(databaseSize);
 
 		return rules;
+	}
+
+	/** Convert frequent itemsets to HashMap<Itemset, Integer> */
+	public static HashMap<Itemset, Integer> toMap(final Itemsets patterns) {
+		final HashMap<Itemset, Integer> itemsets = Maps.newHashMap();
+		for (final List<ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemset> level : patterns
+				.getLevels()) {
+			for (final ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemset itemset : level)
+				itemsets.put(new Itemset(itemset.getItems()),
+						itemset.getAbsoluteSupport());
+		}
+		return itemsets;
 	}
 
 	/** Read in frequent itemsets */
