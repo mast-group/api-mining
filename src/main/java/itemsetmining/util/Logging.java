@@ -29,34 +29,35 @@ public class Logging {
 
 	/** Set up logging to file */
 	public static void setUpFileLogger(final Logger logger,
-			final Level logLevel, final String path) {
+			final Level logLevel, final File logFile) {
 		LogManager.getLogManager().reset();
 		logger.setLevel(logLevel);
-		final Handler handler = setUpFileHandler(path);
+		final Handler handler = setUpFileHandler(logFile.getAbsolutePath());
 		logger.addHandler(handler);
 	}
 
 	/** Set up logging to console and file */
 	public static void setUpConsoleAndFileLogger(final Logger logger,
-			final Level logLevel, final String path) {
+			final Level logLevel, final File logFile) {
 		LogManager.getLogManager().reset();
 		logger.setLevel(logLevel);
 		final Handler chandler = setUpConsoleHandler();
-		final Handler fhandler = setUpFileHandler(path);
+		final Handler fhandler = setUpFileHandler(logFile.getAbsolutePath());
 		logger.addHandler(chandler);
 		logger.addHandler(fhandler);
 	}
 
 	/** Set the log file name */
-	public static String getLogFileName(final boolean timeStampLog,
-			final String logDir, final File dataset) {
+	public static File getLogFileName(final String algorithm,
+			final boolean timeStampLog, final File logDir, final File dataset) {
 		String timeStamp = "";
 		if (timeStampLog)
 			timeStamp = "-"
 					+ new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
 							.format(new Date());
-		return logDir + FilenameUtils.getBaseName(dataset.getName())
-				+ timeStamp + ".log";
+		return new File(logDir + File.separator + algorithm + "-"
+				+ FilenameUtils.getBaseName(dataset.getName()) + timeStamp
+				+ ".log");
 	}
 
 	/** Set up console handler */

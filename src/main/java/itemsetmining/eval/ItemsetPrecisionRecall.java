@@ -4,6 +4,7 @@ import itemsetmining.itemset.Itemset;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.ItemsetMining;
 import itemsetmining.transaction.TransactionGenerator;
+import itemsetmining.util.Logging;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,13 +29,13 @@ import com.google.common.io.Files;
 public class ItemsetPrecisionRecall {
 
 	/** Main Settings */
-	private static final String algorithm = "FIM";
+	private static final String algorithm = "IIM";
 	private static final File dbFile = new File(
 			"/disk/data1/jfowkes/itemset.txt");
 	private static final File saveDir = new File("/disk/data1/jfowkes/logs/");
 
 	/** FIM Issues to incorporate */
-	private static final String name = "freerider";
+	private static final String name = "caviar";
 	private static final int noIterations = 300;
 
 	/** Previously mined Itemsets to use for background distribution */
@@ -55,18 +56,17 @@ public class ItemsetPrecisionRecall {
 	public static void main(final String[] args) throws IOException {
 
 		// Set up logging
-		final String prefix = algorithm + "_";
 		final FileOutputStream outFile = new FileOutputStream(saveDir + "/"
-				+ prefix + name + "_pr.txt");
+				+ algorithm + "_" + name + "_pr.txt");
 		final TeeOutputStream out = new TeeOutputStream(System.out, outFile);
 		final PrintStream ps = new PrintStream(out);
 		System.setOut(ps);
 
 		// Read in background distribution
 		final HashMap<Itemset, Double> backgroundItemsets = ItemsetPrecisionRecall
-				.readSparkOutput(itemsetLog);
+				.readIIMItemsets(itemsetLog);
 
-		precisionRecall(backgroundItemsets, new int[] { 5, 10, 15, 20, 25, 30 });
+		precisionRecall(backgroundItemsets, new int[] { 30 });
 
 	}
 
@@ -103,20 +103,22 @@ public class ItemsetPrecisionRecall {
 
 			// Mine itemsets
 			Set<Itemset> minedItemsets = null;
+			final File logFile = Logging.getLogFileName(algorithm, true,
+					saveDir, dbFile);
 			final long startTime = System.currentTimeMillis();
 			if (algorithm.equals("spark"))
 				minedItemsets = runSpark(sparkCores, noIterations).keySet();
 			else if (algorithm.equals("MTV"))
 				minedItemsets = MTVItemsetMining.mineItemsets(dbFile,
-						minSupMTV, noIterations).keySet();
+						minSupMTV, noIterations, logFile).keySet();
 			else if (algorithm.equals("FIM"))
 				minedItemsets = FrequentItemsetMining
 						.mineFrequentItemsetsFPGrowth(dbFile.getAbsolutePath(),
-								null, minSup).keySet();
+								logFile.getAbsolutePath(), minSup).keySet();
 			else if (algorithm.equals("IIM"))
 				minedItemsets = ItemsetMining.mineItemsets(dbFile,
-						new InferGreedy(), maxStructureSteps, noIterations)
-						.keySet();
+						new InferGreedy(), maxStructureSteps, noIterations,
+						logFile).keySet();
 			else
 				throw new RuntimeException("Incorrect algorithm name.");
 			final long endTime = System.currentTimeMillis();
@@ -167,7 +169,7 @@ public class ItemsetPrecisionRecall {
 
 		final File output = new File(ItemsetMining.LOG_DIR
 				+ FilenameUtils.getBaseName(dbFile.getName()) + ".log");
-		final HashMap<Itemset, Double> itemsets = readSparkOutput(output);
+		final HashMap<Itemset, Double> itemsets = readIIMItemsets(output);
 
 		final String timestamp = new SimpleDateFormat("-dd.MM.yyyy-HH:mm:ss")
 				.format(new Date());
@@ -178,8 +180,8 @@ public class ItemsetPrecisionRecall {
 		return itemsets;
 	}
 
-	/** Read Spark output itemsets to file */
-	static HashMap<Itemset, Double> readSparkOutput(final File output)
+	/** Read output itemsets from file */
+	static HashMap<Itemset, Double> readIIMItemsets(final File output)
 			throws IOException {
 		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
 

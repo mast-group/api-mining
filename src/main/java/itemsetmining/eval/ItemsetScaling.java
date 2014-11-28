@@ -4,6 +4,7 @@ import itemsetmining.itemset.Itemset;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.ItemsetMining;
 import itemsetmining.transaction.TransactionGenerator;
+import itemsetmining.util.Logging;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -72,7 +73,7 @@ public class ItemsetScaling {
 
 		// Read in previously mined itemsets
 		final HashMap<Itemset, Double> itemsets = ItemsetPrecisionRecall
-				.readSparkOutput(itemsetLog);
+				.readIIMItemsets(itemsetLog);
 		System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 			System.out.print(String.format("%s\tprob: %1.5f %n",
@@ -93,12 +94,14 @@ public class ItemsetScaling {
 			printTransactionDBStats(dbFile);
 
 			// Mine itemsets
+			final File logFile = Logging.getLogFileName("IIM", true, saveDir,
+					dbFile);
 			final long startTime = System.currentTimeMillis();
 			if (useSpark)
 				runSpark(noCores);
 			else
 				ItemsetMining.mineItemsets(dbFile, new InferGreedy(),
-						maxStructureSteps, maxEMIterations);
+						maxStructureSteps, maxEMIterations, logFile);
 
 			final long endTime = System.currentTimeMillis();
 			final double tim = (endTime - startTime) / (double) 1000;
@@ -137,7 +140,7 @@ public class ItemsetScaling {
 			final File dbPath) throws IOException {
 
 		final HashMap<Itemset, Double> itemsets = ItemsetPrecisionRecall
-				.readSparkOutput(itemsetLog);
+				.readIIMItemsets(itemsetLog);
 		System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
 			System.out.print(String.format("%s\tprob: %1.5f %n",

@@ -6,6 +6,7 @@ import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.TransactionDatabase;
 import itemsetmining.transaction.TransactionRDD;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,11 +32,10 @@ public abstract class ItemsetMiningCore {
 
 	protected static final Logger logger = Logger
 			.getLogger(ItemsetMiningCore.class.getName());
-	public static final String LOG_DIR = "/disk/data1/jfowkes/logs/";
+	public static final File LOG_DIR = new File("/disk/data1/jfowkes/logs/");
 
 	/** Variable settings */
 	protected static Level LOG_LEVEL = Level.FINE;
-	protected static boolean TIMESTAMP_LOG = true;
 	protected static long MAX_RUNTIME = 6 * 60 * 60 * 1_000; // 6hrs
 
 	/**

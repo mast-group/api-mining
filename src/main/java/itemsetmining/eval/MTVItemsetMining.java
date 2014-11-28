@@ -8,7 +8,6 @@ import java.lang.ProcessBuilder.Redirect;
 import java.util.HashMap;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.LineIterator;
 
 import com.google.common.collect.Maps;
 
@@ -21,53 +20,50 @@ public class MTVItemsetMining {
 		final double minSupp = 0.01164144353; // relative support
 		final int noItemsets = 10;
 
-		mineItemsets(new File(dataset), minSupp, noItemsets);
+		mineItemsets(new File(dataset), minSupp, noItemsets, new File(
+				"/tmp/mtv-log.txt"));
 
 	}
 
-	public static HashMap<Itemset, Double> mineItemsets(final File dbfile,
-			final double minsup, final int noItemsets) throws IOException {
+	public static HashMap<Itemset, Double> mineItemsets(final File dbFile,
+			final double minSup, final int noItemsets, final File saveFile)
+			throws IOException {
 
 		final HashMap<Itemset, Double> minedItemsets = Maps.newHashMap();
 
 		// Set MTV settings
 		final String cmd[] = new String[6];
 		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Packages/mtv/mtv.sh";
-		cmd[1] = "-f " + dbfile;
-		cmd[2] = "-s " + minsup;
+		cmd[1] = "-f " + dbFile;
+		cmd[2] = "-s " + minSup;
 		cmd[3] = "-k " + noItemsets;
-		cmd[4] = "-o /tmp/mtv-log.txt";
+		cmd[4] = "-o " + saveFile;
 		cmd[5] = "-g 10"; // Max items per group (for efficiency)
 		// cmd[6] = "-q" // Quiet mode
 		runScript(cmd);
 
-		System.out.println("SUMMARY:");
-		final LineIterator it = FileUtils.lineIterator(new File(
-				"/tmp/mtv-log.txt"), "UTF-8");
-		while (it.hasNext()) {
+		return readMTVItemsets(saveFile);
+	}
 
-			final String line = it.nextLine();
-			// Skip comments
-			if (line.charAt(0) == '#')
-				continue;
-			System.out.println(line);
+	/** Read in MTV itemsets */
+	public static HashMap<Itemset, Double> readMTVItemsets(final File output)
+			throws IOException {
+		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
 
-			// Read prob
-			final String[] splitLine = line.split(" ", 2);
-			final double prob = Double.parseDouble(splitLine[0]);
+		final String[] lines = FileUtils.readFileToString(output).split("\n");
 
-			// Read itemset
-			final Itemset set = new Itemset();
-			final String[] items = splitLine[1].split(" ");
-			for (int i = 0; i < items.length; i++)
-				set.add(Integer.parseInt(items[i]));
-			minedItemsets.put(set, prob);
-
+		for (final String line : lines) {
+			if (!line.trim().isEmpty() && line.charAt(0) != '#') {
+				final String[] splitLine = line.split(" ");
+				final Itemset itemset = new Itemset();
+				for (int i = 1; i < splitLine.length; i++)
+					itemset.add(Integer.parseInt(splitLine[i].trim()));
+				final double prob = Double.parseDouble(splitLine[0].trim());
+				itemsets.put(itemset, prob);
+			}
 		}
-		LineIterator.closeQuietly(it);
-		System.out.println();
 
-		return minedItemsets;
+		return itemsets;
 	}
 
 	/** Run shell script with command line arguments */

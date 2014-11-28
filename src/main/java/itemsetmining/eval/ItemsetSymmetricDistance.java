@@ -19,7 +19,7 @@ public class ItemsetSymmetricDistance {
 		// Read in interesting itemsets
 		final String logfile = "plants-20.10.2014-11:12:45.log";
 		final Set<Itemset> intItemsets = ItemsetPrecisionRecall
-				.readSparkOutput(new File(LOGDIR + logfile)).keySet();
+				.readIIMItemsets(new File(LOGDIR + logfile)).keySet();
 		System.out.println("\nIIM Itemsets");
 		System.out.println("No itemsets: " + intItemsets.size());
 		System.out.println("No items: "

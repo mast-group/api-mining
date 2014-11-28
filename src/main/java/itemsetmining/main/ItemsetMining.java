@@ -32,20 +32,22 @@ public class ItemsetMining extends ItemsetMiningCore {
 	public static void main(final String[] args) throws IOException {
 
 		// Main function parameters
-		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/mammals.dat";
+		final File dataset = new File(
+				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/mammals.dat");
 		final boolean associationRules = false;
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
-		// Max iterations
+		// Runtime parameters
 		final int maxStructureSteps = 100_000_000;
 		final int maxEMIterations = 1_000;
 		MAX_RUNTIME = 12 * 60 * 60 * 1_000; // 12hrs
 		LOG_LEVEL = Level.FINE;
+		final File logFile = Logging.getLogFileName("IIM", true, LOG_DIR,
+				dataset);
 
 		// Mine interesting itemsets
-		final HashMap<Itemset, Double> itemsets = mineItemsets(
-				new File(dataset), inferenceAlg, maxStructureSteps,
-				maxEMIterations);
+		final HashMap<Itemset, Double> itemsets = mineItemsets(dataset,
+				inferenceAlg, maxStructureSteps, maxEMIterations, logFile);
 
 		// Generate Association rules from the interesting itemsets
 		if (associationRules) {
@@ -63,13 +65,14 @@ public class ItemsetMining extends ItemsetMiningCore {
 	/** Mine interesting itemsets */
 	public static HashMap<Itemset, Double> mineItemsets(final File inputFile,
 			final InferenceAlgorithm inferenceAlgorithm,
-			final int maxStructureSteps, final int maxEMIterations)
-			throws IOException {
+			final int maxStructureSteps, final int maxEMIterations,
+			final File logFile) throws IOException {
 
 		// Set up logging
-		final String logFile = Logging.getLogFileName(TIMESTAMP_LOG, LOG_DIR,
-				inputFile);
-		Logging.setUpFileLogger(logger, LOG_LEVEL, logFile);
+		if (logFile != null)
+			Logging.setUpFileLogger(logger, LOG_LEVEL, logFile);
+		else
+			Logging.setUpConsoleLogger(logger, LOG_LEVEL);
 
 		// Read in transaction database
 		final TransactionList transactions = readTransactions(inputFile);

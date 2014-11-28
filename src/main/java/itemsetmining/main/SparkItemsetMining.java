@@ -80,13 +80,14 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 					params.noCores);
 			final FileSystem hdfs = setUpHDFS();
 
-			// Set loglevel, runtime and timestamp
+			// Set loglevel, runtime, timestamp and log file
 			LOG_LEVEL = params.logLevel;
 			MAX_RUNTIME = params.maxRunTime * 60 * 1_000;
-			TIMESTAMP_LOG = params.timestampLog;
+			final File logFile = Logging.getLogFileName("IIM",
+					params.timestampLog, LOG_DIR, params.dataset);
 
 			mineItemsets(params.dataset, hdfs, sc, inferenceAlg,
-					params.maxStructureSteps, params.maxEMIterations);
+					params.maxStructureSteps, params.maxEMIterations, logFile);
 
 		} catch (final ParameterException e) {
 			System.out.println(e.getMessage());
@@ -98,12 +99,13 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 	public static HashMap<Itemset, Double> mineItemsets(final File inputFile,
 			final FileSystem hdfs, final JavaSparkContext sc,
 			final InferenceAlgorithm inferenceAlg, final int maxStructureSteps,
-			final int maxEMIterations) throws IOException {
+			final int maxEMIterations, final File logFile) throws IOException {
 
 		// Set up logging
-		final String logFile = Logging.getLogFileName(TIMESTAMP_LOG, LOG_DIR,
-				inputFile);
-		Logging.setUpFileLogger(logger, LOG_LEVEL, logFile);
+		if (logFile != null)
+			Logging.setUpFileLogger(logger, LOG_LEVEL, logFile);
+		else
+			Logging.setUpConsoleLogger(logger, LOG_LEVEL);
 
 		// Copy transaction database to hdfs
 		final String datasetPath = "hdfs://" + MASTER + ".inf.ed.ac.uk:54310/"
