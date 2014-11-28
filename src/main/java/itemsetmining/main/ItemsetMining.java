@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 
@@ -21,9 +22,12 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Functions;
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 
@@ -46,7 +50,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 				dataset);
 
 		// Mine interesting itemsets
-		final HashMap<Itemset, Double> itemsets = mineItemsets(dataset,
+		final Map<Itemset, Double> itemsets = mineItemsets(dataset,
 				inferenceAlg, maxStructureSteps, maxEMIterations, logFile);
 
 		// Generate Association rules from the interesting itemsets
@@ -63,7 +67,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 	}
 
 	/** Mine interesting itemsets */
-	public static HashMap<Itemset, Double> mineItemsets(final File inputFile,
+	public static Map<Itemset, Double> mineItemsets(final File inputFile,
 			final InferenceAlgorithm inferenceAlgorithm,
 			final int maxStructureSteps, final int maxEMIterations,
 			final File logFile) throws IOException {
@@ -98,17 +102,30 @@ public class ItemsetMining extends ItemsetMiningCore {
 		if (LOG_LEVEL.equals(Level.FINEST))
 			logger.finest("\n======= Transaction Database =======\n"
 					+ Files.toString(inputFile, Charsets.UTF_8) + "\n");
-		logger.info("\n============= INTERESTING ITEMSETS =============\n");
+
+		// Sort itemsets by interestingness
 		final HashMap<Itemset, Double> intMap = calculateInterestingness(
 				itemsets, transactions, tree);
-		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+		final Ordering<Itemset> comparator = Ordering
+				.natural()
+				.reverse()
+				.onResultOf(Functions.forMap(intMap))
+				.compound(
+						Ordering.natural().reverse()
+								.onResultOf(Functions.forMap(itemsets)))
+				.compound(Ordering.usingToString());
+		final Map<Itemset, Double> sortedItemsets = ImmutableSortedMap.copyOf(
+				itemsets, comparator);
+
+		logger.info("\n============= INTERESTING ITEMSETS =============\n");
+		for (final Entry<Itemset, Double> entry : sortedItemsets.entrySet()) {
 			logger.info(String.format("%s\tprob: %1.5f \tint: %1.5f %n",
 					entry.getKey(), entry.getValue(),
 					intMap.get(entry.getKey())));
 		}
 		logger.info("\n");
 
-		return itemsets;
+		return sortedItemsets;
 	}
 
 	private static TransactionList readTransactions(final File inputFile)
@@ -187,7 +204,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 	}
 
 	private static List<Rule> generateAssociationRules(
-			final HashMap<Itemset, Double> itemsets) {
+			final Map<Itemset, Double> itemsets) {
 
 		final List<Rule> rules = Lists.newArrayList();
 

@@ -29,8 +29,11 @@ import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
+import com.google.common.base.Functions;
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.Ordering;
 
 public class SparkItemsetMining extends ItemsetMiningCore {
 
@@ -96,7 +99,7 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 
 	}
 
-	public static HashMap<Itemset, Double> mineItemsets(final File inputFile,
+	public static Map<Itemset, Double> mineItemsets(final File inputFile,
 			final FileSystem hdfs, final JavaSparkContext sc,
 			final InferenceAlgorithm inferenceAlg, final int maxStructureSteps,
 			final int maxEMIterations, final File logFile) throws IOException {
@@ -147,17 +150,30 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
 				singletons, tree, inferenceAlg, maxStructureSteps,
 				maxEMIterations);
-		logger.info("\n============= INTERESTING ITEMSETS =============\n");
+
+		// Sort itemsets by interestingness
 		final HashMap<Itemset, Double> intMap = calculateInterestingness(
 				itemsets, transactions, tree);
-		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+		final Ordering<Itemset> comparator = Ordering
+				.natural()
+				.reverse()
+				.onResultOf(Functions.forMap(intMap))
+				.compound(
+						Ordering.natural().reverse()
+								.onResultOf(Functions.forMap(itemsets)))
+				.compound(Ordering.usingToString());
+		final Map<Itemset, Double> sortedItemsets = ImmutableSortedMap.copyOf(
+				itemsets, comparator);
+
+		logger.info("\n============= INTERESTING ITEMSETS =============\n");
+		for (final Entry<Itemset, Double> entry : sortedItemsets.entrySet()) {
 			logger.info(String.format("%s\tprob: %1.5f \tint: %1.5f %n",
 					entry.getKey(), entry.getValue(),
 					intMap.get(entry.getKey())));
 		}
 		logger.info("\n");
 
-		return itemsets;
+		return sortedItemsets;
 	}
 
 	/** Set up Spark */
