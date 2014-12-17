@@ -5,7 +5,7 @@ import itemsetmining.itemset.Itemset;
 import java.io.File;
 import java.io.IOException;
 import java.lang.ProcessBuilder.Redirect;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 import org.apache.commons.io.FileUtils;
 
@@ -25,11 +25,9 @@ public class MTVItemsetMining {
 
 	}
 
-	public static HashMap<Itemset, Double> mineItemsets(final File dbFile,
-			final double minSup, final int noItemsets, final File saveFile)
-			throws IOException {
-
-		final HashMap<Itemset, Double> minedItemsets = Maps.newHashMap();
+	public static LinkedHashMap<Itemset, Double> mineItemsets(
+			final File dbFile, final double minSup, final int noItemsets,
+			final File saveFile) throws IOException {
 
 		// Set MTV settings
 		final String cmd[] = new String[6];
@@ -46,9 +44,9 @@ public class MTVItemsetMining {
 	}
 
 	/** Read in MTV itemsets */
-	public static HashMap<Itemset, Double> readMTVItemsets(final File output)
-			throws IOException {
-		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
+	public static LinkedHashMap<Itemset, Double> readMTVItemsets(
+			final File output) throws IOException {
+		final LinkedHashMap<Itemset, Double> itemsets = Maps.newLinkedHashMap();
 
 		final String[] lines = FileUtils.readFileToString(output).split("\n");
 

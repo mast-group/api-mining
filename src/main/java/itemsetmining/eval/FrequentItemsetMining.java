@@ -6,8 +6,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.SortedMap;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
 
 import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.AlgoAgrawalFaster94;
 import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.AssocRules;
@@ -15,7 +17,10 @@ import ca.pfv.spmf.algorithms.frequentpatterns.apriori.AlgoApriori;
 import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPGrowth;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
 
+import com.google.common.base.Functions;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 
 public class FrequentItemsetMining {
 
@@ -31,7 +36,7 @@ public class FrequentItemsetMining {
 	}
 
 	/** Run FPGrowth algorithm */
-	public static HashMap<Itemset, Integer> mineFrequentItemsetsFPGrowth(
+	public static SortedMap<Itemset, Integer> mineFrequentItemsetsFPGrowth(
 			final String dataset, final String saveFile, final double minSupp)
 			throws IOException {
 
@@ -44,7 +49,7 @@ public class FrequentItemsetMining {
 	}
 
 	/** Run Apriori algorithm */
-	public static HashMap<Itemset, Integer> mineFrequentItemsetsApriori(
+	public static SortedMap<Itemset, Integer> mineFrequentItemsetsApriori(
 			final String dataset, final String saveFile, final double minSupp)
 			throws IOException {
 
@@ -70,26 +75,34 @@ public class FrequentItemsetMining {
 		return rules;
 	}
 
-	/** Convert frequent itemsets to HashMap<Itemset, Integer> */
-	public static HashMap<Itemset, Integer> toMap(final Itemsets patterns) {
-		final HashMap<Itemset, Integer> itemsets = Maps.newHashMap();
-		for (final List<ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemset> level : patterns
-				.getLevels()) {
-			for (final ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemset itemset : level)
-				itemsets.put(new Itemset(itemset.getItems()),
-						itemset.getAbsoluteSupport());
+	/** Convert frequent itemsets to sorted Map<Itemset, Integer> */
+	public static SortedMap<Itemset, Integer> toMap(final Itemsets patterns) {
+		if (patterns == null) {
+			return null;
+		} else {
+			final HashMap<Itemset, Integer> itemsets = Maps.newHashMap();
+			for (final List<ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemset> level : patterns
+					.getLevels()) {
+				for (final ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemset itemset : level)
+					itemsets.put(new Itemset(itemset.getItems()),
+							itemset.getAbsoluteSupport());
+			}
+			// Sort itemsets by support
+			final Ordering<Itemset> comparator = Ordering.natural().reverse()
+					.onResultOf(Functions.forMap(itemsets))
+					.compound(Ordering.usingToString());
+			return ImmutableSortedMap.copyOf(itemsets, comparator);
 		}
-		return itemsets;
 	}
 
 	/** Read in frequent itemsets */
-	public static HashMap<Itemset, Integer> readFrequentItemsets(
+	public static SortedMap<Itemset, Integer> readFrequentItemsets(
 			final File output) throws IOException {
 		final HashMap<Itemset, Integer> itemsets = Maps.newHashMap();
 
-		final String[] lines = FileUtils.readFileToString(output).split("\n");
-
-		for (final String line : lines) {
+		final LineIterator it = FileUtils.lineIterator(output);
+		while (it.hasNext()) {
+			final String line = it.nextLine();
 			if (!line.trim().isEmpty()) {
 				final String[] splitLine = line.split("#SUP:");
 				final String[] items = splitLine[0].split(" ");
@@ -100,8 +113,11 @@ public class FrequentItemsetMining {
 				itemsets.put(itemset, supp);
 			}
 		}
-
-		return itemsets;
+		// Sort itemsets by support
+		final Ordering<Itemset> comparator = Ordering.natural().reverse()
+				.onResultOf(Functions.forMap(itemsets))
+				.compound(Ordering.usingToString());
+		return ImmutableSortedMap.copyOf(itemsets, comparator);
 	}
 
 }

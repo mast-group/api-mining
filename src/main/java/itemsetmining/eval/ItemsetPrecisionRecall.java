@@ -29,21 +29,22 @@ import com.google.common.io.Files;
 public class ItemsetPrecisionRecall {
 
 	/** Main Settings */
-	private static final String algorithm = "IIM";
 	private static final File dbFile = new File(
 			"/disk/data1/jfowkes/itemset.txt");
 	private static final File saveDir = new File("/disk/data1/jfowkes/logs/");
 
 	/** FIM Issues to incorporate */
 	private static final String name = "caviar";
-	private static final int noIterations = 300;
+	private static final int noIterations = 250;
 
 	/** Previously mined Itemsets to use for background distribution */
 	private static final File itemsetLog = new File(
 			"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Logs/plants-20.10.2014-11:12:45.log");
 	private static final int noTransactions = 10_000;
+	private static final int noSpecialItemsets = 30;
 
 	/** MTV/FIM Settings */
+	private static final int noMTVIterations = 30;
 	private static final double minSup = 0.0099;
 	private static final double minSupMTV = 0.0099;
 
@@ -55,6 +56,37 @@ public class ItemsetPrecisionRecall {
 
 	public static void main(final String[] args) throws IOException {
 
+		// Read in background distribution
+		final HashMap<Itemset, Double> backgroundItemsets = ItemsetPrecisionRecall
+				.readIIMItemsets(itemsetLog);
+
+		// Set up transaction DB
+		final HashMap<Itemset, Double> specialItemsets = TransactionGenerator
+				.generateExampleItemsets(name, noSpecialItemsets, 0);
+		backgroundItemsets.putAll(specialItemsets);
+		// Generate transaction DB
+		final HashMap<Itemset, Double> itemsets = TransactionGenerator
+				.generateTransactionDatabase(backgroundItemsets,
+						noTransactions, dbFile);
+		System.out.print("\n============= ACTUAL ITEMSETS =============\n");
+		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
+			System.out.print(String.format("%s\tprob: %1.5f %n",
+					entry.getKey(), entry.getValue()));
+		}
+		System.out.print("\n");
+		System.out.println("No itemsets: " + itemsets.size());
+		ItemsetScaling.printTransactionDBStats(dbFile);
+
+		precisionRecall(itemsets, specialItemsets, "IIM");
+		precisionRecall(itemsets, specialItemsets, "MTV");
+		precisionRecall(itemsets, specialItemsets, "FIM");
+
+	}
+
+	public static void precisionRecall(final HashMap<Itemset, Double> itemsets,
+			final HashMap<Itemset, Double> specialItemsets,
+			final String algorithm) throws IOException {
+
 		// Set up logging
 		final FileOutputStream outFile = new FileOutputStream(saveDir + "/"
 				+ algorithm + "_" + name + "_pr.txt");
@@ -62,93 +94,73 @@ public class ItemsetPrecisionRecall {
 		final PrintStream ps = new PrintStream(out);
 		System.setOut(ps);
 
-		// Read in background distribution
-		final HashMap<Itemset, Double> backgroundItemsets = ItemsetPrecisionRecall
-				.readIIMItemsets(itemsetLog);
+		System.out.println("\nSpecial Itemsets: " + noSpecialItemsets);
 
-		precisionRecall(backgroundItemsets, new int[] { 30 });
+		// Mine itemsets
+		Set<Itemset> minedItemsets = null;
+		final File logFile = Logging.getLogFileName(algorithm, true, saveDir,
+				dbFile);
+		final long startTime = System.currentTimeMillis();
+		if (algorithm.equals("spark"))
+			minedItemsets = runSpark(sparkCores, noIterations).keySet();
+		else if (algorithm.equals("MTV"))
+			minedItemsets = MTVItemsetMining.mineItemsets(dbFile, minSupMTV,
+					noMTVIterations, logFile).keySet();
+		else if (algorithm.equals("FIM")) {
+			FrequentItemsetMining
+					.mineFrequentItemsetsFPGrowth(dbFile.getAbsolutePath(),
+							logFile.getAbsolutePath(), minSup);
+			minedItemsets = FrequentItemsetMining.readFrequentItemsets(logFile)
+					.keySet();
+		} else if (algorithm.equals("IIM"))
+			minedItemsets = ItemsetMining
+					.mineItemsets(dbFile, new InferGreedy(), maxStructureSteps,
+							noIterations, logFile).keySet();
+		else
+			throw new RuntimeException("Incorrect algorithm name.");
+		final long endTime = System.currentTimeMillis();
+		final double time = (endTime - startTime) / (double) 1000;
 
-	}
-
-	public static void precisionRecall(
-			final HashMap<Itemset, Double> backgroundItemsets,
-			final int[] specialFrequency) throws IOException {
-
-		final int len = specialFrequency.length;
-		final double[] time = new double[len];
+		// Calculate sorted precision and recall
+		final int len = minedItemsets.size();
+		System.out.println("No. mined itemsets: " + len);
 		final double[] precision = new double[len];
 		final double[] recall = new double[len];
+		for (int k = 1; k < minedItemsets.size(); k++) {
 
-		for (int i = 0; i < len; i++) {
-			final int noSpecialItemsets = specialFrequency[i];
-			System.out.println("\nSpecial Itemsets: " + noSpecialItemsets);
-
-			// Set up transaction DB
-			final HashMap<Itemset, Double> specialItemsets = TransactionGenerator
-					.generateExampleItemsets(name, noSpecialItemsets, 0);
-			backgroundItemsets.putAll(specialItemsets);
-
-			// Generate transaction DB
-			final HashMap<Itemset, Double> itemsets = TransactionGenerator
-					.generateTransactionDatabase(backgroundItemsets,
-							noTransactions, dbFile);
-			System.out.print("\n============= ACTUAL ITEMSETS =============\n");
-			for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-				System.out.print(String.format("%s\tprob: %1.5f %n",
-						entry.getKey(), entry.getValue()));
+			final Set<Itemset> topKMined = Sets.newHashSet();
+			for (final Itemset set : minedItemsets) {
+				topKMined.add(set);
+				if (topKMined.size() == k)
+					break;
 			}
-			System.out.print("\n");
-			System.out.println("No itemsets: " + itemsets.size());
-			ItemsetScaling.printTransactionDBStats(dbFile);
 
-			// Mine itemsets
-			Set<Itemset> minedItemsets = null;
-			final File logFile = Logging.getLogFileName(algorithm, true,
-					saveDir, dbFile);
-			final long startTime = System.currentTimeMillis();
-			if (algorithm.equals("spark"))
-				minedItemsets = runSpark(sparkCores, noIterations).keySet();
-			else if (algorithm.equals("MTV"))
-				minedItemsets = MTVItemsetMining.mineItemsets(dbFile,
-						minSupMTV, noIterations, logFile).keySet();
-			else if (algorithm.equals("FIM"))
-				minedItemsets = FrequentItemsetMining
-						.mineFrequentItemsetsFPGrowth(dbFile.getAbsolutePath(),
-								logFile.getAbsolutePath(), minSup).keySet();
-			else if (algorithm.equals("IIM"))
-				minedItemsets = ItemsetMining.mineItemsets(dbFile,
-						new InferGreedy(), maxStructureSteps, noIterations,
-						logFile).keySet();
-			else
-				throw new RuntimeException("Incorrect algorithm name.");
-			final long endTime = System.currentTimeMillis();
-			final double tim = (endTime - startTime) / (double) 1000;
-			time[i] += tim;
-
-			// Calculate precision and recall
-			System.out.println("No. mined itemsets: " + minedItemsets.size());
 			final double noInBoth = Sets.intersection(itemsets.keySet(),
-					minedItemsets).size();
+					topKMined).size();
 			final double noSpecialInBoth = Sets.intersection(
-					specialItemsets.keySet(), minedItemsets).size();
-			final double pr = noInBoth / (double) minedItemsets.size();
+					specialItemsets.keySet(), topKMined).size();
+			final double pr = noInBoth / (double) topKMined.size();
 			final double rec = noSpecialInBoth
 					/ (double) specialItemsets.size();
-			precision[i] += pr;
-			recall[i] += rec;
+			precision[k] += pr;
+			recall[k] += rec;
 
-			// Display precision and recall
-			System.out.printf("Precision: %.2f%n", pr);
-			System.out.printf("Recall: %.2f%n", rec);
-			System.out.printf("Time (s): %.2f%n", tim);
+			if (algorithm.equals("FIM") && (k % 100 == 0)) {
+				System.out.println("\n======== " + name + " ========");
+				System.out.println("Special Frequency: " + noSpecialItemsets);
+				System.out.println("Time: " + time);
+				System.out.println("Precision (all): "
+						+ Arrays.toString(precision));
+				System.out.println("Recall (special): "
+						+ Arrays.toString(recall));
+			}
 
 		}
 
 		// Output precision and recall
 		System.out.println("\n======== " + name + " ========");
-		System.out.println("Special Frequency: "
-				+ Arrays.toString(specialFrequency));
-		System.out.println("Time: " + Arrays.toString(time));
+		System.out.println("Special Frequency: " + noSpecialItemsets);
+		System.out.println("Time: " + time);
 		System.out.println("Precision (all): " + Arrays.toString(precision));
 		System.out.println("Recall (special): " + Arrays.toString(recall));
 
