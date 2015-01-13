@@ -29,11 +29,8 @@ import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
-import com.google.common.base.Functions;
 import com.google.common.collect.HashMultiset;
-import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Multiset;
-import com.google.common.collect.Ordering;
 
 public class SparkItemsetMining extends ItemsetMiningCore {
 
@@ -154,16 +151,8 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 		// Sort itemsets by interestingness
 		final HashMap<Itemset, Double> intMap = calculateInterestingness(
 				itemsets, transactions, tree);
-		final Ordering<Itemset> comparator = Ordering
-				.natural()
-				.reverse()
-				.onResultOf(Functions.forMap(intMap))
-				.compound(
-						Ordering.natural().reverse()
-								.onResultOf(Functions.forMap(itemsets)))
-				.compound(Ordering.usingToString());
-		final Map<Itemset, Double> sortedItemsets = ImmutableSortedMap.copyOf(
-				itemsets, comparator);
+		final Map<Itemset, Double> sortedItemsets = sortItemsets(itemsets,
+				intMap);
 
 		logger.info("\n============= INTERESTING ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : sortedItemsets.entrySet()) {

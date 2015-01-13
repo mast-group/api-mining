@@ -17,6 +17,8 @@ import java.util.logging.Logger;
 
 import scala.Tuple2;
 
+import com.google.common.base.Functions;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
@@ -351,11 +353,30 @@ public abstract class ItemsetMiningCore {
 		return false;
 	}
 
+	/** Sort itemsets by interestingness */
+	public static Map<Itemset, Double> sortItemsets(
+			final HashMap<Itemset, Double> itemsets,
+			final HashMap<Itemset, Double> intMap) {
+
+		final Ordering<Itemset> comparator = Ordering
+				.natural()
+				.reverse()
+				.onResultOf(Functions.forMap(intMap))
+				.compound(
+						Ordering.natural().reverse()
+								.onResultOf(Functions.forMap(itemsets)))
+				.compound(Ordering.usingToString());
+		final Map<Itemset, Double> sortedItemsets = ImmutableSortedMap.copyOf(
+				itemsets, comparator);
+
+		return sortedItemsets;
+	}
+
 	/**
 	 * Calculate interestingness as defined by i(S) = |z_S = 1|/|T : S in T|
 	 * where |z_S = 1| is calculated by pi_S*|T| and |T : S in T| = supp(S)
 	 */
-	protected static HashMap<Itemset, Double> calculateInterestingness(
+	public static HashMap<Itemset, Double> calculateInterestingness(
 			final HashMap<Itemset, Double> itemsets,
 			final TransactionDatabase transactions, final ItemsetTree tree) {
 
