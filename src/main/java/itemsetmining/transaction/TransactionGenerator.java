@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.Random;
 
 import org.apache.commons.io.LineIterator;
 import org.apache.commons.math3.distribution.GeometricDistribution;
@@ -117,6 +118,9 @@ public class TransactionGenerator {
 			final HashMap<Itemset, Double> itemsets, final int noTransactions,
 			final File outFile) throws IOException {
 
+		// Set random number seed
+		final Random random = new Random(1);
+
 		// Storage for itemsets actually added
 		final HashMap<Itemset, Double> addedItemsets = Maps.newHashMap();
 
@@ -128,8 +132,8 @@ public class TransactionGenerator {
 		while (count < noTransactions) {
 
 			// Generate transaction from distribution
-			final Transaction transaction = sampleFromDistribution(itemsets,
-					addedItemsets);
+			final Transaction transaction = sampleFromDistribution(random,
+					itemsets, addedItemsets);
 			for (final int item : transaction) {
 				out.print(item + " ");
 			}
@@ -155,13 +159,13 @@ public class TransactionGenerator {
 	}
 
 	/** Randomly generate itemset with its probability */
-	private static Transaction sampleFromDistribution(
+	private static Transaction sampleFromDistribution(final Random random,
 			final HashMap<Itemset, Double> itemsets,
 			final HashMap<Itemset, Double> addedItemsets) {
 
 		final Transaction transaction = new Transaction();
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-			if (Math.random() < entry.getValue()) {
+			if (random.nextDouble() < entry.getValue()) {
 				transaction.add(entry.getKey());
 				addedItemsets.put(entry.getKey(), entry.getValue());
 			}
