@@ -28,7 +28,7 @@ items = []
 
 
 found = False
-for line in f.readlines():
+for line in f:
     
     if found and line != '\n':
         splitline = line.split('\t')

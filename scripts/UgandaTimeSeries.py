@@ -1,9 +1,11 @@
 ''' Plot top Uganda itemsets as a time series '''
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib import rc
 import numpy as np
 import linecache as lc
 import pickle
+import brewer2mpl
 from datetime import datetime
 from scipy.stats import itemfreq
 
@@ -14,6 +16,15 @@ logfile = basedir + 'Logs/IIM-uganda_en_3m_filtered-14.01.2015-16:36:50.log'
 db_file = basedir + 'Datasets/Uganda/3mths/uganda_en_filtered.dat'
 dates_file = basedir + 'Datasets/Uganda/3mths/dates_en_filtered.txt'
 item_dict = basedir + 'Datasets/Uganda/items_en.dict'
+
+rc('xtick', labelsize=16)
+rc('ytick', labelsize=16)
+
+# Set up colour brewer colours
+# http://nbviewer.ipython.org/gist/olgabot/5357268
+bmap = brewer2mpl.get_map('Set2', 'qualitative', 7)
+colors = bmap.mpl_colors
+rc('axes', color_cycle=colors)
 
 itemsets = []
 setprobs = []
@@ -72,24 +83,30 @@ for i in range(len(itemsets)):
     
     freqs = itemfreq(np.array(itemset_days[i]))
     print freqs
-    plt.plot(freqs[:,0],freqs[:,1])
+    plt.plot(freqs[:,0],freqs[:,1],linewidth=2)
 
-plt.ylabel('Mentions per day')
+plt.ylabel('Mentions per day',fontsize=16)
 plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%m/%Y'))
 plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
 plt.gca().xaxis.set_minor_locator(mdates.WeekdayLocator())
 plt.grid()
-plt.gcf().autofmt_xdate()
 
-# Shrink current axis's height by 10% on the top
+# Shrink current axis's height by 10% on the top and bottom
 # http://stackoverflow.com/questions/4700614/how-to-put-the-legend-out-of-the-plot
 ax = plt.gca()
 box = ax.get_position()
-ax.set_position([box.x0, box.y0 - box.height * 0.1,
-                 box.width, box.height * 0.9])
-# Put a legend below current axis
-ax.legend(legend,loc='lower center', bbox_to_anchor=(0.5005, 1.05),
-          fancybox=True, ncol=3)
+ax.set_position([box.x0, box.y0,
+                 box.width, box.height * 0.8])
+
+# Put a legend above current axis
+legend[0] = 'soul, rest, peace'
+ax.legend(legend,loc='lower center', bbox_to_anchor=(0.485, 1.05),
+          fancybox=True, ncol=3, fontsize=16)
+
+# Add label for April at end
+min_val = mdates.date2num(datetime.strptime('31/12/2012','%d/%m/%Y'))
+max_val = mdates.date2num(datetime.strptime('01/04/2013','%d/%m/%Y'))
+ax.set_xlim( ( min_val, max_val ) ) 
 
 plt.show()
 
