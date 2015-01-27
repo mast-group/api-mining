@@ -26,7 +26,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 
-public class ItemsetPrecisionRecall {
+public class BackgroundPrecisionRecall {
 
 	/** Main Settings */
 	private static final File dbFile = new File(
@@ -34,8 +34,8 @@ public class ItemsetPrecisionRecall {
 	private static final File saveDir = new File("/disk/data1/jfowkes/logs/");
 
 	/** FIM Issues to incorporate */
-	private static final String name = "caviar";
-	private static final int noIterations = 250;
+	private static final String name = "Background";
+	private static final int noIterations = 500;
 
 	/** Previously mined Itemsets to use for background distribution */
 	private static final File itemsetLog = new File(
@@ -44,9 +44,9 @@ public class ItemsetPrecisionRecall {
 	private static final int noSpecialItemsets = 30;
 
 	/** MTV/FIM Settings */
-	private static final int noMTVIterations = 30;
-	private static final double minSup = 0.0099;
-	private static final double minSupMTV = 0.0099;
+	private static final int noMTVIterations = 250;
+	private static final double minSup = 0.05750265949;
+	private static final double minSupMTV = 0.05750265949;
 
 	/** Spark Settings */
 	private static final int sparkCores = 64;
@@ -57,14 +57,9 @@ public class ItemsetPrecisionRecall {
 	public static void main(final String[] args) throws IOException {
 
 		// Read in background distribution
-		final HashMap<Itemset, Double> backgroundItemsets = ItemsetPrecisionRecall
+		final HashMap<Itemset, Double> backgroundItemsets = BackgroundPrecisionRecall
 				.readIIMItemsets(itemsetLog);
 
-		// Set up transaction DB
-		final HashMap<Itemset, Double> specialItemsets = TransactionGenerator
-				.generateExampleItemsets(name, noSpecialItemsets, 0);
-		backgroundItemsets.putAll(specialItemsets);
-		// Generate transaction DB
 		final HashMap<Itemset, Double> itemsets = TransactionGenerator
 				.generateTransactionDatabase(backgroundItemsets,
 						noTransactions, dbFile);
@@ -77,14 +72,13 @@ public class ItemsetPrecisionRecall {
 		System.out.println("No itemsets: " + itemsets.size());
 		ItemsetScaling.printTransactionDBStats(dbFile);
 
-		//precisionRecall(itemsets, specialItemsets, "IIM");
-		//precisionRecall(itemsets, specialItemsets, "MTV");
-		precisionRecall(itemsets, specialItemsets, "FIM");
+		precisionRecall(itemsets, "IIM");
+		precisionRecall(itemsets, "MTV");
+		precisionRecall(itemsets, "FIM");
 
 	}
 
 	public static void precisionRecall(final HashMap<Itemset, Double> itemsets,
-			final HashMap<Itemset, Double> specialItemsets,
 			final String algorithm) throws IOException {
 
 		// Set up logging
@@ -137,11 +131,8 @@ public class ItemsetPrecisionRecall {
 
 			final double noInBoth = Sets.intersection(itemsets.keySet(),
 					topKMined).size();
-			final double noSpecialInBoth = Sets.intersection(
-					specialItemsets.keySet(), topKMined).size();
 			final double pr = noInBoth / (double) topKMined.size();
-			final double rec = noSpecialInBoth
-					/ (double) specialItemsets.size();
+			final double rec = noInBoth / (double) itemsets.size();
 			precision[k] += pr;
 			recall[k] += rec;
 		}
