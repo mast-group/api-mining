@@ -99,7 +99,7 @@ ax.set_position([box.x0, box.y0,
                  box.width, box.height * 0.8])
 
 # Put a legend above current axis
-legend[0] = 'soul, rest, peace'
+legend[0] = 'soul, rest, peac'
 ax.legend(legend,loc='lower center', bbox_to_anchor=(0.485, 1.05),
           fancybox=True, ncol=3, fontsize=16)
 
