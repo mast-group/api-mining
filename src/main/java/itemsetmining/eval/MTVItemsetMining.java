@@ -16,12 +16,15 @@ public class MTVItemsetMining {
 	public static void main(final String[] args) throws IOException {
 
 		// MTV Parameters
-		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/abstracts.dat";
-		final double minSupp = 0.01164144353; // relative support
-		final int noItemsets = 10;
+		final String dataset = "uganda";
+		final double minSupp = 0.01; // relative support
+		final int noItemsets = 200;
+		final String dbPath = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/"
+				+ dataset + ".dat";
+		final String saveFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/MTV/"
+				+ dataset + ".txt";
 
-		mineItemsets(new File(dataset), minSupp, noItemsets, new File(
-				"/tmp/mtv-log.txt"));
+		mineItemsets(new File(dbPath), minSupp, noItemsets, new File(saveFile));
 
 	}
 

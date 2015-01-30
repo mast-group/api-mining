@@ -27,12 +27,20 @@ public class FrequentItemsetMining {
 	public static void main(final String[] args) throws IOException {
 
 		// FIM parameters
-		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/plants.dat";
-		final double minSupp = 0.1024; // relative support
-		final String saveFile = "/tmp/plants-fim.txt";
+		final String dataset = "uganda";
+		final double minSupp = 0.001; // relative support
+		final String dbPath = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/"
+				+ dataset + ".dat";
+		final String saveFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/FIM/"
+				+ dataset + ".txt";
 
-		mineFrequentItemsetsFPGrowth(dataset, saveFile, minSupp);
+		mineFrequentItemsetsApriori(dbPath, saveFile, minSupp);
 		// generateAssociationRules(itemsets, dbSize, null, 0, 0);
+		final SortedMap<Itemset, Integer> freqItemsets = readFrequentItemsets(new File(
+				saveFile));
+		System.out.println("\nFIM Itemsets");
+		System.out.println("No itemsets: " + freqItemsets.size());
+
 	}
 
 	/** Run FPGrowth algorithm */
@@ -48,7 +56,12 @@ public class FrequentItemsetMining {
 		return toMap(patterns);
 	}
 
-	/** Run Apriori algorithm */
+	/**
+	 * Run Apriori algorithm
+	 *
+	 * @deprecated appears to be broken
+	 */
+	@Deprecated
 	public static SortedMap<Itemset, Integer> mineFrequentItemsetsApriori(
 			final String dataset, final String saveFile, final double minSupp)
 			throws IOException {

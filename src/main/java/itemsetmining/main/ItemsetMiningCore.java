@@ -7,6 +7,7 @@ import itemsetmining.transaction.TransactionDatabase;
 import itemsetmining.transaction.TransactionRDD;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,6 +15,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.apache.commons.io.FileUtils;
 
 import scala.Tuple2;
 
@@ -391,6 +394,44 @@ public abstract class ItemsetMiningCore {
 		}
 
 		return interestingnessMap;
+	}
+
+	/** Read output itemsets from file (sorted by interestingness) */
+	public static Map<Itemset, Double> readIIMItemsets(final File output)
+			throws IOException {
+		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
+		final HashMap<Itemset, Double> intMap = Maps.newHashMap();
+	
+		final String[] lines = FileUtils.readFileToString(output).split("\n");
+	
+		boolean found = false;
+		for (final String line : lines) {
+	
+			if (found && !line.trim().isEmpty()) {
+				final String[] splitLine = line.split("\t");
+				final String[] items = splitLine[0].split(",");
+				items[0] = items[0].replace("{", "");
+				items[items.length - 1] = items[items.length - 1].replace("}",
+						"");
+				final Itemset itemset = new Itemset();
+				for (final String item : items)
+					itemset.add(Integer.parseInt(item.trim()));
+				final double prob = Double
+						.parseDouble(splitLine[1].split(":")[1]);
+				final double intr = Double
+						.parseDouble(splitLine[2].split(":")[1]);
+				itemsets.put(itemset, prob);
+				intMap.put(itemset, intr);
+			}
+	
+			if (line.contains("INTERESTING ITEMSETS"))
+				found = true;
+		}
+	
+		// Sort itemsets by interestingness
+		final Map<Itemset, Double> sortedItemsets = sortItemsets(itemsets, intMap);
+	
+		return sortedItemsets;
 	}
 
 }

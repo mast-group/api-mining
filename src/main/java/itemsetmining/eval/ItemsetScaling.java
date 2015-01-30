@@ -3,6 +3,7 @@ package itemsetmining.eval;
 import itemsetmining.itemset.Itemset;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.ItemsetMining;
+import itemsetmining.main.ItemsetMiningCore;
 import itemsetmining.transaction.TransactionGenerator;
 import itemsetmining.util.Logging;
 
@@ -12,7 +13,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Level;
@@ -72,7 +73,7 @@ public class ItemsetScaling {
 		System.setOut(ps);
 
 		// Read in previously mined itemsets
-		final HashMap<Itemset, Double> itemsets = ItemsetPrecisionRecall
+		final Map<Itemset, Double> itemsets = ItemsetMiningCore
 				.readIIMItemsets(itemsetLog);
 		System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
@@ -139,7 +140,7 @@ public class ItemsetScaling {
 	public static void generateSyntheticDatabase(final int noTransactions,
 			final File dbPath) throws IOException {
 
-		final HashMap<Itemset, Double> itemsets = ItemsetPrecisionRecall
+		final Map<Itemset, Double> itemsets = ItemsetMiningCore
 				.readIIMItemsets(itemsetLog);
 		System.out.print("\n============= ACTUAL ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {

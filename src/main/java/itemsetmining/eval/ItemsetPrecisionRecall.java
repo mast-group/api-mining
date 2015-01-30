@@ -3,6 +3,7 @@ package itemsetmining.eval;
 import itemsetmining.itemset.Itemset;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.ItemsetMining;
+import itemsetmining.main.ItemsetMiningCore;
 import itemsetmining.transaction.TransactionGenerator;
 import itemsetmining.util.Logging;
 
@@ -14,15 +15,14 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Level;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.output.TeeOutputStream;
 
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 
@@ -35,7 +35,7 @@ public class ItemsetPrecisionRecall {
 
 	/** FIM Issues to incorporate */
 	private static final String name = "caviar";
-	private static final int noIterations = 250;
+	private static final int noIterations = 300;
 
 	/** Previously mined Itemsets to use for background distribution */
 	private static final File itemsetLog = new File(
@@ -57,7 +57,7 @@ public class ItemsetPrecisionRecall {
 	public static void main(final String[] args) throws IOException {
 
 		// Read in background distribution
-		final HashMap<Itemset, Double> backgroundItemsets = ItemsetPrecisionRecall
+		final Map<Itemset, Double> backgroundItemsets = ItemsetMiningCore
 				.readIIMItemsets(itemsetLog);
 
 		// Set up transaction DB
@@ -77,9 +77,9 @@ public class ItemsetPrecisionRecall {
 		System.out.println("No itemsets: " + itemsets.size());
 		ItemsetScaling.printTransactionDBStats(dbFile);
 
-		//precisionRecall(itemsets, specialItemsets, "IIM");
-		//precisionRecall(itemsets, specialItemsets, "MTV");
-		precisionRecall(itemsets, specialItemsets, "FIM");
+		precisionRecall(itemsets, specialItemsets, "IIM");
+		// precisionRecall(itemsets, specialItemsets, "MTV");
+		// precisionRecall(itemsets, specialItemsets, "FIM");
 
 	}
 
@@ -155,7 +155,7 @@ public class ItemsetPrecisionRecall {
 
 	}
 
-	private static HashMap<Itemset, Double> runSpark(final int noCores,
+	static Map<Itemset, Double> runSpark(final int noCores,
 			final int noIterations) throws IOException {
 		final String cmd[] = new String[8];
 		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/git/itemset-mining/run-spark.sh";
@@ -170,7 +170,7 @@ public class ItemsetPrecisionRecall {
 
 		final File output = new File(ItemsetMining.LOG_DIR
 				+ FilenameUtils.getBaseName(dbFile.getName()) + ".log");
-		final HashMap<Itemset, Double> itemsets = readIIMItemsets(output);
+		final Map<Itemset, Double> itemsets = ItemsetMiningCore.readIIMItemsets(output);
 
 		final String timestamp = new SimpleDateFormat("-dd.MM.yyyy-HH:mm:ss")
 				.format(new Date());
@@ -178,37 +178,6 @@ public class ItemsetPrecisionRecall {
 				+ timestamp + ".log");
 		Files.move(output, newLog);
 
-		return itemsets;
-	}
-
-	/** Read output itemsets from file */
-	static HashMap<Itemset, Double> readIIMItemsets(final File output)
-			throws IOException {
-		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
-
-		final String[] lines = FileUtils.readFileToString(output).split("\n");
-
-		boolean found = false;
-		for (final String line : lines) {
-
-			if (found && !line.trim().isEmpty()) {
-				final String[] splitLine = line.split("\t");
-				final String[] items = splitLine[0].split(",");
-				items[0] = items[0].replace("{", "");
-				items[items.length - 1] = items[items.length - 1].replace("}",
-						"");
-				final Itemset itemset = new Itemset();
-				for (final String item : items)
-					itemset.add(Integer.parseInt(item.trim()));
-				final double prob = Double
-						.parseDouble(splitLine[1].split(":")[1]);
-				// double intr = Double.parseDouble(splitLine[2].split(":")[1]);
-				itemsets.put(itemset, prob);
-			}
-
-			if (line.contains("INTERESTING ITEMSETS"))
-				found = true;
-		}
 		return itemsets;
 	}
 

@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
@@ -115,7 +116,7 @@ public class TransactionGenerator {
 	 * @return set of itemsets added to transaction
 	 */
 	public static HashMap<Itemset, Double> generateTransactionDatabase(
-			final HashMap<Itemset, Double> itemsets, final int noTransactions,
+			final Map<Itemset, Double> itemsets, final int noTransactions,
 			final File outFile) throws IOException {
 
 		// Set random number seed
@@ -160,7 +161,7 @@ public class TransactionGenerator {
 
 	/** Randomly generate itemset with its probability */
 	private static Transaction sampleFromDistribution(final Random random,
-			final HashMap<Itemset, Double> itemsets,
+			final Map<Itemset, Double> itemsets,
 			final HashMap<Itemset, Double> addedItemsets) {
 
 		final Transaction transaction = new Transaction();
