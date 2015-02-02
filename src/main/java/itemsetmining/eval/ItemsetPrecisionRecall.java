@@ -23,6 +23,7 @@ import java.util.logging.Level;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.output.TeeOutputStream;
 
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 
@@ -57,8 +58,8 @@ public class ItemsetPrecisionRecall {
 	public static void main(final String[] args) throws IOException {
 
 		// Read in background distribution
-		final Map<Itemset, Double> backgroundItemsets = ItemsetMiningCore
-				.readIIMItemsets(itemsetLog);
+		final Map<Itemset, Double> backgroundItemsets = Maps
+				.newHashMap(ItemsetMiningCore.readIIMItemsets(itemsetLog));
 
 		// Set up transaction DB
 		final HashMap<Itemset, Double> specialItemsets = TransactionGenerator
@@ -77,9 +78,9 @@ public class ItemsetPrecisionRecall {
 		System.out.println("No itemsets: " + itemsets.size());
 		ItemsetScaling.printTransactionDBStats(dbFile);
 
-		precisionRecall(itemsets, specialItemsets, "IIM");
+		// precisionRecall(itemsets, specialItemsets, "IIM");
 		// precisionRecall(itemsets, specialItemsets, "MTV");
-		// precisionRecall(itemsets, specialItemsets, "FIM");
+		precisionRecall(itemsets, specialItemsets, "FIM");
 
 	}
 
@@ -170,7 +171,8 @@ public class ItemsetPrecisionRecall {
 
 		final File output = new File(ItemsetMining.LOG_DIR
 				+ FilenameUtils.getBaseName(dbFile.getName()) + ".log");
-		final Map<Itemset, Double> itemsets = ItemsetMiningCore.readIIMItemsets(output);
+		final Map<Itemset, Double> itemsets = ItemsetMiningCore
+				.readIIMItemsets(output);
 
 		final String timestamp = new SimpleDateFormat("-dd.MM.yyyy-HH:mm:ss")
 				.format(new Date());
