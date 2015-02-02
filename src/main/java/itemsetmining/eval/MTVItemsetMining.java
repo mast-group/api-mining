@@ -9,22 +9,35 @@ import java.util.LinkedHashMap;
 
 import org.apache.commons.io.FileUtils;
 
+import ca.pfv.spmf.tools.other_dataset_tools.FixTransactionDatabaseTool;
+
 import com.google.common.collect.Maps;
 
 public class MTVItemsetMining {
 
+	private static final String TMPDB = "/tmp/fixed-dataset.dat";
+	private static final FixTransactionDatabaseTool dbTool = new FixTransactionDatabaseTool();
+
 	public static void main(final String[] args) throws IOException {
 
 		// MTV Parameters
-		final String dataset = "uganda";
-		final double minSupp = 0.01; // relative support
-		final int noItemsets = 200;
-		final String dbPath = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/"
-				+ dataset + ".dat";
-		final String saveFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/MTV/"
-				+ dataset + ".txt";
+		final String[] datasets = new String[] { "plants", "mammals",
+				"abstracts", "uganda" };
+		final double[] minSupps = new double[] { 0.05750265949, 0.07490636704,
+				0.01164144353, 0.001 }; // relative support
+		final int noItemsets = 1000;
 
-		mineItemsets(new File(dbPath), minSupp, noItemsets, new File(saveFile));
+		for (int i = 0; i < datasets.length; i++) {
+
+			final String dbPath = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/"
+					+ datasets[i] + ".dat";
+			final String saveFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/MTV/"
+					+ datasets[i] + ".txt";
+
+			mineItemsets(new File(dbPath), minSupps[i], noItemsets, new File(
+					saveFile));
+
+		}
 
 	}
 
@@ -32,10 +45,13 @@ public class MTVItemsetMining {
 			final File dbFile, final double minSup, final int noItemsets,
 			final File saveFile) throws IOException {
 
+		// Remove transaction duplicates and sort items ascending
+		dbTool.convert(dbFile.getAbsolutePath(), TMPDB);
+
 		// Set MTV settings
 		final String cmd[] = new String[6];
 		cmd[0] = "/afs/inf.ed.ac.uk/user/j/jfowkes/Packages/mtv/mtv.sh";
-		cmd[1] = "-f " + dbFile;
+		cmd[1] = "-f " + TMPDB;
 		cmd[2] = "-s " + minSup;
 		cmd[3] = "-k " + noItemsets;
 		cmd[4] = "-o " + saveFile;

@@ -10,10 +10,14 @@ import ca.pfv.spmf.algorithms.frequentpatterns.charm.AlgoCharmMFI;
 import ca.pfv.spmf.algorithms.frequentpatterns.charm.AlgoCharm_Bitset;
 import ca.pfv.spmf.input.transaction_database_list_integers.TransactionDatabase;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_tids_bitset.Itemsets;
+import ca.pfv.spmf.tools.other_dataset_tools.FixTransactionDatabaseTool;
 
 import com.google.common.collect.Maps;
 
 public class CondensedFrequentItemsetMining {
+
+	private static final String TMPDB = "/tmp/fixed-dataset.dat";
+	private static final FixTransactionDatabaseTool dbTool = new FixTransactionDatabaseTool();
 
 	public static void main(final String[] args) throws IOException {
 
@@ -32,8 +36,11 @@ public class CondensedFrequentItemsetMining {
 			final String dataset, final String saveFile, final double minSupp)
 			throws IOException {
 
+		// Remove transaction duplicates and sort items ascending
+		dbTool.convert(dataset, TMPDB);
+
 		final TransactionDatabase database = new TransactionDatabase();
-		database.loadFile(dataset);
+		database.loadFile(TMPDB);
 
 		final AlgoCharm_Bitset algo = new AlgoCharm_Bitset();
 		final Itemsets patterns = algo.runAlgorithm(saveFile, database,
@@ -49,8 +56,11 @@ public class CondensedFrequentItemsetMining {
 			final String dataset, final String saveFile, final double minSupp)
 			throws IOException {
 
+		// Remove transaction duplicates and sort items ascending
+		dbTool.convert(dataset, TMPDB);
+
 		final TransactionDatabase database = new TransactionDatabase();
-		database.loadFile(dataset);
+		database.loadFile(TMPDB);
 
 		final AlgoCharm_Bitset algo_closed = new AlgoCharm_Bitset();
 		final Itemsets closed_patterns = algo_closed.runAlgorithm(null,

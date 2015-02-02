@@ -16,6 +16,7 @@ import ca.pfv.spmf.algorithms.associationrules.agrawal94_association_rules.Assoc
 import ca.pfv.spmf.algorithms.frequentpatterns.apriori.AlgoApriori;
 import ca.pfv.spmf.algorithms.frequentpatterns.fpgrowth.AlgoFPGrowth;
 import ca.pfv.spmf.patterns.itemset_array_integers_with_count.Itemsets;
+import ca.pfv.spmf.tools.other_dataset_tools.FixTransactionDatabaseTool;
 
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableSortedMap;
@@ -24,17 +25,20 @@ import com.google.common.collect.Ordering;
 
 public class FrequentItemsetMining {
 
+	private static final String TMPDB = "/tmp/fixed-dataset.dat";
+	private static final FixTransactionDatabaseTool dbTool = new FixTransactionDatabaseTool();
+
 	public static void main(final String[] args) throws IOException {
 
 		// FIM parameters
 		final String dataset = "uganda";
-		final double minSupp = 0.001; // relative support
+		final double minSupp = 0.002; // relative support
 		final String dbPath = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Succintly/"
 				+ dataset + ".dat";
 		final String saveFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/FIM/"
 				+ dataset + ".txt";
 
-		mineFrequentItemsetsApriori(dbPath, saveFile, minSupp);
+		mineFrequentItemsetsFPGrowth(dbPath, saveFile, minSupp);
 		// generateAssociationRules(itemsets, dbSize, null, 0, 0);
 		final SortedMap<Itemset, Integer> freqItemsets = readFrequentItemsets(new File(
 				saveFile));
@@ -48,26 +52,27 @@ public class FrequentItemsetMining {
 			final String dataset, final String saveFile, final double minSupp)
 			throws IOException {
 
+		// Remove transaction duplicates and sort items ascending
+		dbTool.convert(dataset, TMPDB);
+
 		final AlgoFPGrowth algo = new AlgoFPGrowth();
-		final Itemsets patterns = algo.runAlgorithm(dataset, saveFile, minSupp);
+		final Itemsets patterns = algo.runAlgorithm(TMPDB, saveFile, minSupp);
 		// algo.printStats();
 		// patterns.printItemsets(algo.getDatabaseSize());
 
 		return toMap(patterns);
 	}
 
-	/**
-	 * Run Apriori algorithm
-	 *
-	 * @deprecated appears to be broken
-	 */
-	@Deprecated
+	/** Run Apriori algorithm */
 	public static SortedMap<Itemset, Integer> mineFrequentItemsetsApriori(
 			final String dataset, final String saveFile, final double minSupp)
 			throws IOException {
 
+		// Remove transaction duplicates and sort items ascending
+		dbTool.convert(dataset, TMPDB);
+
 		final AlgoApriori algo = new AlgoApriori();
-		final Itemsets patterns = algo.runAlgorithm(minSupp, dataset, saveFile);
+		final Itemsets patterns = algo.runAlgorithm(minSupp, TMPDB, saveFile);
 		// algo.printStats();
 		// patterns.printItemsets(algo.getDatabaseSize());
 
