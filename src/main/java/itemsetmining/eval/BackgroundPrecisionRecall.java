@@ -114,7 +114,7 @@ public class BackgroundPrecisionRecall {
 		System.out.println("No. mined itemsets: " + len);
 		final double[] precision = new double[len];
 		final double[] recall = new double[len];
-		for (int k = 1; k < minedItemsets.size(); k++) {
+		for (int k = 1; k <= minedItemsets.size(); k++) {
 
 			final Set<Itemset> topKMined = Sets.newHashSet();
 			for (final Itemset set : minedItemsets) {
@@ -127,8 +127,8 @@ public class BackgroundPrecisionRecall {
 					topKMined).size();
 			final double pr = noInBoth / (double) topKMined.size();
 			final double rec = noInBoth / (double) itemsets.size();
-			precision[k] += pr;
-			recall[k] += rec;
+			precision[k - 1] = pr;
+			recall[k - 1] = rec;
 		}
 
 		// Output precision and recall

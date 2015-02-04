@@ -127,7 +127,7 @@ public class ItemsetPrecisionRecall {
 		System.out.println("No. mined itemsets: " + len);
 		final double[] precision = new double[len];
 		final double[] recall = new double[len];
-		for (int k = 1; k < minedItemsets.size(); k++) {
+		for (int k = 1; k <= len; k++) {
 
 			final Set<Itemset> topKMined = Sets.newHashSet();
 			for (final Itemset set : minedItemsets) {
@@ -143,8 +143,8 @@ public class ItemsetPrecisionRecall {
 			final double pr = noInBoth / (double) topKMined.size();
 			final double rec = noSpecialInBoth
 					/ (double) specialItemsets.size();
-			precision[k] += pr;
-			recall[k] += rec;
+			precision[k - 1] = pr;
+			recall[k - 1] = rec;
 		}
 
 		// Output precision and recall
