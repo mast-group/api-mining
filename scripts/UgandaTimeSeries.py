@@ -6,7 +6,7 @@ import numpy as np
 import linecache as lc
 import pickle
 import brewer2mpl
-from datetime import datetime
+from datetime import datetime, timedelta
 from scipy.stats import itemfreq
 
 top_itemsets = 6
@@ -78,12 +78,18 @@ for itemset in itemsets:
     decodedItemset = ', '.join(decodedItems)
     legend.append(decodedItemset)
 
-# Aggregate itemsets by day and plot across time
+# Aggregate itemsets by day and plot across time, filling in gaps with zeros
+date_list = np.array([datetime.strptime('2012-12-31','%Y-%m-%d') + timedelta(days=k) for k in range(92)])
 for i in range(len(itemsets)):
     
+    freqs_with_zeros = np.zeros(92)
     freqs = itemfreq(np.array(itemset_days[i]))
-    print freqs
-    plt.plot(freqs[:,0],freqs[:,1],linewidth=2)
+    for k in range(92):
+        for row in freqs:
+            if(date_list[k] == row[0]):
+                freqs_with_zeros[k] = row[1]
+                break
+    plt.plot(date_list,freqs_with_zeros,linewidth=2)
 
 plt.ylabel('Mentions per day',fontsize=16)
 plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%m/%Y'))
