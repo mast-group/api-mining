@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -246,12 +247,110 @@ public abstract class ItemsetMiningCore {
 	}
 
 	/**
-	 * Generate candidate itemsets by combining existing sets with highest order
+	 * Generate candidate itemsets by combining existing sets with highest
+	 * order. Evaluate candidates with highest order first.
 	 *
 	 * @param itemsetOrdering
 	 *            ordering that determines which itemsets to combine first
 	 */
 	private static void combineItemsetsStep(
+			final HashMap<Itemset, Double> itemsets,
+			final TransactionDatabase transactions, final ItemsetTree tree,
+			final Set<Itemset> rejected_sets,
+			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps,
+			final Ordering<Itemset> itemsetOrdering,
+			final HashMap<Itemset, Integer> supports) {
+
+		// Try and find better itemset to add
+		// logger.finest(" Structural candidate itemsets: ");
+
+		// Set up support-ordered priority queue
+		// Define decreasing support ordering for candidate itemsets
+		final HashMap<Itemset, Integer> candidateSupports = Maps.newHashMap();
+		final Ordering<Itemset> candidateSupportOrdering = new Ordering<Itemset>() {
+			@Override
+			public int compare(final Itemset set1, final Itemset set2) {
+				return candidateSupports.get(set2)
+						- candidateSupports.get(set1);
+			}
+		}.compound(Ordering.usingToString());
+		final PriorityQueue<Itemset> candidateQueue = new PriorityQueue<Itemset>(
+				maxSteps, candidateSupportOrdering);
+
+		// Sort itemsets according to given ordering
+		final ArrayList<Itemset> sortedItemsets = Lists.newArrayList(itemsets
+				.keySet());
+		Collections.sort(sortedItemsets, itemsetOrdering);
+
+		// Find maxSteps supersets for all itemsets
+		int iteration = 0;
+		final int len = sortedItemsets.size();
+		outerLoop: for (int k = 0; k < 2 * len - 2; k++) {
+			for (int i = 0; i < len && i < k + 1; i++) {
+				for (int j = i + 1; j < len && i + j < k + 1; j++) {
+					if (k <= i + j) {
+
+						// Create a new candidate by combining itemsets
+						final Itemset candidate = new Itemset();
+						candidate.add(sortedItemsets.get(i));
+						candidate.add(sortedItemsets.get(j));
+						// logger.finest(candidate + ", ");
+
+						// Add candidate to queue
+						if (!rejected_sets.contains(candidate)) {
+							candidateSupports.put(candidate,
+									tree.getSupportOfItemset(candidate));
+							candidateQueue.add(candidate);
+							iteration++;
+						}
+
+						if (iteration > maxSteps) // Queue limit exceeded
+							break outerLoop; // finished building queue
+
+					}
+				}
+			}
+		}
+		logger.info(" Finished bulding priority queue. Size: "
+				+ candidateQueue.size() + "\n");
+
+		// Evaluate candidates with highest support first
+		int counter = 0;
+		for (Itemset topCandidate; (topCandidate = candidateQueue.poll()) != null;) {
+			counter++;
+			rejected_sets.add(topCandidate); // candidate seen
+			final boolean accepted = evaluateCandidate(itemsets, transactions,
+					inferenceAlgorithm, topCandidate);
+			if (accepted == true) { // Better itemset found
+				// update supports
+				supports.put(topCandidate, candidateSupports.get(topCandidate));
+				logger.info(" Number of eval calls: " + counter + "\n");
+				return;
+			}
+			// logger.finest("\n Structural candidate itemsets: ");
+		}
+
+		if (iteration > maxSteps) { // Iteration limit exceeded
+			logger.warning("\n Combine iteration limit exceeded.\n");
+			return; // No better itemset found
+		}
+
+		// No better itemset found
+		logger.info("\n All possible candidates suggested. Exiting. \n");
+		transactions.setIterationLimitExceeded();
+
+	}
+
+	/**
+	 * Generate candidate itemsets by combining existing sets with highest order
+	 *
+	 * @param itemsetOrdering
+	 *            ordering that determines which itemsets to combine first
+	 * @deprecated use the improved {@link #combineItemsetsStep}
+	 */
+	@SuppressWarnings("unused")
+	@Deprecated
+	private static void oldCombineItemsetsStep(
 			final HashMap<Itemset, Double> itemsets,
 			final TransactionDatabase transactions, final ItemsetTree tree,
 			final Set<Itemset> rejected_sets,
@@ -401,12 +500,12 @@ public abstract class ItemsetMiningCore {
 			throws IOException {
 		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
 		final HashMap<Itemset, Double> intMap = Maps.newHashMap();
-	
+
 		final String[] lines = FileUtils.readFileToString(output).split("\n");
-	
+
 		boolean found = false;
 		for (final String line : lines) {
-	
+
 			if (found && !line.trim().isEmpty()) {
 				final String[] splitLine = line.split("\t");
 				final String[] items = splitLine[0].split(",");
@@ -423,14 +522,15 @@ public abstract class ItemsetMiningCore {
 				itemsets.put(itemset, prob);
 				intMap.put(itemset, intr);
 			}
-	
+
 			if (line.contains("INTERESTING ITEMSETS"))
 				found = true;
 		}
-	
+
 		// Sort itemsets by interestingness
-		final Map<Itemset, Double> sortedItemsets = sortItemsets(itemsets, intMap);
-	
+		final Map<Itemset, Double> sortedItemsets = sortItemsets(itemsets,
+				intMap);
+
 		return sortedItemsets;
 	}
 
