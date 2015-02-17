@@ -304,7 +304,7 @@ public abstract class ItemsetMiningCore {
 							iteration++;
 						}
 
-						if (iteration > maxSteps) // Queue limit exceeded
+						if (iteration >= maxSteps) // Queue limit exceeded
 							break outerLoop; // finished building queue
 
 					}
