@@ -330,9 +330,10 @@ public abstract class ItemsetMiningCore {
 			// logger.finest("\n Structural candidate itemsets: ");
 		}
 
-		if (iteration > maxSteps) { // Iteration limit exceeded
-			logger.warning("\n Combine iteration limit exceeded.\n");
-			return; // No better itemset found
+		if (iteration >= maxSteps) { // Priority queue exhausted
+			logger.warning("\n Priority queue exhausted. Exiting. \n");
+			transactions.setIterationLimitExceeded();
+			//return; // No better itemset found
 		}
 
 		// No better itemset found
