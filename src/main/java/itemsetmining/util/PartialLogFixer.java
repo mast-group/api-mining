@@ -7,8 +7,8 @@ import itemsetmining.main.ItemsetMiningCore;
 import itemsetmining.transaction.TransactionList;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -22,14 +22,13 @@ import com.google.common.collect.Multiset;
 
 /**
  * Read last EM step of partial itemset log and output interesting itemsets
- * along with interestingness and probability.
+ * along with interestingness and probability and write to end of log file.
  */
 public class PartialLogFixer {
 
 	public static void main(final String[] args) throws IOException {
-		if (args.length != 3) {
-			System.err
-					.println("Usage <transactionDB> <inputLogFile> <outputLogFile> ");
+		if (args.length != 2) {
+			System.err.println("Usage <transactionDB> <logFile>");
 			System.exit(-1);
 		}
 
@@ -39,9 +38,9 @@ public class PartialLogFixer {
 				args[1]));
 		System.out.println("done. Number of itemsets: " + itemsets.size());
 
-		System.out.println("\nWriting sorted itemsets to " + args[2] + "...");
+		System.out.println("\nWriting sorted itemsets to " + args[1] + "...");
 		sortItemsetsInterestingness(itemsets, new File(args[0]), new File(
-				args[2]));
+				args[1]));
 		System.out.println("All done. Exiting.");
 
 	}
@@ -80,7 +79,7 @@ public class PartialLogFixer {
 
 	public static void sortItemsetsInterestingness(
 			final HashMap<Itemset, Double> itemsets, final File transactionDB,
-			final File outputFile) throws IOException {
+			final File logFile) throws IOException {
 
 		// Read in transaction database
 		final TransactionList transactions = ItemsetMining
@@ -103,14 +102,14 @@ public class PartialLogFixer {
 				.sortItemsets(itemsets, intMap);
 
 		System.out.println("Writing out to file...");
-		final PrintWriter out = new PrintWriter(outputFile, "UTF-8");
-		out.print("\n============= INTERESTING ITEMSETS =============\n");
+		final FileWriter out = new FileWriter(logFile, true);
+		out.write("\n============= INTERESTING ITEMSETS =============\n");
 		for (final Entry<Itemset, Double> entry : sortedItemsets.entrySet()) {
-			out.print(String.format("%s\tprob: %1.5f \tint: %1.5f %n",
+			out.write(String.format("%s\tprob: %1.5f \tint: %1.5f %n",
 					entry.getKey(), entry.getValue(),
 					intMap.get(entry.getKey())));
 		}
-		out.print("\n");
+		out.write("\n");
 		out.close();
 		System.out.println("done.");
 
