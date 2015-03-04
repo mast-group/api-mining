@@ -122,10 +122,10 @@ public class ItemsetMining extends ItemsetMiningCore {
 		tree.buildTree(inputFile);
 		if (LOG_LEVEL.equals(Level.FINE))
 			tree.printStatistics(logger);
-		if (LOG_LEVEL.equals(Level.FINEST)) {
-			logger.finest("THIS IS THE TREE:\n");
-			logger.finest(tree.toString());
-		}
+		// if (LOG_LEVEL.equals(Level.FINEST)) {
+		// logger.finest("THIS IS THE TREE:\n");
+		// logger.finest(tree.toString());
+		// }
 
 		// Run inference to find interesting itemsets
 		logger.fine("\n============= ITEMSET INFERENCE =============\n");
