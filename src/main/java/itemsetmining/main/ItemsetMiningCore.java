@@ -78,11 +78,21 @@ public abstract class ItemsetMiningCore {
 		// Initialize list of rejected sets
 		final Set<Itemset> rejected_sets = Sets.newHashSet();
 
-		// Define decreasing support ordering
+		// Define decreasing support ordering for itemsets
 		final Ordering<Itemset> supportOrdering = new Ordering<Itemset>() {
 			@Override
 			public int compare(final Itemset set1, final Itemset set2) {
 				return supports.get(set2) - supports.get(set1);
+			}
+		}.compound(Ordering.usingToString());
+
+		// Define decreasing support ordering for candidate itemsets
+		final HashMap<Itemset, Integer> candidateSupports = Maps.newHashMap();
+		final Ordering<Itemset> candidateSupportOrdering = new Ordering<Itemset>() {
+			@Override
+			public int compare(final Itemset set1, final Itemset set2) {
+				return candidateSupports.get(set2)
+						- candidateSupports.get(set1);
 			}
 		}.compound(Ordering.usingToString());
 
@@ -99,7 +109,8 @@ public abstract class ItemsetMiningCore {
 						+ "\n");
 				combineItemsetsStep(itemsets, transactions, tree,
 						rejected_sets, inferenceAlgorithm, maxStructureSteps,
-						supportOrdering, supports);
+						supportOrdering, supports, candidateSupportOrdering,
+						candidateSupports);
 				if (transactions.getIterationLimitExceeded())
 					breakLoop = true;
 			} else {
@@ -133,8 +144,8 @@ public abstract class ItemsetMiningCore {
 				break;
 			}
 
-			// Checkpoint every 100 iterations to avoid StackOverflow errors due
-			// to long lineage (http://tinyurl.com/ouswhrc)
+			// Spark: checkpoint every 100 iterations to avoid StackOverflow
+			// errors due to long lineage (http://tinyurl.com/ouswhrc)
 			if (iteration % 100 == 0 && transactions instanceof TransactionRDD) {
 				transactions.getTransactionRDD().cache();
 				transactions.getTransactionRDD().checkpoint();
@@ -208,6 +219,7 @@ public abstract class ItemsetMiningCore {
 	}
 
 	/** Generate candidate itemsets from Itemset tree */
+	@Deprecated
 	private static void learnStructureStep(
 			final HashMap<Itemset, Double> itemsets,
 			final TransactionDatabase transactions, final ItemsetTree tree,
@@ -250,39 +262,36 @@ public abstract class ItemsetMiningCore {
 	 * Generate candidate itemsets by combining existing sets with highest
 	 * order. Evaluate candidates with highest order first.
 	 *
-	 * @param itemsetOrdering
+	 * @param itemsetSupportOrdering
 	 *            ordering that determines which itemsets to combine first
+	 * @param supports
+	 *            cached itemset supports for the above ordering
+	 * @param candidateSupportOrdering
+	 *            ordering that determines which candidates to evaluate first
+	 * @param candidateSupports
+	 *            cached candididate supports for the above ordering
 	 */
 	private static void combineItemsetsStep(
 			final HashMap<Itemset, Double> itemsets,
 			final TransactionDatabase transactions, final ItemsetTree tree,
 			final Set<Itemset> rejected_sets,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps,
-			final Ordering<Itemset> itemsetOrdering,
-			final HashMap<Itemset, Integer> supports) {
-
-		// Try and find better itemset to add
-		// logger.finest(" Structural candidate itemsets: ");
+			final Ordering<Itemset> itemsetSupportOrdering,
+			final HashMap<Itemset, Integer> supports,
+			final Ordering<Itemset> candidateSupportOrdering,
+			final HashMap<Itemset, Integer> candidateSupports) {
 
 		// Set up support-ordered priority queue
-		// Define decreasing support ordering for candidate itemsets
-		final HashMap<Itemset, Integer> candidateSupports = Maps.newHashMap();
-		final Ordering<Itemset> candidateSupportOrdering = new Ordering<Itemset>() {
-			@Override
-			public int compare(final Itemset set1, final Itemset set2) {
-				return candidateSupports.get(set2)
-						- candidateSupports.get(set1);
-			}
-		}.compound(Ordering.usingToString());
 		final PriorityQueue<Itemset> candidateQueue = new PriorityQueue<Itemset>(
 				maxSteps, candidateSupportOrdering);
 
 		// Sort itemsets according to given ordering
 		final ArrayList<Itemset> sortedItemsets = Lists.newArrayList(itemsets
 				.keySet());
-		Collections.sort(sortedItemsets, itemsetOrdering);
+		Collections.sort(sortedItemsets, itemsetSupportOrdering);
 
 		// Find maxSteps supersets for all itemsets
+		// final long startTime = System.nanoTime();
 		int iteration = 0;
 		final int len = sortedItemsets.size();
 		outerLoop: for (int k = 0; k < 2 * len - 2; k++) {
@@ -294,12 +303,12 @@ public abstract class ItemsetMiningCore {
 						final Itemset candidate = new Itemset();
 						candidate.add(sortedItemsets.get(i));
 						candidate.add(sortedItemsets.get(j));
-						// logger.finest(candidate + ", ");
 
 						// Add candidate to queue
 						if (!rejected_sets.contains(candidate)) {
-							candidateSupports.put(candidate,
-									tree.getSupportOfItemset(candidate));
+							if (!candidateSupports.containsKey(candidate))
+								candidateSupports.put(candidate,
+										tree.getSupportOfItemset(candidate));
 							candidateQueue.add(candidate);
 							iteration++;
 						}
@@ -313,10 +322,15 @@ public abstract class ItemsetMiningCore {
 		}
 		logger.info(" Finished bulding priority queue. Size: "
 				+ candidateQueue.size() + "\n");
+		// logger.info(" Time taken: " + (System.nanoTime() - startTime) / 1e6);
+		// logger.finest(" Structural candidate itemsets: ");
 
 		// Evaluate candidates with highest support first
 		int counter = 0;
 		for (Itemset topCandidate; (topCandidate = candidateQueue.poll()) != null;) {
+			// logger.finest("\n Candidate: " + topCandidate + ", supp: "
+			// + candidateSupports.get(topCandidate)
+			// / (double) transactions.size());
 			counter++;
 			rejected_sets.add(topCandidate); // candidate seen
 			final boolean accepted = evaluateCandidate(itemsets, transactions,
@@ -327,13 +341,12 @@ public abstract class ItemsetMiningCore {
 				logger.info(" Number of eval calls: " + counter + "\n");
 				return;
 			}
-			// logger.finest("\n Structural candidate itemsets: ");
 		}
 
 		if (iteration >= maxSteps) { // Priority queue exhausted
 			logger.warning("\n Priority queue exhausted. Exiting. \n");
 			transactions.setIterationLimitExceeded();
-			//return; // No better itemset found
+			// return; // No better itemset found
 		}
 
 		// No better itemset found
