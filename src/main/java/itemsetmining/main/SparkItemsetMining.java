@@ -10,6 +10,8 @@ import itemsetmining.util.Logging;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -106,6 +108,16 @@ public class SparkItemsetMining extends ItemsetMiningCore {
 			Logging.setUpFileLogger(logger, LOG_LEVEL, logFile);
 		else
 			Logging.setUpConsoleLogger(logger, LOG_LEVEL);
+
+		// Echo input parameters
+		logger.info("========== SPARK INTERESTING ITEMSET MINING ============");
+		logger.info(" Time: "
+				+ new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
+						.format(new Date()));
+		logger.info(" Inputs: -f " + inputFile + " -s " + maxStructureSteps
+				+ " -i " + maxEMIterations + " -c "
+				+ sc.getLocalProperty("spark.cores.max") + " -r " + MAX_RUNTIME
+				/ 60_000);
 
 		// Copy transaction database to hdfs
 		final String datasetPath = "hdfs://" + MASTER + ".inf.ed.ac.uk:54310/"

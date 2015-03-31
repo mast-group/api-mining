@@ -12,6 +12,8 @@ import itemsetmining.util.Logging;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -110,6 +112,14 @@ public class ItemsetMining extends ItemsetMiningCore {
 			Logging.setUpFileLogger(logger, LOG_LEVEL, logFile);
 		else
 			Logging.setUpConsoleLogger(logger, LOG_LEVEL);
+
+		// Echo input parameters
+		logger.info("========== INTERESTING ITEMSET MINING ============");
+		logger.info(" Time: "
+				+ new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
+						.format(new Date()));
+		logger.info(" Inputs: -f " + inputFile + " -s " + maxStructureSteps
+				+ " -i " + maxEMIterations + " -r " + MAX_RUNTIME / 60_000);
 
 		// Read in transaction database
 		final TransactionList transactions = readTransactions(inputFile);
