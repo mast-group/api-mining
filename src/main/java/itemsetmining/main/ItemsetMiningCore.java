@@ -2,6 +2,7 @@ package itemsetmining.main;
 
 import itemsetmining.itemset.Itemset;
 import itemsetmining.itemset.ItemsetTree;
+import itemsetmining.itemset.Sequence;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.TransactionDatabase;
 import itemsetmining.transaction.TransactionRDD;
@@ -33,7 +34,6 @@ public abstract class ItemsetMiningCore {
 
 	/** Main fixed settings */
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
-	private static final int COMBINE_ITEMSETS_EVERY = 1;
 	private static final double OPTIMIZE_TOL = 1e-5;
 
 	protected static final Logger logger = Logger
@@ -47,7 +47,7 @@ public abstract class ItemsetMiningCore {
 	/**
 	 * Learn itemsets model using structural EM
 	 */
-	protected static HashMap<Itemset, Double> structuralEM(
+	protected static HashMap<Sequence, Double> structuralEM(
 			final TransactionDatabase transactions,
 			final Multiset<Integer> singletons, final ItemsetTree tree,
 			final InferenceAlgorithm inferenceAlgorithm,
@@ -57,70 +57,60 @@ public abstract class ItemsetMiningCore {
 		final long startTime = System.currentTimeMillis();
 
 		// Initialize itemset cache
-		if (transactions instanceof TransactionRDD) {
-			SparkEMStep.initializeCachedItemsets(transactions, singletons);
-		} else {
-			EMStep.initializeCachedItemsets(transactions, singletons);
-		}
+		// if (transactions instanceof TransactionRDD) {
+		// SparkEMStep.initializeCachedItemsets(transactions, singletons);
+		// } else {
+		EMStep.initializeCachedItemsets(transactions, singletons);
+		// }
 
-		// Intialize itemsets with singleton sets and their relative support
+		// Intialize sequences with singleton seqs and their relative support
 		// as well as supports with singletons and their actual supports
-		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
-		final HashMap<Itemset, Integer> supports = Maps.newHashMap();
+		final HashMap<Sequence, Double> sequences = Maps.newHashMap();
+		final HashMap<Sequence, Integer> supports = Maps.newHashMap();
 		for (final Multiset.Entry<Integer> entry : singletons.entrySet()) {
-			final Itemset set = new Itemset(entry.getElement());
+			final Sequence seq = new Sequence(new Itemset(entry.getElement()));
 			final int support = entry.getCount();
-			itemsets.put(set, support / (double) transactions.size());
-			supports.put(set, support);
+			sequences.put(seq, support / (double) transactions.size());
+			supports.put(seq, support);
 		}
-		logger.fine(" Initial itemsets: " + itemsets + "\n");
+		logger.fine(" Initial sequences: " + sequences + "\n");
 
-		// Initialize list of rejected sets
-		final Set<Itemset> rejected_sets = Sets.newHashSet();
+		// Initialize list of rejected seqs
+		final Set<Sequence> rejected_seqs = Sets.newHashSet();
 
-		// Define decreasing support ordering for itemsets
-		final Ordering<Itemset> supportOrdering = new Ordering<Itemset>() {
+		// Define decreasing support ordering for sequences
+		final Ordering<Sequence> supportOrdering = new Ordering<Sequence>() {
 			@Override
-			public int compare(final Itemset set1, final Itemset set2) {
-				return supports.get(set2) - supports.get(set1);
+			public int compare(final Sequence seq1, final Sequence seq2) {
+				return supports.get(seq2) - supports.get(seq1);
 			}
 		}.compound(Ordering.usingToString());
 
-		// Define decreasing support ordering for candidate itemsets
-		final HashMap<Itemset, Integer> candidateSupports = Maps.newHashMap();
-		final Ordering<Itemset> candidateSupportOrdering = new Ordering<Itemset>() {
+		// Define decreasing support ordering for candidate sequences
+		final HashMap<Sequence, Integer> candidateSupports = Maps.newHashMap();
+		final Ordering<Sequence> candidateSupportOrdering = new Ordering<Sequence>() {
 			@Override
-			public int compare(final Itemset set1, final Itemset set2) {
-				return candidateSupports.get(set2)
-						- candidateSupports.get(set1);
+			public int compare(final Sequence seq1, final Sequence seq2) {
+				return candidateSupports.get(seq2)
+						- candidateSupports.get(seq1);
 			}
 		}.compound(Ordering.usingToString());
 
 		// Initialize average cost per transaction for singletons
-		expectationMaximizationStep(itemsets, transactions, inferenceAlgorithm);
+		expectationMaximizationStep(sequences, transactions, inferenceAlgorithm);
 
 		// Structural EM
 		boolean breakLoop = false;
 		for (int iteration = 1; iteration <= maxEMIterations; iteration++) {
 
 			// Learn structure
-			if (iteration % COMBINE_ITEMSETS_EVERY == 0) {
-				logger.finer("\n----- Itemset Combination at Step " + iteration
-						+ "\n");
-				combineItemsetsStep(itemsets, transactions, tree,
-						rejected_sets, inferenceAlgorithm, maxStructureSteps,
-						supportOrdering, supports, candidateSupportOrdering,
-						candidateSupports);
-				if (transactions.getIterationLimitExceeded())
-					breakLoop = true;
-			} else {
-				logger.finer("\n+++++ Tree Structural Optimization at Step "
-						+ iteration + "\n");
-				learnStructureStep(itemsets, transactions, tree, rejected_sets,
-						inferenceAlgorithm, maxStructureSteps);
-				if (transactions.getIterationLimitExceeded())
-					breakLoop = true;
-			}
+			logger.finer("\n----- Itemset Combination at Step " + iteration
+					+ "\n");
+			combineItemsetsStep(sequences, transactions, tree, rejected_seqs,
+					inferenceAlgorithm, maxStructureSteps, supportOrdering,
+					supports, candidateSupportOrdering, candidateSupports);
+			if (transactions.getIterationLimitExceeded())
+				breakLoop = true;
 			logger.finer(String.format(" Average cost: %.2f%n",
 					transactions.getAverageCost()));
 
@@ -129,7 +119,7 @@ public abstract class ItemsetMiningCore {
 					|| iteration == maxEMIterations || breakLoop == true) {
 				logger.fine("\n***** Parameter Optimization at Step "
 						+ iteration + "\n");
-				expectationMaximizationStep(itemsets, transactions,
+				expectationMaximizationStep(sequences, transactions,
 						inferenceAlgorithm);
 			}
 
@@ -159,158 +149,132 @@ public abstract class ItemsetMiningCore {
 				+ (System.currentTimeMillis() - startTime) / (60. * 1000.)
 				+ " minutes.\n");
 
-		return itemsets;
+		return sequences;
 	}
 
 	/**
-	 * Find optimal parameters for given set of itemsets and store in itemsets
+	 * Find optimal parameters for given set of sequences and store in sequences
 	 *
 	 * @return TransactionDatabase with the average cost per transaction
 	 *         <p>
-	 *         NB. zero probability itemsets are dropped
+	 *         NB. zero probability sequences are dropped
 	 */
 	private static void expectationMaximizationStep(
-			final HashMap<Itemset, Double> itemsets,
+			final HashMap<Sequence, Double> sequences,
 			final TransactionDatabase transactions,
 			final InferenceAlgorithm inferenceAlgorithm) {
 
-		logger.fine(" Structure Optimal Itemsets: " + itemsets + "\n");
+		logger.fine(" Structure Optimal Sequences: " + sequences + "\n");
 
-		Map<Itemset, Double> prevItemsets = itemsets;
+		Map<Sequence, Double> prevSequences = sequences;
 
 		double norm = 1;
 		while (norm > OPTIMIZE_TOL) {
 
 			// Set up storage
-			final Map<Itemset, Double> newItemsets;
+			final Map<Sequence, Double> newSequences;
 
 			// Parallel E-step and M-step combined
-			if (transactions instanceof TransactionRDD)
-				newItemsets = SparkEMStep.hardEMStep(transactions,
-						inferenceAlgorithm);
-			else
-				newItemsets = EMStep.hardEMStep(
-						transactions.getTransactionList(), inferenceAlgorithm);
+			// if (transactions instanceof TransactionRDD)
+			// newItemsets = SparkEMStep.hardEMStep(transactions,
+			// inferenceAlgorithm);
+			// else
+			newSequences = EMStep.hardEMStep(transactions.getTransactionList(),
+					inferenceAlgorithm);
 
 			// If set has stabilised calculate norm(p_prev - p_new)
-			if (prevItemsets.keySet().equals(newItemsets.keySet())) {
+			if (prevSequences.keySet().equals(newSequences.keySet())) {
 				norm = 0;
-				for (final Itemset set : prevItemsets.keySet()) {
+				for (final Sequence seq : prevSequences.keySet()) {
 					norm += Math.pow(
-							prevItemsets.get(set) - newItemsets.get(set), 2);
+							prevSequences.get(seq) - newSequences.get(seq), 2);
 				}
 				norm = Math.sqrt(norm);
 			}
 
-			prevItemsets = newItemsets;
+			prevSequences = newSequences;
 		}
 
 		// Calculate average cost of last covering
-		if (transactions instanceof TransactionRDD)
-			SparkEMStep.calculateAndSetAverageCost(transactions);
-		else
-			EMStep.calculateAndSetAverageCost(transactions);
+		// if (transactions instanceof TransactionRDD)
+		// SparkEMStep.calculateAndSetAverageCost(transactions);
+		// else
+		EMStep.calculateAndSetAverageCost(transactions);
 
-		itemsets.clear();
-		itemsets.putAll(prevItemsets);
-		logger.fine(" Parameter Optimal Itemsets: " + itemsets + "\n");
+		sequences.clear();
+		sequences.putAll(prevSequences);
+		logger.fine(" Parameter Optimal Sequences: " + sequences + "\n");
 		logger.fine(String.format(" Average cost: %.2f%n",
 				transactions.getAverageCost()));
 	}
 
-	/** Generate candidate itemsets from Itemset tree */
-	@Deprecated
-	private static void learnStructureStep(
-			final HashMap<Itemset, Double> itemsets,
-			final TransactionDatabase transactions, final ItemsetTree tree,
-			final Set<Itemset> rejected_sets,
-			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps) {
-
-		// Try and find better itemset to add
-		logger.finer(" Structural candidate itemsets: ");
-
-		int iteration;
-		for (iteration = 0; iteration < maxSteps; iteration++) {
-
-			// Generate candidate itemset
-			final Itemset candidate = tree.randomWalk();
-			logger.finer(candidate + ", ");
-
-			// Evaluate candidate itemset (skipping empty candidates)
-			if (!rejected_sets.contains(candidate) && !candidate.isEmpty()) {
-				// Skip candidates already present
-				if (itemsets.keySet().contains(candidate)) {
-					rejected_sets.add(candidate);
-					continue;
-				}
-				final boolean accepted = evaluateCandidate(itemsets,
-						transactions, inferenceAlgorithm, candidate);
-				if (accepted == true) // Better itemset found
-					return;
-				rejected_sets.add(candidate); // otherwise add to rejected
-				logger.finer("\n Structural candidate itemsets: ");
-			}
-
-		}
-
-		// No better itemset found
-		logger.warning("\n\n Structure iteration limit exceeded. No better candidate found.\n");
-		transactions.setIterationLimitExceeded();
-	}
-
 	/**
-	 * Generate candidate itemsets by combining existing sets with highest
+	 * Generate candidate sequences by combining existing seqs with highest
 	 * order. Evaluate candidates with highest order first.
 	 *
-	 * @param itemsetSupportOrdering
-	 *            ordering that determines which itemsets to combine first
+	 * @param sequenceSupportOrdering
+	 *            ordering that determines which sequences to combine first
 	 * @param supports
-	 *            cached itemset supports for the above ordering
+	 *            cached sequence supports for the above ordering
 	 * @param candidateSupportOrdering
 	 *            ordering that determines which candidates to evaluate first
 	 * @param candidateSupports
 	 *            cached candididate supports for the above ordering
 	 */
 	private static void combineItemsetsStep(
-			final HashMap<Itemset, Double> itemsets,
+			final HashMap<Sequence, Double> sequences,
 			final TransactionDatabase transactions, final ItemsetTree tree,
-			final Set<Itemset> rejected_sets,
+			final Set<Sequence> rejected_seqs,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps,
-			final Ordering<Itemset> itemsetSupportOrdering,
-			final HashMap<Itemset, Integer> supports,
-			final Ordering<Itemset> candidateSupportOrdering,
-			final HashMap<Itemset, Integer> candidateSupports) {
+			final Ordering<Sequence> sequenceSupportOrdering,
+			final HashMap<Sequence, Integer> supports,
+			final Ordering<Sequence> candidateSupportOrdering,
+			final HashMap<Sequence, Integer> candidateSupports) {
 
 		// Set up support-ordered priority queue
-		final PriorityQueue<Itemset> candidateQueue = new PriorityQueue<Itemset>(
+		final PriorityQueue<Sequence> candidateQueue = new PriorityQueue<Sequence>(
 				maxSteps, candidateSupportOrdering);
 
-		// Sort itemsets according to given ordering
-		final ArrayList<Itemset> sortedItemsets = Lists.newArrayList(itemsets
-				.keySet());
-		Collections.sort(sortedItemsets, itemsetSupportOrdering);
+		// Sort sequences according to given ordering
+		final ArrayList<Sequence> sortedSequences = Lists
+				.newArrayList(sequences.keySet());
+		Collections.sort(sortedSequences, sequenceSupportOrdering);
 
 		// Find maxSteps supersets for all itemsets
 		// final long startTime = System.nanoTime();
 		int iteration = 0;
-		final int len = sortedItemsets.size();
+		final int len = sortedSequences.size();
 		outerLoop: for (int k = 0; k < 2 * len - 2; k++) {
 			for (int i = 0; i < len && i < k + 1; i++) {
 				for (int j = i + 1; j < len && i + j < k + 1; j++) {
 					if (k <= i + j) {
 
-						// Create a new candidate by combining itemsets
-						final Itemset candidate = new Itemset();
-						candidate.add(sortedItemsets.get(i));
-						candidate.add(sortedItemsets.get(j));
+						// Create new candidates by joining overlapping seqs
+						final String code1 = sortedSequences.get(i).toCode();
+						final String code2 = sortedSequences.get(j).toCode();
+						final String joined1 = Sequence.join(code1, code2);
+						final String joined2 = Sequence.join(code2, code1);
 
-						// Add candidate to queue
-						if (!rejected_sets.contains(candidate)) {
-							if (!candidateSupports.containsKey(candidate))
-								candidateSupports.put(candidate,
-										tree.getSupportOfItemset(candidate));
-							candidateQueue.add(candidate);
-							iteration++;
+						// Add candidate(s) to queue
+						if (joined1 != null) {
+							final Sequence cand1 = Sequence.fromCode(joined1);
+							if (!rejected_seqs.contains(cand1)) {
+								if (!candidateSupports.containsKey(cand1))
+									candidateSupports.put(cand1,
+											tree.getSupportOfSequence(cand1));
+								candidateQueue.add(cand1);
+								iteration++;
+							}
+						}
+						if (joined2 != null) {
+							final Sequence cand2 = Sequence.fromCode(joined2);
+							if (!rejected_seqs.contains(cand2)) {
+								if (!candidateSupports.containsKey(cand2))
+									candidateSupports.put(cand2,
+											tree.getSupportOfSequence(cand2));
+								candidateQueue.add(cand2);
+								iteration++;
+							}
 						}
 
 						if (iteration >= maxSteps) // Queue limit exceeded
@@ -327,13 +291,13 @@ public abstract class ItemsetMiningCore {
 
 		// Evaluate candidates with highest support first
 		int counter = 0;
-		for (Itemset topCandidate; (topCandidate = candidateQueue.poll()) != null;) {
+		for (Sequence topCandidate; (topCandidate = candidateQueue.poll()) != null;) {
 			// logger.finest("\n Candidate: " + topCandidate + ", supp: "
 			// + candidateSupports.get(topCandidate)
 			// / (double) transactions.size());
 			counter++;
-			rejected_sets.add(topCandidate); // candidate seen
-			final boolean accepted = evaluateCandidate(itemsets, transactions,
+			rejected_seqs.add(topCandidate); // candidate seen
+			final boolean accepted = evaluateCandidate(sequences, transactions,
 					inferenceAlgorithm, topCandidate);
 			if (accepted == true) { // Better itemset found
 				// update supports
@@ -355,112 +319,43 @@ public abstract class ItemsetMiningCore {
 
 	}
 
-	/**
-	 * Generate candidate itemsets by combining existing sets with highest order
-	 *
-	 * @param itemsetOrdering
-	 *            ordering that determines which itemsets to combine first
-	 * @deprecated use the improved {@link #combineItemsetsStep}
-	 */
-	@SuppressWarnings("unused")
-	@Deprecated
-	private static void oldCombineItemsetsStep(
-			final HashMap<Itemset, Double> itemsets,
-			final TransactionDatabase transactions, final ItemsetTree tree,
-			final Set<Itemset> rejected_sets,
-			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps,
-			final Ordering<Itemset> itemsetOrdering,
-			final HashMap<Itemset, Integer> supports) {
-
-		// Try and find better itemset to add
-		// logger.finest(" Structural candidate itemsets: ");
-
-		// Sort itemsets according to given ordering
-		final ArrayList<Itemset> sortedItemsets = Lists.newArrayList(itemsets
-				.keySet());
-		Collections.sort(sortedItemsets, itemsetOrdering);
-
-		// Suggest supersets for all itemsets
-		int iteration = 0;
-		final int len = sortedItemsets.size();
-		for (int k = 0; k < 2 * len - 2; k++) {
-			for (int i = 0; i < len && i < k + 1; i++) {
-				for (int j = i + 1; j < len && i + j < k + 1; j++) {
-					if (k <= i + j) {
-
-						// Create a new candidate by combining itemsets
-						final Itemset candidate = new Itemset();
-						candidate.add(sortedItemsets.get(i));
-						candidate.add(sortedItemsets.get(j));
-						// logger.finest(candidate + ", ");
-
-						// Evaluate candidate itemset
-						if (!rejected_sets.contains(candidate)) {
-							rejected_sets.add(candidate); // candidate seen
-							final boolean accepted = evaluateCandidate(
-									itemsets, transactions, inferenceAlgorithm,
-									candidate);
-							if (accepted == true) { // Better itemset found
-								// update supports
-								supports.put(candidate,
-										tree.getSupportOfItemset(candidate));
-								return;
-							}
-							// logger.finest("\n Structural candidate itemsets: ");
-						}
-
-						iteration++;
-						if (iteration > maxSteps) { // Iteration limit exceeded
-							logger.warning("\n Combine iteration limit exceeded.\n");
-							return; // No better itemset found
-						}
-
-					}
-				}
-			}
-		}
-
-		// No better itemset found
-		logger.info("\n All possible candidates suggested. Exiting. \n");
-		transactions.setIterationLimitExceeded();
-	}
-
-	/** Evaluate a candidate itemset to see if it should be included */
+	/** Evaluate a candidate sequence to see if it should be included */
 	private static boolean evaluateCandidate(
-			final HashMap<Itemset, Double> itemsets,
+			final HashMap<Sequence, Double> sequences,
 			final TransactionDatabase transactions,
-			final InferenceAlgorithm inferenceAlgorithm, final Itemset candidate) {
+			final InferenceAlgorithm inferenceAlgorithm,
+			final Sequence candidate) {
 
 		logger.finer("\n Candidate: " + candidate);
 
 		// Find cost in parallel
 		Tuple2<Double, Double> costAndProb;
-		if (transactions instanceof TransactionRDD) {
-			costAndProb = SparkEMStep.structuralEMStep(transactions,
-					inferenceAlgorithm, candidate);
-		} else {
-			costAndProb = EMStep.structuralEMStep(transactions,
-					inferenceAlgorithm, candidate);
-		}
+		// if (transactions instanceof TransactionRDD) {
+		// costAndProb = SparkEMStep.structuralEMStep(transactions,
+		// inferenceAlgorithm, candidate);
+		// } else {
+		costAndProb = EMStep.structuralEMStep(transactions, inferenceAlgorithm,
+				candidate);
+		// }
 		final double curCost = costAndProb._1;
 		final double prob = costAndProb._2;
 		logger.finer(String.format(", cost: %.2f", curCost));
 
-		// Return if better set of itemsets found
+		// Return if better collection of seqs found
 		if (curCost < transactions.getAverageCost()) {
 			logger.finer("\n Candidate Accepted.\n");
 			// Update cache with candidate
-			Map<Itemset, Double> newItemsets;
-			if (transactions instanceof TransactionRDD) {
-				newItemsets = SparkEMStep.addAcceptedCandidateCache(
-						transactions, candidate, prob);
-			} else {
-				newItemsets = EMStep.addAcceptedCandidateCache(transactions,
-						candidate, prob);
-			}
-			// Update itemsets with newly inferred itemsets
-			itemsets.clear();
-			itemsets.putAll(newItemsets);
+			Map<Sequence, Double> newSequences;
+			// if (transactions instanceof TransactionRDD) {
+			// newItemsets = SparkEMStep.addAcceptedCandidateCache(
+			// transactions, candidate, prob);
+			// } else {
+			newSequences = EMStep.addAcceptedCandidateCache(transactions,
+					candidate, prob);
+			// }
+			// Update sequences with newly inferred sequences
+			sequences.clear();
+			sequences.putAll(newSequences);
 			transactions.setAverageCost(curCost);
 			return true;
 		} // otherwise keep trying
@@ -469,51 +364,51 @@ public abstract class ItemsetMiningCore {
 		return false;
 	}
 
-	/** Sort itemsets by interestingness */
-	public static Map<Itemset, Double> sortItemsets(
-			final HashMap<Itemset, Double> itemsets,
-			final HashMap<Itemset, Double> intMap) {
+	/** Sort sequences by interestingness */
+	public static Map<Sequence, Double> sortSequences(
+			final HashMap<Sequence, Double> sequences,
+			final HashMap<Sequence, Double> intMap) {
 
-		final Ordering<Itemset> comparator = Ordering
+		final Ordering<Sequence> comparator = Ordering
 				.natural()
 				.reverse()
 				.onResultOf(Functions.forMap(intMap))
 				.compound(
 						Ordering.natural().reverse()
-								.onResultOf(Functions.forMap(itemsets)))
+								.onResultOf(Functions.forMap(sequences)))
 				.compound(Ordering.usingToString());
-		final Map<Itemset, Double> sortedItemsets = ImmutableSortedMap.copyOf(
-				itemsets, comparator);
+		final Map<Sequence, Double> sortedSequences = ImmutableSortedMap
+				.copyOf(sequences, comparator);
 
-		return sortedItemsets;
+		return sortedSequences;
 	}
 
 	/**
 	 * Calculate interestingness as defined by i(S) = |z_S = 1|/|T : S in T|
 	 * where |z_S = 1| is calculated by pi_S*|T| and |T : S in T| = supp(S)
 	 */
-	public static HashMap<Itemset, Double> calculateInterestingness(
-			final HashMap<Itemset, Double> itemsets,
+	public static HashMap<Sequence, Double> calculateInterestingness(
+			final HashMap<Sequence, Double> sequences,
 			final TransactionDatabase transactions, final ItemsetTree tree) {
 
-		final HashMap<Itemset, Double> interestingnessMap = Maps.newHashMap();
+		final HashMap<Sequence, Double> interestingnessMap = Maps.newHashMap();
 
 		// Calculate interestingness
 		final long noTransactions = transactions.size();
-		for (final Itemset set : itemsets.keySet()) {
-			final double interestingness = itemsets.get(set) * noTransactions
-					/ (double) tree.getSupportOfItemset(set);
-			interestingnessMap.put(set, interestingness);
+		for (final Sequence seq : sequences.keySet()) {
+			final double interestingness = sequences.get(seq) * noTransactions
+					/ (double) tree.getSupportOfSequence(seq);
+			interestingnessMap.put(seq, interestingness);
 		}
 
 		return interestingnessMap;
 	}
 
-	/** Read output itemsets from file (sorted by interestingness) */
-	public static Map<Itemset, Double> readIIMItemsets(final File output)
+	/** Read output sequences from file (sorted by interestingness) */
+	public static Map<Sequence, Double> readISMSequences(final File output)
 			throws IOException {
-		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
-		final HashMap<Itemset, Double> intMap = Maps.newHashMap();
+		final HashMap<Sequence, Double> sequences = Maps.newHashMap();
+		final HashMap<Sequence, Double> intMap = Maps.newHashMap();
 
 		final String[] lines = FileUtils.readFileToString(output).split("\n");
 
@@ -521,31 +416,39 @@ public abstract class ItemsetMiningCore {
 		for (final String line : lines) {
 
 			if (found && !line.trim().isEmpty()) {
+				final Sequence sequence = new Sequence();
 				final String[] splitLine = line.split("\t");
-				final String[] items = splitLine[0].split(",");
-				items[0] = items[0].replace("{", "");
-				items[items.length - 1] = items[items.length - 1].replace("}",
-						"");
-				final Itemset itemset = new Itemset();
-				for (final String item : items)
-					itemset.add(Integer.parseInt(item.trim()));
+				final String[] itemsets = splitLine[0].split(",");
+				itemsets[0] = itemsets[0].replace("[", "");
+				itemsets[itemsets.length - 1] = itemsets[itemsets.length - 1]
+						.replace("]", "");
+				for (final String set : itemsets) {
+					final String[] items = set.split(",");
+					items[0] = items[0].replace("{", "");
+					items[items.length - 1] = items[items.length - 1].replace(
+							"}", "");
+					final Itemset itemset = new Itemset();
+					for (final String item : items)
+						itemset.add(Integer.parseInt(item.trim()));
+					sequence.add(itemset);
+				}
 				final double prob = Double
 						.parseDouble(splitLine[1].split(":")[1]);
 				final double intr = Double
 						.parseDouble(splitLine[2].split(":")[1]);
-				itemsets.put(itemset, prob);
-				intMap.put(itemset, intr);
+				sequences.put(sequence, prob);
+				intMap.put(sequence, intr);
 			}
 
-			if (line.contains("INTERESTING ITEMSETS"))
+			if (line.contains("INTERESTING SEQUENCES"))
 				found = true;
 		}
 
 		// Sort itemsets by interestingness
-		final Map<Itemset, Double> sortedItemsets = sortItemsets(itemsets,
+		final Map<Sequence, Double> sortedSequences = sortSequences(sequences,
 				intMap);
 
-		return sortedItemsets;
+		return sortedSequences;
 	}
 
 }

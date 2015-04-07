@@ -2,10 +2,9 @@ package itemsetmining.main;
 
 import itemsetmining.itemset.Itemset;
 import itemsetmining.itemset.ItemsetTree;
-import itemsetmining.itemset.Rule;
+import itemsetmining.itemset.Sequence;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
-import itemsetmining.main.SparkItemsetMining.LogLevelConverter;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionList;
 import itemsetmining.util.Logging;
@@ -15,7 +14,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -24,6 +22,7 @@ import java.util.logging.Level;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 
+import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
@@ -31,7 +30,6 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
-import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 
 public class ItemsetMining extends ItemsetMiningCore {
@@ -62,7 +60,6 @@ public class ItemsetMining extends ItemsetMiningCore {
 	public static void main(final String[] args) throws IOException {
 
 		// Main fixed parameters
-		final boolean associationRules = false;
 		final InferenceAlgorithm inferenceAlg = new InferGreedy();
 
 		// Runtime parameters
@@ -78,21 +75,10 @@ public class ItemsetMining extends ItemsetMiningCore {
 			final File logFile = Logging.getLogFileName("IIM",
 					params.timestampLog, LOG_DIR, params.dataset);
 
-			// Mine interesting itemsets
-			final Map<Itemset, Double> itemsets = mineItemsets(params.dataset,
-					inferenceAlg, params.maxStructureSteps,
+			// Mine interesting sequences
+			final Map<Sequence, Double> sequences = mineSequences(
+					params.dataset, inferenceAlg, params.maxStructureSteps,
 					params.maxEMIterations, logFile);
-
-			// Generate Association rules from the interesting itemsets
-			if (associationRules) {
-				final List<Rule> rules = generateAssociationRules(itemsets);
-				System.out
-						.println("\n============= ASSOCIATION RULES =============");
-				for (final Rule rule : rules) {
-					System.out.println(rule.toString());
-				}
-				System.out.println("\n");
-			}
 
 		} catch (final ParameterException e) {
 			System.out.println(e.getMessage());
@@ -101,8 +87,8 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 	}
 
-	/** Mine interesting itemsets */
-	public static Map<Itemset, Double> mineItemsets(final File inputFile,
+	/** Mine interesting sequences */
+	public static Map<Sequence, Double> mineSequences(final File inputFile,
 			final InferenceAlgorithm inferenceAlgorithm,
 			final int maxStructureSteps, final int maxEMIterations,
 			final File logFile) throws IOException {
@@ -114,7 +100,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 			Logging.setUpConsoleLogger(logger, LOG_LEVEL);
 
 		// Echo input parameters
-		logger.info("========== INTERESTING ITEMSET MINING ============");
+		logger.info("========== INTERESTING SEQUENCE MINING ============");
 		logger.info(" Time: "
 				+ new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
 						.format(new Date()));
@@ -137,30 +123,30 @@ public class ItemsetMining extends ItemsetMiningCore {
 		// logger.finest(tree.toString());
 		// }
 
-		// Run inference to find interesting itemsets
-		logger.fine("\n============= ITEMSET INFERENCE =============\n");
-		final HashMap<Itemset, Double> itemsets = structuralEM(transactions,
+		// Run inference to find interesting sequences
+		logger.fine("\n============= SEQUENCE INFERENCE =============\n");
+		final HashMap<Sequence, Double> sequences = structuralEM(transactions,
 				singletons, tree, inferenceAlgorithm, maxStructureSteps,
 				maxEMIterations);
 		if (LOG_LEVEL.equals(Level.FINEST))
 			logger.finest("\n======= Transaction Database =======\n"
 					+ Files.toString(inputFile, Charsets.UTF_8) + "\n");
 
-		// Sort itemsets by interestingness
-		final HashMap<Itemset, Double> intMap = calculateInterestingness(
-				itemsets, transactions, tree);
-		final Map<Itemset, Double> sortedItemsets = sortItemsets(itemsets,
+		// Sort sequences by interestingness
+		final HashMap<Sequence, Double> intMap = calculateInterestingness(
+				sequences, transactions, tree);
+		final Map<Sequence, Double> sortedSequences = sortSequences(sequences,
 				intMap);
 
-		logger.info("\n============= INTERESTING ITEMSETS =============\n");
-		for (final Entry<Itemset, Double> entry : sortedItemsets.entrySet()) {
+		logger.info("\n============= INTERESTING SEQUENCES =============\n");
+		for (final Entry<Sequence, Double> entry : sortedSequences.entrySet()) {
 			logger.info(String.format("%s\tprob: %1.5f \tint: %1.5f %n",
 					entry.getKey(), entry.getValue(),
 					intMap.get(entry.getKey())));
 		}
 		logger.info("\n");
 
-		return sortedItemsets;
+		return sortedSequences;
 	}
 
 	public static TransactionList readTransactions(final File inputFile)
@@ -182,21 +168,37 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 			// split the transaction into items
 			final String[] lineSplited = line.split(" ");
-			// create a structure for storing the transaction
-			final Transaction transaction = new Transaction();
-			// for each item in the transaction
-			for (int i = 0; i < lineSplited.length; i++) {
-				// convert the item to integer and add it to the structure
-				transaction.add(Integer.parseInt(lineSplited[i]));
-
-			}
-			transactions.add(transaction);
+			// convert to Transaction class and add it to the structure
+			transactions.add(getTransaction(lineSplited));
 
 		}
 		// close the input file
 		LineIterator.closeQuietly(it);
 
 		return new TransactionList(transactions);
+	}
+
+	/**
+	 * Create and add the Transaction in the String array
+	 *
+	 * @param integers
+	 *            one line of integers in the sequence database
+	 */
+	public static Transaction getTransaction(final String[] integers) {
+		final Transaction sequence = new Transaction();
+		Itemset itemset = new Itemset();
+
+		for (int i = 0; i < integers.length; i++) {
+			if (integers[i].equals("-1")) { // end of itemset
+				sequence.add(itemset);
+				itemset = new Itemset();
+			} else if (integers[i].equals("-2")) { // end of sequence
+				return sequence;
+			} else { // extract the value for an item
+				itemset.add(Integer.parseInt(integers[i]));
+			}
+		}
+		throw new RuntimeException("Corrupt sequence database.");
 	}
 
 	/**
@@ -228,8 +230,11 @@ public class ItemsetMining extends ItemsetMiningCore {
 			final String[] lineSplit = line.split(" ");
 			// for each item
 			for (final String itemString : lineSplit) {
-				// increase the support count of the item
-				singletons.add(Integer.parseInt(itemString));
+				final int item = Integer.parseInt(itemString);
+				if (item < 0) { // ignore end of itemset/sequence tags
+					// increase the support count of the item
+					singletons.add(item);
+				}
 			}
 		}
 		// close the input file
@@ -238,42 +243,27 @@ public class ItemsetMining extends ItemsetMiningCore {
 		return singletons;
 	}
 
-	private static List<Rule> generateAssociationRules(
-			final Map<Itemset, Double> itemsets) {
-
-		final List<Rule> rules = Lists.newArrayList();
-
-		for (final Entry<Itemset, Double> entry : itemsets.entrySet()) {
-			final HashSet<Integer> setForRecursion = Sets.newHashSet(entry
-					.getKey());
-			recursiveGenRules(rules, setForRecursion, new HashSet<Integer>(),
-					entry.getValue());
+	/** Convert string level to level class */
+	public static class LogLevelConverter implements IStringConverter<Level> {
+		@Override
+		public Level convert(final String value) {
+			if (value.equals("SEVERE"))
+				return Level.SEVERE;
+			else if (value.equals("WARNING"))
+				return Level.WARNING;
+			else if (value.equals("INFO"))
+				return Level.INFO;
+			else if (value.equals("CONFIG"))
+				return Level.CONFIG;
+			else if (value.equals("FINE"))
+				return Level.FINE;
+			else if (value.equals("FINER"))
+				return Level.FINER;
+			else if (value.equals("FINEST"))
+				return Level.FINEST;
+			else
+				throw new RuntimeException("Incorrect Log Level.");
 		}
-
-		return rules;
-	}
-
-	private static void recursiveGenRules(final List<Rule> rules,
-			final HashSet<Integer> antecedent,
-			final HashSet<Integer> consequent, final double prob) {
-
-		// Stop if no more rules to generate
-		if (antecedent.isEmpty())
-			return;
-
-		// Add rule
-		if (!antecedent.isEmpty() && !consequent.isEmpty())
-			rules.add(new Rule(antecedent, consequent, prob));
-
-		// Recursively generate more rules
-		for (final Integer element : antecedent) {
-			final HashSet<Integer> newAntecedent = Sets.newHashSet(antecedent);
-			newAntecedent.remove(element);
-			final HashSet<Integer> newConsequent = Sets.newHashSet(consequent);
-			newConsequent.add(element);
-			recursiveGenRules(rules, newAntecedent, newConsequent, prob);
-		}
-
 	}
 
 }

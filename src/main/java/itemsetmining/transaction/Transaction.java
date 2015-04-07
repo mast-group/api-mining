@@ -1,57 +1,60 @@
 package itemsetmining.transaction;
 
-import itemsetmining.itemset.AbstractItemset;
+import itemsetmining.itemset.AbstractSequence;
 import itemsetmining.itemset.Itemset;
+import itemsetmining.itemset.Sequence;
 
 import java.io.Serializable;
-import java.util.BitSet;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.clearspring.analytics.util.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 
 /** A transaction is an ordered list of items */
-public class Transaction extends AbstractItemset implements Serializable {
+public class Transaction extends AbstractSequence implements Serializable {
 	private static final long serialVersionUID = 3327396055332538091L;
 
 	/** Cached itemsets for this transaction */
-	private HashMap<Itemset, Double> cachedItemsets;
+	private HashMap<Sequence, Double> cachedSequences;
 
 	/** Cached covering for this transaction */
-	private HashSet<Itemset> cachedCovering;
-	private HashSet<Itemset> tempCachedCovering;
+	private HashSet<Sequence> cachedCovering;
+	private HashSet<Sequence> tempCachedCovering;
 
-	public void initializeCachedItemsets(final Multiset<Integer> singletons,
+	public void initializeCachedSequences(final Multiset<Integer> singletons,
 			final long noTransactions) {
-		cachedItemsets = Maps.newHashMap();
+		cachedSequences = Maps.newHashMap();
 		for (final Multiset.Entry<Integer> entry : singletons.entrySet()) {
 			if (this.contains(entry.getElement()))
-				cachedItemsets.put(new Itemset(entry.getElement()),
-						entry.getCount() / (double) noTransactions);
+				cachedSequences.put(new Sequence(
+						new Itemset(entry.getElement())), entry.getCount()
+						/ (double) noTransactions);
 		}
 	}
 
-	public HashMap<Itemset, Double> getCachedItemsets() {
-		return cachedItemsets;
+	public HashMap<Sequence, Double> getCachedSequences() {
+		return cachedSequences;
 	}
 
-	public void addItemsetCache(final Itemset candidate, final double prob) {
-		cachedItemsets.put(candidate, prob);
+	public void addSequenceCache(final Sequence candidate, final double prob) {
+		cachedSequences.put(candidate, prob);
 	}
 
-	public void removeItemsetCache(final Itemset candidate) {
-		cachedItemsets.remove(candidate);
+	public void removeSequenceCache(final Sequence candidate) {
+		cachedSequences.remove(candidate);
 	}
 
-	public void updateCachedItemsets(final Map<Itemset, Double> newItemsets) {
-		for (final Iterator<Entry<Itemset, Double>> it = cachedItemsets
+	public void updateCachedSequences(final Map<Sequence, Double> newSequences) {
+		for (final Iterator<Entry<Sequence, Double>> it = cachedSequences
 				.entrySet().iterator(); it.hasNext();) {
-			final Entry<Itemset, Double> entry = it.next();
-			final Double newProb = newItemsets.get(entry.getKey());
+			final Entry<Sequence, Double> entry = it.next();
+			final Double newProb = newSequences.get(entry.getKey());
 			if (newProb != null)
 				entry.setValue(newProb);
 			else
@@ -62,7 +65,7 @@ public class Transaction extends AbstractItemset implements Serializable {
 	/** Get cost of cached covering for hard EM-step */
 	public double getCachedCost() {
 		double totalCost = 0;
-		for (final Entry<Itemset, Double> entry : cachedItemsets.entrySet()) {
+		for (final Entry<Sequence, Double> entry : cachedSequences.entrySet()) {
 			if (cachedCovering.contains(entry.getKey()))
 				totalCost += -Math.log(entry.getValue());
 			else
@@ -72,24 +75,24 @@ public class Transaction extends AbstractItemset implements Serializable {
 	}
 
 	/** Get cost of cached covering for structural EM-step */
-	public double getCachedCost(final Map<Itemset, Double> itemsets) {
-		return calculateCachedCost(itemsets, cachedCovering);
+	public double getCachedCost(final Map<Sequence, Double> sequences) {
+		return calculateCachedCost(sequences, cachedCovering);
 	}
 
 	/** Get cost of temp. cached covering for structural EM-step */
-	public double getTempCachedCost(final Map<Itemset, Double> itemsets) {
-		return calculateCachedCost(itemsets, tempCachedCovering);
+	public double getTempCachedCost(final Map<Sequence, Double> sequences) {
+		return calculateCachedCost(sequences, tempCachedCovering);
 	}
 
 	/** Calculate cached cost for structural EM-step */
-	private double calculateCachedCost(final Map<Itemset, Double> itemsets,
-			HashSet<Itemset> covering) {
+	private double calculateCachedCost(final Map<Sequence, Double> sequences,
+			final HashSet<Sequence> covering) {
 		double totalCost = 0;
-		for (final Entry<Itemset, Double> entry : cachedItemsets.entrySet()) {
-			final Itemset set = entry.getKey();
-			final Double prob = itemsets.get(set);
+		for (final Entry<Sequence, Double> entry : cachedSequences.entrySet()) {
+			final Sequence seq = entry.getKey();
+			final Double prob = sequences.get(seq);
 			if (prob != null) {
-				if (covering.contains(set))
+				if (covering.contains(seq))
 					totalCost += -Math.log(prob);
 				else
 					totalCost += -Math.log(1 - prob);
@@ -98,19 +101,19 @@ public class Transaction extends AbstractItemset implements Serializable {
 		return totalCost;
 	}
 
-	public void setCachedCovering(final HashSet<Itemset> covering) {
+	public void setCachedCovering(final HashSet<Sequence> covering) {
 		cachedCovering = covering;
 	}
 
-	public HashSet<Itemset> getCachedCovering() {
+	public HashSet<Sequence> getCachedCovering() {
 		return cachedCovering;
 	}
 
-	public void setTempCachedCovering(final HashSet<Itemset> covering) {
+	public void setTempCachedCovering(final HashSet<Sequence> covering) {
 		tempCachedCovering = covering;
 	}
 
-	public HashSet<Itemset> getTempCachedCovering() {
+	public HashSet<Sequence> getTempCachedCovering() {
 		return tempCachedCovering;
 	}
 
@@ -118,18 +121,17 @@ public class Transaction extends AbstractItemset implements Serializable {
 	 * Constructor
 	 */
 	public Transaction() {
-		this.items = new BitSet();
+		this.itemsets = Lists.newArrayList();
 	}
 
 	/**
 	 * Constructor
 	 *
-	 * @param items
-	 *            a collection of items that should be added to the transaction
+	 * @param itemsets
+	 *            an array of itemsets that should be added to the new sequence
 	 */
-	public Transaction(final int... items) {
-		this.items = new BitSet(items.length);
-		add(items);
+	public Transaction(final Itemset... itemsets) {
+		this.itemsets = Lists.newArrayList(Arrays.asList(itemsets));
 	}
 
 }

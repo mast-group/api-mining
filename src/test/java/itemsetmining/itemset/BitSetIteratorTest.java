@@ -1,7 +1,6 @@
 package itemsetmining.itemset;
 
 import static org.junit.Assert.assertEquals;
-import itemsetmining.transaction.Transaction;
 
 import java.util.List;
 
@@ -14,7 +13,7 @@ public class BitSetIteratorTest {
 	@Test
 	public void testIterator() {
 
-		final Transaction transaction = new Transaction(1, 2, 3, 4);
+		final Itemset transaction = new Itemset(1, 2, 3, 4);
 
 		final List<Integer> expected = Lists.newArrayList(1, 2, 3, 4);
 		final List<Integer> actual = Lists.newArrayList();
