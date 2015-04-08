@@ -1,7 +1,7 @@
 package itemsetmining.util;
 
-import itemsetmining.itemset.AbstractItemset;
-import itemsetmining.itemset.Itemset;
+import itemsetmining.itemset.AbstractSequence;
+import itemsetmining.itemset.Sequence;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.transaction.Transaction;
 
@@ -15,8 +15,8 @@ public class ClassRegistrator implements KryoRegistrator {
 	@Override
 	public void registerClasses(final Kryo kryo) {
 		kryo.register(Transaction.class);
-		kryo.register(AbstractItemset.class);
-		kryo.register(Itemset.class);
+		kryo.register(AbstractSequence.class);
+		kryo.register(Sequence.class);
 		kryo.register(InferGreedy.class);
 	}
 

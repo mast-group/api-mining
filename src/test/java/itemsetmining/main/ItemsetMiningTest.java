@@ -1,18 +1,15 @@
 package itemsetmining.main;
 
 import static org.junit.Assert.assertEquals;
-import itemsetmining.itemset.Itemset;
 import itemsetmining.itemset.Sequence;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 
-import java.util.Set;
-
 import org.junit.Test;
 
 import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Multiset;
 
 public class ItemsetMiningTest {
 
@@ -20,30 +17,51 @@ public class ItemsetMiningTest {
 	public void testDoInference() {
 
 		// Subsequences
-		final Sequence s1 = new Sequence(new Itemset(3), new Itemset(4, 5),
-				new Itemset(8));
+		final Sequence s1 = new Sequence(3, 4, 5, 8);
 		final double p1 = 0.4;
-		final Sequence s2 = new Sequence(new Itemset(7), new Itemset(9));
+		final Sequence s2 = new Sequence(7, 9);
 		final double p2 = 0.3;
-		final Sequence s3 = new Sequence(new Itemset(8), new Itemset(4, 5, 6));
+		final Sequence s3 = new Sequence(8, 4, 5, 6);
 		final double p3 = 0.2;
 
 		// Transaction #1
-		final Transaction transaction1 = new Transaction(new Itemset(7),
-				new Itemset(3, 8), new Itemset(9), new Itemset(4, 5, 6),
-				new Itemset(8));
+		final Transaction transaction1 = new Transaction(7, 3, 8, 9, 4, 5, 6, 8);
 		transaction1.initializeCachedSequences(HashMultiset.create(), 0);
 		transaction1.addSequenceCache(s1, p1);
 		transaction1.addSequenceCache(s2, p2);
 		transaction1.addSequenceCache(s3, p3);
 
 		// Expected solution #1
-		final Set<Sequence> expected1 = Sets.newHashSet(s1, s2, s3);
+		final Multiset<Sequence> expected1 = HashMultiset.create();
+		expected1.add(s1);
+		expected1.add(s2);
+		expected1.add(s3);
 
 		// Test greedy
 		final InferenceAlgorithm inferGreedy = new InferGreedy();
-		final Set<Sequence> actual = inferGreedy.infer(transaction1);
+		final Multiset<Sequence> actual = inferGreedy.infer(transaction1);
 		assertEquals(expected1, actual);
+
+		// Subsequences
+		final Sequence s4 = new Sequence(1, 2);
+		final double p4 = 0.5;
+
+		// Transaction #1
+		final Transaction transaction2 = new Transaction(1, 2, 1, 2, 1, 2);
+		transaction2.initializeCachedSequences(HashMultiset.create(), 0);
+		transaction2.addSequenceCache(s4, p4);
+
+		// Expected solution #1
+		final Multiset<Sequence> expected2 = HashMultiset.create();
+		expected2.add(s4, 3);
+		final double expectedCost2 = -Math.log(p4) - Math.log(p4)
+				- Math.log(p4);
+
+		// Test greedy
+		final Multiset<Sequence> actual2 = inferGreedy.infer(transaction2);
+		assertEquals(expected2, actual2);
+		transaction2.setCachedCovering(actual2);
+		assertEquals(expectedCost2, transaction2.getCachedCost(), 1e-15);
 
 	}
 

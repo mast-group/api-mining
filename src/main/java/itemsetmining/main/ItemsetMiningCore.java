@@ -1,7 +1,5 @@
 package itemsetmining.main;
 
-import itemsetmining.itemset.Itemset;
-import itemsetmining.itemset.ItemsetTree;
 import itemsetmining.itemset.Sequence;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.TransactionDatabase;
@@ -19,6 +17,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
 
 import scala.Tuple2;
 
@@ -49,7 +48,7 @@ public abstract class ItemsetMiningCore {
 	 */
 	protected static HashMap<Sequence, Double> structuralEM(
 			final TransactionDatabase transactions,
-			final Multiset<Integer> singletons, final ItemsetTree tree,
+			final Multiset<Integer> singletons, final File inputFile,
 			final InferenceAlgorithm inferenceAlgorithm,
 			final int maxStructureSteps, final int maxEMIterations) {
 
@@ -68,7 +67,7 @@ public abstract class ItemsetMiningCore {
 		final HashMap<Sequence, Double> sequences = Maps.newHashMap();
 		final HashMap<Sequence, Integer> supports = Maps.newHashMap();
 		for (final Multiset.Entry<Integer> entry : singletons.entrySet()) {
-			final Sequence seq = new Sequence(new Itemset(entry.getElement()));
+			final Sequence seq = new Sequence(entry.getElement());
 			final int support = entry.getCount();
 			sequences.put(seq, support / (double) transactions.size());
 			supports.put(seq, support);
@@ -106,9 +105,10 @@ public abstract class ItemsetMiningCore {
 			// Learn structure
 			logger.finer("\n----- Itemset Combination at Step " + iteration
 					+ "\n");
-			combineItemsetsStep(sequences, transactions, tree, rejected_seqs,
-					inferenceAlgorithm, maxStructureSteps, supportOrdering,
-					supports, candidateSupportOrdering, candidateSupports);
+			combineSequencesStep(sequences, transactions, inputFile,
+					rejected_seqs, inferenceAlgorithm, maxStructureSteps,
+					supportOrdering, supports, candidateSupportOrdering,
+					candidateSupports);
 			if (transactions.getIterationLimitExceeded())
 				breakLoop = true;
 			logger.finer(String.format(" Average cost: %.2f%n",
@@ -221,9 +221,9 @@ public abstract class ItemsetMiningCore {
 	 * @param candidateSupports
 	 *            cached candididate supports for the above ordering
 	 */
-	private static void combineItemsetsStep(
+	private static void combineSequencesStep(
 			final HashMap<Sequence, Double> sequences,
-			final TransactionDatabase transactions, final ItemsetTree tree,
+			final TransactionDatabase transactions, final File inputFile,
 			final Set<Sequence> rejected_seqs,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps,
 			final Ordering<Sequence> sequenceSupportOrdering,
@@ -250,31 +250,25 @@ public abstract class ItemsetMiningCore {
 					if (k <= i + j) {
 
 						// Create new candidates by joining overlapping seqs
-						final String code1 = sortedSequences.get(i).toCode();
-						final String code2 = sortedSequences.get(j).toCode();
-						final String joined1 = Sequence.join(code1, code2);
-						final String joined2 = Sequence.join(code2, code1);
+						final Sequence seq1 = sortedSequences.get(i);
+						final Sequence seq2 = sortedSequences.get(j);
+						final Sequence cand1 = Sequence.join(seq1, seq2);
+						final Sequence cand2 = Sequence.join(seq2, seq1);
 
 						// Add candidate(s) to queue
-						if (joined1 != null) {
-							final Sequence cand1 = Sequence.fromCode(joined1);
-							if (!rejected_seqs.contains(cand1)) {
-								if (!candidateSupports.containsKey(cand1))
-									candidateSupports.put(cand1,
-											tree.getSupportOfSequence(cand1));
-								candidateQueue.add(cand1);
-								iteration++;
-							}
+						if (cand1 != null && !rejected_seqs.contains(cand1)) {
+							if (!candidateSupports.containsKey(cand1))
+								candidateSupports.put(cand1,
+										getSupportOfSequence(inputFile, cand1));
+							candidateQueue.add(cand1);
+							iteration++;
 						}
-						if (joined2 != null) {
-							final Sequence cand2 = Sequence.fromCode(joined2);
-							if (!rejected_seqs.contains(cand2)) {
-								if (!candidateSupports.containsKey(cand2))
-									candidateSupports.put(cand2,
-											tree.getSupportOfSequence(cand2));
-								candidateQueue.add(cand2);
-								iteration++;
-							}
+						if (cand2 != null && !rejected_seqs.contains(cand2)) {
+							if (!candidateSupports.containsKey(cand2))
+								candidateSupports.put(cand2,
+										getSupportOfSequence(inputFile, cand2));
+							candidateQueue.add(cand2);
+							iteration++;
 						}
 
 						if (iteration >= maxSteps) // Queue limit exceeded
@@ -389,7 +383,7 @@ public abstract class ItemsetMiningCore {
 	 */
 	public static HashMap<Sequence, Double> calculateInterestingness(
 			final HashMap<Sequence, Double> sequences,
-			final TransactionDatabase transactions, final ItemsetTree tree) {
+			final TransactionDatabase transactions, final File inputFile) {
 
 		final HashMap<Sequence, Double> interestingnessMap = Maps.newHashMap();
 
@@ -397,7 +391,7 @@ public abstract class ItemsetMiningCore {
 		final long noTransactions = transactions.size();
 		for (final Sequence seq : sequences.keySet()) {
 			final double interestingness = sequences.get(seq) * noTransactions
-					/ (double) tree.getSupportOfSequence(seq);
+					/ (double) getSupportOfSequence(inputFile, seq);
 			interestingnessMap.put(seq, interestingness);
 		}
 
@@ -418,20 +412,12 @@ public abstract class ItemsetMiningCore {
 			if (found && !line.trim().isEmpty()) {
 				final Sequence sequence = new Sequence();
 				final String[] splitLine = line.split("\t");
-				final String[] itemsets = splitLine[0].split(",");
-				itemsets[0] = itemsets[0].replace("[", "");
-				itemsets[itemsets.length - 1] = itemsets[itemsets.length - 1]
-						.replace("]", "");
-				for (final String set : itemsets) {
-					final String[] items = set.split(",");
-					items[0] = items[0].replace("{", "");
-					items[items.length - 1] = items[items.length - 1].replace(
-							"}", "");
-					final Itemset itemset = new Itemset();
-					for (final String item : items)
-						itemset.add(Integer.parseInt(item.trim()));
-					sequence.add(itemset);
-				}
+				final String[] items = splitLine[0].split(",");
+				items[0] = items[0].replace("[", "");
+				items[items.length - 1] = items[items.length - 1].replace("]",
+						"");
+				for (final String item : items)
+					sequence.add(Integer.parseInt(item.trim()));
 				final double prob = Double
 						.parseDouble(splitLine[1].split(":")[1]);
 				final double intr = Double
@@ -451,4 +437,41 @@ public abstract class ItemsetMiningCore {
 		return sortedSequences;
 	}
 
+	/**
+	 * This method scans the input database to calculate the support of a
+	 * sequence.
+	 *
+	 * @param inputFile
+	 *            the input file
+	 * @return the support of the requested sequence
+	 * @deprecated slooowwww
+	 */
+	@Deprecated
+	public static int getSupportOfSequence(final File inputFile,
+			final Sequence seq) {
+
+		// Convert sequence to string code
+		final StringBuilder sb = new StringBuilder(seq.size() * 2);
+		for (final int item : seq) {
+			sb.append(item);
+			sb.append("-1");
+		}
+		final String code = sb.toString();
+
+		// for each line (transaction) until the end of file
+		int support = 0;
+		try {
+			final LineIterator it = FileUtils.lineIterator(inputFile, "UTF-8");
+			while (it.hasNext()) {
+				if (it.nextLine().contains(code))
+					support++;
+			}
+			// close the input file
+			LineIterator.closeQuietly(it);
+		} catch (final IOException e) {
+			throw new RuntimeException(e.getMessage());
+		}
+
+		return support;
+	}
 }

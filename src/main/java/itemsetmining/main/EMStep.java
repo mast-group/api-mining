@@ -8,7 +8,6 @@ import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionDatabase;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,11 +42,11 @@ public class EMStep {
 		final Map<Sequence, Long> coveringWithCounts = transactions
 				.parallelStream()
 				.map(t -> {
-					final HashSet<Sequence> covering = inferenceAlgorithm
+					final Multiset<Sequence> covering = inferenceAlgorithm
 							.infer(t);
 					t.setCachedCovering(covering);
 					return covering;
-				}).flatMap(HashSet::stream)
+				}).flatMap(Multiset::stream)
 				.collect(groupingBy(identity(), counting()));
 
 		// M-step
@@ -90,13 +89,13 @@ public class EMStep {
 				.map(t -> {
 					if (t.contains(candidate)) {
 						t.addSequenceCache(candidate, 1.0);
-						final HashSet<Sequence> covering = inferenceAlgorithm
+						final Multiset<Sequence> covering = inferenceAlgorithm
 								.infer(t);
 						t.setTempCachedCovering(covering);
 						return covering;
 					}
 					return t.getCachedCovering();
-				}).flatMap(HashSet::stream)
+				}).flatMap(Multiset::stream)
 				.collect(groupingBy(identity(), counting()));
 
 		// M-step
@@ -142,13 +141,13 @@ public class EMStep {
 				.map(t -> {
 					if (t.contains(candidate)) {
 						t.addSequenceCache(candidate, prob);
-						final HashSet<Sequence> covering = t
+						final Multiset<Sequence> covering = t
 								.getTempCachedCovering();
 						t.setCachedCovering(covering);
 						return covering;
 					}
 					return t.getCachedCovering();
-				}).flatMap(HashSet::stream)
+				}).flatMap(Multiset::stream)
 				.collect(groupingBy(identity(), counting()));
 
 		// M-step

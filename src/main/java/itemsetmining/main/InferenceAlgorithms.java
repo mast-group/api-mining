@@ -6,17 +6,17 @@ import itemsetmining.transaction.Transaction;
 import java.io.Serializable;
 import java.util.BitSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map.Entry;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
 
 /** Container class for Inference Algorithms */
 public class InferenceAlgorithms {
 
 	/** Interface for the different inference algorithms */
 	public interface InferenceAlgorithm {
-		public HashSet<Sequence> infer(final Transaction transaction);
+		public Multiset<Sequence> infer(final Transaction transaction);
 	}
 
 	/**
@@ -30,9 +30,9 @@ public class InferenceAlgorithms {
 		private static final long serialVersionUID = 9173178089235828142L;
 
 		@Override
-		public HashSet<Sequence> infer(final Transaction transaction) {
+		public Multiset<Sequence> infer(final Transaction transaction) {
 
-			final HashSet<Sequence> covering = Sets.newHashSet();
+			final Multiset<Sequence> covering = HashMultiset.create();
 			final int transactionSize = transaction.size();
 			final BitSet coveredItems = new BitSet(transactionSize);
 
@@ -48,8 +48,8 @@ public class InferenceAlgorithms {
 						.entrySet()) {
 
 					// How many additional items does S cover?
-					final BitSet currentCoveredItems = transaction
-							.getCovered(entry.getKey());
+					final BitSet currentCoveredItems = transaction.getCovered(
+							entry.getKey(), coveredItems);
 					currentCoveredItems.or(coveredItems);
 					final int notCovered = currentCoveredItems.cardinality()
 							- coveredItems.cardinality();

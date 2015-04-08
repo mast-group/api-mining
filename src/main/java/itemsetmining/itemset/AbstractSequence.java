@@ -7,44 +7,53 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-public abstract class AbstractSequence extends AbstractCollection<Itemset>
+public abstract class AbstractSequence extends AbstractCollection<Integer>
 		implements Serializable {
 	private static final long serialVersionUID = 686688001826219278L;
 
-	protected List<Itemset> itemsets;
+	protected List<Integer> items;
 
 	/**
-	 * Add given itemset to this sequence
-	 *
-	 * @param itemset
-	 *            an itemset that should be added to this sequence
-	 * @return
-	 */
-	@Override
-	public boolean add(final Itemset set) {
-		return this.itemsets.add(set);
-	}
-
-	/**
-	 * Add itemsets to this sequence
-	 *
-	 * @param itemsets
-	 *            a collection of itemsets that should be added to this sequence
-	 */
-	@Override
-	public boolean addAll(final Collection<? extends Itemset> itemsets) {
-		return this.itemsets.addAll(itemsets);
-	}
-
-	/**
-	 * Add items to this itemset
+	 * Add given items to this sequence
 	 *
 	 * @param items
-	 *            an array of items that should be added to this itemset
+	 *            an item that should be added to this sequence
 	 */
-	public void add(final Itemset... itemsets) {
-		for (final Itemset set : itemsets)
-			this.itemsets.add(set);
+	@Override
+	public boolean add(final Integer item) {
+		return this.items.add(item);
+	}
+
+	/**
+	 * Get item at specified position in this sequence
+	 *
+	 * @param index
+	 *            index of the element to return
+	 */
+	public int get(final int index) {
+		return this.items.get(index);
+	}
+
+	/**
+	 * Add item to this sequence
+	 *
+	 * @param items
+	 *            a collection of items that should be added to this sequence
+	 */
+	@Override
+	public boolean addAll(final Collection<? extends Integer> items) {
+		return this.items.addAll(items);
+	}
+
+	/**
+	 * Add items to this sequence
+	 *
+	 * @param items
+	 *            an array of items that should be added to this sequence
+	 */
+	public void add(final Integer... items) {
+		for (final Integer set : items)
+			this.items.add(set);
 	}
 
 	/**
@@ -54,20 +63,55 @@ public abstract class AbstractSequence extends AbstractCollection<Itemset>
 	 */
 	public boolean contains(final AbstractSequence seq) {
 		int pos = 0;
-		boolean containsSet;
-		for (final Itemset set : seq.itemsets) {
-			containsSet = false;
-			for (int i = pos; i < this.itemsets.size(); i++) {
-				if (this.itemsets.get(i).contains(set)) {
+		boolean containsItem;
+		for (final Integer item : seq.items) {
+			containsItem = false;
+			for (int i = pos; i < this.items.size(); i++) {
+				if (this.items.get(i) == item) {
 					pos = i + 1;
-					containsSet = true;
+					containsItem = true;
 					break;
 				}
 			}
-			if (!containsSet)
+			if (!containsItem)
 				return false;
 		}
 		return true;
+	}
+
+	/**
+	 * Check if first BitSet contains second BitSet
+	 */
+	public boolean contains(final BitSet set1, final BitSet set2) {
+		final BitSet copy = (BitSet) set2.clone();
+		copy.and(set1);
+		return copy.equals(set2);
+	}
+
+	/**
+	 * Return the items in this sequence covered by the given sequence, allowing
+	 * for multiple covering matches if the first match is already fully covered
+	 *
+	 * <p>
+	 * This is intended to allow the covering of 1 2 1 2 1 2 by 1 2.
+	 *
+	 * @param sequence
+	 * @return BitSet of items in order with the covered items set true
+	 */
+	public BitSet getCovered(final AbstractSequence seq,
+			final BitSet alreadyCoveredItems) {
+
+		int index = 0;
+		while (true) {
+			final BitSet coveredItems = getCovered(seq, index);
+			if (coveredItems.isEmpty())
+				return coveredItems;
+			if (contains(alreadyCoveredItems, coveredItems))
+				index = coveredItems.nextSetBit(index) + 1;
+			else
+				return coveredItems;
+		}
+
 	}
 
 	/**
@@ -76,30 +120,22 @@ public abstract class AbstractSequence extends AbstractCollection<Itemset>
 	 * @param sequence
 	 * @return BitSet of items in order with the covered items set true
 	 */
-	// TODO remove containsSet check? This should always be true...
-	public BitSet getCovered(final AbstractSequence seq) {
-		int pos = 0;
-		int itemPos = 0;
-		boolean containsSet;
+	// TODO remove containsItem check? This should always be true...
+	public BitSet getCovered(final AbstractSequence seq, final int startIndex) {
+		int pos = startIndex;
+		boolean containsItem;
 		final BitSet coveredItems = new BitSet(this.size());
-		for (final Itemset set : seq.itemsets) {
-			containsSet = false;
-			for (int i = pos; i < this.itemsets.size(); i++) {
-				final Itemset thisSet = this.itemsets.get(i);
-				if (thisSet.contains(set)) {
-					for (final int item : thisSet) {
-						if (set.contains(item))
-							coveredItems.set(itemPos);
-						itemPos++;
-					}
+		for (final Integer item : seq.items) {
+			containsItem = false;
+			for (int i = pos; i < this.items.size(); i++) {
+				if (this.items.get(i) == item) {
+					coveredItems.set(i);
 					pos = i + 1;
-					containsSet = true;
+					containsItem = true;
 					break;
-				} else {
-					itemPos += thisSet.size();
 				}
 			}
-			if (!containsSet) {
+			if (!containsItem) {
 				coveredItems.clear();
 				return coveredItems;
 			}
@@ -112,25 +148,22 @@ public abstract class AbstractSequence extends AbstractCollection<Itemset>
 	 */
 	@Override
 	public int size() {
-		int noItems = 0;
-		for (final Itemset set : itemsets)
-			noItems += set.size();
-		return noItems;
+		return this.items.size();
 	}
 
 	@Override
 	public boolean isEmpty() {
-		return itemsets.isEmpty();
+		return items.isEmpty();
 	}
 
 	@Override
 	public String toString() {
-		return itemsets.toString();
+		return items.toString();
 	}
 
 	@Override
 	public int hashCode() {
-		return itemsets.hashCode();
+		return items.hashCode();
 	}
 
 	@Override
@@ -140,12 +173,12 @@ public abstract class AbstractSequence extends AbstractCollection<Itemset>
 		if (!(obj instanceof AbstractSequence))
 			return false;
 		final AbstractSequence other = (AbstractSequence) obj;
-		return itemsets.equals(other.itemsets);
+		return items.equals(other.items);
 	}
 
 	@Override
-	public Iterator<Itemset> iterator() {
-		return itemsets.iterator();
+	public Iterator<Integer> iterator() {
+		return items.iterator();
 	}
 
 }

@@ -1,13 +1,11 @@
 package itemsetmining.transaction;
 
 import itemsetmining.itemset.AbstractSequence;
-import itemsetmining.itemset.Itemset;
 import itemsetmining.itemset.Sequence;
 
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -24,17 +22,16 @@ public class Transaction extends AbstractSequence implements Serializable {
 	private HashMap<Sequence, Double> cachedSequences;
 
 	/** Cached covering for this transaction */
-	private HashSet<Sequence> cachedCovering;
-	private HashSet<Sequence> tempCachedCovering;
+	private Multiset<Sequence> cachedCovering;
+	private Multiset<Sequence> tempCachedCovering;
 
 	public void initializeCachedSequences(final Multiset<Integer> singletons,
 			final long noTransactions) {
 		cachedSequences = Maps.newHashMap();
 		for (final Multiset.Entry<Integer> entry : singletons.entrySet()) {
 			if (this.contains(entry.getElement()))
-				cachedSequences.put(new Sequence(
-						new Itemset(entry.getElement())), entry.getCount()
-						/ (double) noTransactions);
+				cachedSequences.put(new Sequence(entry.getElement()),
+						entry.getCount() / (double) noTransactions);
 		}
 	}
 
@@ -66,9 +63,10 @@ public class Transaction extends AbstractSequence implements Serializable {
 	public double getCachedCost() {
 		double totalCost = 0;
 		for (final Entry<Sequence, Double> entry : cachedSequences.entrySet()) {
-			if (cachedCovering.contains(entry.getKey()))
-				totalCost += -Math.log(entry.getValue());
-			else
+			if (cachedCovering.contains(entry.getKey())) {
+				for (int i = 0; i < cachedCovering.count(entry.getKey()); i++)
+					totalCost += -Math.log(entry.getValue());
+			} else
 				totalCost += -Math.log(1 - entry.getValue());
 		}
 		return totalCost;
@@ -86,34 +84,35 @@ public class Transaction extends AbstractSequence implements Serializable {
 
 	/** Calculate cached cost for structural EM-step */
 	private double calculateCachedCost(final Map<Sequence, Double> sequences,
-			final HashSet<Sequence> covering) {
+			final Multiset<Sequence> covering) {
 		double totalCost = 0;
 		for (final Entry<Sequence, Double> entry : cachedSequences.entrySet()) {
 			final Sequence seq = entry.getKey();
 			final Double prob = sequences.get(seq);
 			if (prob != null) {
-				if (covering.contains(seq))
-					totalCost += -Math.log(prob);
-				else
+				if (covering.contains(seq)) {
+					for (int i = 0; i < covering.count(seq); i++)
+						totalCost += -Math.log(prob);
+				} else
 					totalCost += -Math.log(1 - prob);
 			}
 		}
 		return totalCost;
 	}
 
-	public void setCachedCovering(final HashSet<Sequence> covering) {
+	public void setCachedCovering(final Multiset<Sequence> covering) {
 		cachedCovering = covering;
 	}
 
-	public HashSet<Sequence> getCachedCovering() {
+	public Multiset<Sequence> getCachedCovering() {
 		return cachedCovering;
 	}
 
-	public void setTempCachedCovering(final HashSet<Sequence> covering) {
+	public void setTempCachedCovering(final Multiset<Sequence> covering) {
 		tempCachedCovering = covering;
 	}
 
-	public HashSet<Sequence> getTempCachedCovering() {
+	public Multiset<Sequence> getTempCachedCovering() {
 		return tempCachedCovering;
 	}
 
@@ -121,17 +120,17 @@ public class Transaction extends AbstractSequence implements Serializable {
 	 * Constructor
 	 */
 	public Transaction() {
-		this.itemsets = Lists.newArrayList();
+		this.items = Lists.newArrayList();
 	}
 
 	/**
 	 * Constructor
 	 *
-	 * @param itemsets
-	 *            an array of itemsets that should be added to the new sequence
+	 * @param items
+	 *            an array of items that should be added to the new sequence
 	 */
-	public Transaction(final Itemset... itemsets) {
-		this.itemsets = Lists.newArrayList(Arrays.asList(itemsets));
+	public Transaction(final Integer... items) {
+		this.items = Lists.newArrayList(Arrays.asList(items));
 	}
 
 }

@@ -1,7 +1,5 @@
 package itemsetmining.main;
 
-import itemsetmining.itemset.Itemset;
-import itemsetmining.itemset.ItemsetTree;
 import itemsetmining.itemset.Sequence;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
@@ -114,10 +112,11 @@ public class ItemsetMining extends ItemsetMiningCore {
 		final Multiset<Integer> singletons = scanDatabaseToDetermineFrequencyOfSingleItems(inputFile);
 
 		// Apply the algorithm to build the itemset tree
-		final ItemsetTree tree = new ItemsetTree(singletons);
-		tree.buildTree(inputFile);
-		if (LOG_LEVEL.equals(Level.FINE))
-			tree.printStatistics(logger);
+		// FIXME implement sequence tree
+		// final ItemsetTree tree = new ItemsetTree(singletons);
+		// tree.buildTree(inputFile);
+		// if (LOG_LEVEL.equals(Level.FINE))
+		// tree.printStatistics(logger);
 		// if (LOG_LEVEL.equals(Level.FINEST)) {
 		// logger.finest("THIS IS THE TREE:\n");
 		// logger.finest(tree.toString());
@@ -126,7 +125,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 		// Run inference to find interesting sequences
 		logger.fine("\n============= SEQUENCE INFERENCE =============\n");
 		final HashMap<Sequence, Double> sequences = structuralEM(transactions,
-				singletons, tree, inferenceAlgorithm, maxStructureSteps,
+				singletons, inputFile, inferenceAlgorithm, maxStructureSteps,
 				maxEMIterations);
 		if (LOG_LEVEL.equals(Level.FINEST))
 			logger.finest("\n======= Transaction Database =======\n"
@@ -134,7 +133,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 		// Sort sequences by interestingness
 		final HashMap<Sequence, Double> intMap = calculateInterestingness(
-				sequences, transactions, tree);
+				sequences, transactions, inputFile);
 		final Map<Sequence, Double> sortedSequences = sortSequences(sequences,
 				intMap);
 
@@ -186,16 +185,14 @@ public class ItemsetMining extends ItemsetMiningCore {
 	 */
 	public static Transaction getTransaction(final String[] integers) {
 		final Transaction sequence = new Transaction();
-		Itemset itemset = new Itemset();
 
 		for (int i = 0; i < integers.length; i++) {
-			if (integers[i].equals("-1")) { // end of itemset
-				sequence.add(itemset);
-				itemset = new Itemset();
+			if (integers[i].equals("-1")) { // end of item
+
 			} else if (integers[i].equals("-2")) { // end of sequence
 				return sequence;
 			} else { // extract the value for an item
-				itemset.add(Integer.parseInt(integers[i]));
+				sequence.add(Integer.parseInt(integers[i]));
 			}
 		}
 		throw new RuntimeException("Corrupt sequence database.");
