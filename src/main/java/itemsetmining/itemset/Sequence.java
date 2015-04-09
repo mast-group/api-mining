@@ -71,6 +71,13 @@ public class Sequence extends AbstractSequence implements Serializable {
 	 */
 	public static Sequence join(final Sequence s1, final Sequence s2) {
 		final int len1 = s1.size() - 1;
+		final int len2 = s2.size() - 1;
+
+		// Handle singletons by just joining them
+		if (len1 == 0 && len2 == 0)
+			return new Sequence(s1, s2, 0);
+
+		// Otherwise detect overlap
 		final int last1 = s1.get(len1);
 		final int first2 = s2.get(0);
 

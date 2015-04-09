@@ -37,16 +37,16 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 		@Parameter(names = { "-f", "--file" }, description = "Dataset filename")
 		private final File dataset = new File(
-				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/Datasets/Uganda/keywords/uganda_en_teenage_pregnancy.dat");
+				"/afs/inf.ed.ac.uk/user/j/jfowkes/TOY2.txt");
 
 		@Parameter(names = { "-s", "--maxSteps" }, description = "Max structure steps")
-		int maxStructureSteps = 10_000;
+		int maxStructureSteps = 1_000_000;
 
 		@Parameter(names = { "-i", "--iterations" }, description = "Max iterations")
 		int maxEMIterations = 1_000;
 
 		@Parameter(names = { "-l", "--log-level" }, description = "Log level", converter = LogLevelConverter.class)
-		Level logLevel = Level.FINE;
+		Level logLevel = Level.FINEST;
 
 		@Parameter(names = { "-r", "--runtime" }, description = "Max Runtime (min)")
 		long maxRunTime = 72 * 60; // 12hrs
@@ -92,17 +92,18 @@ public class ItemsetMining extends ItemsetMiningCore {
 			final File logFile) throws IOException {
 
 		// Set up logging
-		if (logFile != null)
-			Logging.setUpFileLogger(logger, LOG_LEVEL, logFile);
-		else
-			Logging.setUpConsoleLogger(logger, LOG_LEVEL);
+		// if (logFile != null)
+		// Logging.setUpFileLogger(logger, LOG_LEVEL, logFile);
+		// else
+		// Logging.setUpConsoleLogger(logger, LOG_LEVEL);
+		Logging.setUpConsoleAndFileLogger(logger, LOG_LEVEL, logFile);
 
 		// Echo input parameters
 		logger.info("========== INTERESTING SEQUENCE MINING ============");
-		logger.info(" Time: "
+		logger.info("\n Time: "
 				+ new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
 						.format(new Date()));
-		logger.info(" Inputs: -f " + inputFile + " -s " + maxStructureSteps
+		logger.info("\n Inputs: -f " + inputFile + " -s " + maxStructureSteps
 				+ " -i " + maxEMIterations + " -r " + MAX_RUNTIME / 60_000);
 
 		// Read in transaction database
@@ -228,7 +229,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 			// for each item
 			for (final String itemString : lineSplit) {
 				final int item = Integer.parseInt(itemString);
-				if (item < 0) { // ignore end of itemset/sequence tags
+				if (item >= 0) { // ignore end of itemset/sequence tags
 					// increase the support count of the item
 					singletons.add(item);
 				}

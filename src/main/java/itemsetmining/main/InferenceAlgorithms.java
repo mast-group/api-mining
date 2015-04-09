@@ -50,6 +50,9 @@ public class InferenceAlgorithms {
 					// How many additional items does S cover?
 					final BitSet currentCoveredItems = transaction.getCovered(
 							entry.getKey(), coveredItems);
+					// Ignore sequences which don't cover anything
+					if (currentCoveredItems.isEmpty())
+						continue;
 					currentCoveredItems.or(coveredItems);
 					final int notCovered = currentCoveredItems.cardinality()
 							- coveredItems.cardinality();
