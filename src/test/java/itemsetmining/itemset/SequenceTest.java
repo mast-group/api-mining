@@ -76,15 +76,4 @@ public class SequenceTest {
 
 	}
 
-	@Test
-	public void testSequenceJoin() {
-
-		final Sequence seq1 = new Sequence(0, 1, 2, 3);
-		final Sequence seq2 = new Sequence(2, 3, 4, 5);
-
-		final Sequence expectedSeq = new Sequence(0, 1, 2, 3, 4, 5);
-		assertEquals(expectedSeq, Sequence.join(seq1, seq2));
-		assertEquals(null, Sequence.join(seq2, seq1));
-
-	}
 }

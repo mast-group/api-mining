@@ -15,6 +15,8 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
@@ -252,8 +254,8 @@ public abstract class ItemsetMiningCore {
 						// Create new candidates by joining overlapping seqs
 						final Sequence seq1 = sortedSequences.get(i);
 						final Sequence seq2 = sortedSequences.get(j);
-						final Sequence cand1 = Sequence.join(seq1, seq2);
-						final Sequence cand2 = Sequence.join(seq2, seq1);
+						final Sequence cand1 = new Sequence(seq1, seq2);
+						final Sequence cand2 = new Sequence(seq2, seq1);
 
 						// Add candidate(s) to queue
 						if (cand1 != null && !rejected_seqs.contains(cand1)) {
@@ -450,20 +452,24 @@ public abstract class ItemsetMiningCore {
 	public static int getSupportOfSequence(final File inputFile,
 			final Sequence seq) {
 
-		// Convert sequence to string code
-		final StringBuilder sb = new StringBuilder(seq.size() * 2);
+		// Convert sequence to regex
+		final StringBuilder sb = new StringBuilder(seq.size() * 2 + 1);
+		String prefix = "(^| )";
 		for (final int item : seq) {
+			sb.append(prefix);
 			sb.append(item);
-			sb.append(" -1 ");
+			prefix = " .*? ";
 		}
-		final String code = sb.toString();
+		sb.append(" ");
+		final Pattern pattern = Pattern.compile(sb.toString());
 
 		// for each line (transaction) until the end of file
 		int support = 0;
 		try {
 			final LineIterator it = FileUtils.lineIterator(inputFile, "UTF-8");
 			while (it.hasNext()) {
-				if (it.nextLine().contains(code))
+				final Matcher matcher = pattern.matcher(it.nextLine());
+				while (matcher.find())
 					support++;
 			}
 			// close the input file

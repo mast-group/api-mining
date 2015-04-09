@@ -6,6 +6,8 @@ import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 
+import java.io.File;
+
 import org.junit.Test;
 
 import com.google.common.collect.HashMultiset;
@@ -63,6 +65,16 @@ public class ItemsetMiningTest {
 		transaction2.setCachedCovering(actual2);
 		assertEquals(expectedCost2, transaction2.getCachedCost(), 1e-15);
 
+	}
+
+	@Test
+	public void testGetSupportOfSequence() {
+		final File inputFile = new File(
+				"/afs/inf.ed.ac.uk/user/j/jfowkes/TOY.txt");
+		final Sequence seq = new Sequence(1, 3);
+		final int expectedSupp = 5;
+		assertEquals(expectedSupp,
+				ItemsetMiningCore.getSupportOfSequence(inputFile, seq));
 	}
 
 }
