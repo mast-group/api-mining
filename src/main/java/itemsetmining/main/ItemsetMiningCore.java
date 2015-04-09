@@ -242,34 +242,26 @@ public abstract class ItemsetMiningCore {
 				.newArrayList(sequences.keySet());
 		Collections.sort(sortedSequences, sequenceSupportOrdering);
 
-		// Find maxSteps supersets for all itemsets
+		// Find maxSteps superseqs for all seqs
 		// final long startTime = System.nanoTime();
 		int iteration = 0;
 		final int len = sortedSequences.size();
-		outerLoop: for (int k = 0; k < 2 * len - 2; k++) {
+		outerLoop: for (int k = 0; k < 2 * len - 1; k++) {
 			for (int i = 0; i < len && i < k + 1; i++) {
-				for (int j = i + 1; j < len && i + j < k + 1; j++) {
+				for (int j = 0; j < len && i + j < k + 1; j++) {
 					if (k <= i + j) {
 
-						// Create new candidates by joining overlapping seqs
+						// Create new candidates by joining seqs
 						final Sequence seq1 = sortedSequences.get(i);
 						final Sequence seq2 = sortedSequences.get(j);
-						final Sequence cand1 = new Sequence(seq1, seq2);
-						final Sequence cand2 = new Sequence(seq2, seq1);
+						final Sequence cand = new Sequence(seq1, seq2);
 
-						// Add candidate(s) to queue
-						if (cand1 != null && !rejected_seqs.contains(cand1)) {
-							if (!candidateSupports.containsKey(cand1))
-								candidateSupports.put(cand1,
-										getSupportOfSequence(inputFile, cand1));
-							candidateQueue.add(cand1);
-							iteration++;
-						}
-						if (cand2 != null && !rejected_seqs.contains(cand2)) {
-							if (!candidateSupports.containsKey(cand2))
-								candidateSupports.put(cand2,
-										getSupportOfSequence(inputFile, cand2));
-							candidateQueue.add(cand2);
+						// Add candidate to queue
+						if (cand != null && !rejected_seqs.contains(cand)) {
+							if (!candidateSupports.containsKey(cand))
+								candidateSupports.put(cand,
+										getSupportOfSequence(inputFile, cand));
+							candidateQueue.add(cand);
 							iteration++;
 						}
 

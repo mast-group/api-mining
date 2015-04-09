@@ -6,8 +6,6 @@ import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 
-import java.io.File;
-
 import org.junit.Test;
 
 import com.google.common.collect.HashMultiset;
@@ -67,14 +65,36 @@ public class ItemsetMiningTest {
 
 	}
 
-	@Test
-	public void testGetSupportOfSequence() {
-		final File inputFile = new File(
-				"/afs/inf.ed.ac.uk/user/j/jfowkes/TOY.txt");
-		final Sequence seq = new Sequence(1, 3);
-		final int expectedSupp = 5;
-		assertEquals(expectedSupp,
-				ItemsetMiningCore.getSupportOfSequence(inputFile, seq));
-	}
+	// @Test
+	// public void testGetSupportOfSequence() {
+	// final File inputFile = new File(
+	// "/afs/inf.ed.ac.uk/user/j/jfowkes/TOY.txt");
+	// final Sequence seq = new Sequence(1, 3);
+	// final int expectedSupp = 5;
+	// assertEquals(expectedSupp,
+	// ItemsetMiningCore.getSupportOfSequence(inputFile, seq));
+	// }
+
+	// @Test
+	// public void testCombLoop() {
+	//
+	// final ArrayList<Sequence> sequences = Lists.newArrayList();
+	// for (int i = 1; i < 10; i++)
+	// sequences.add(new Sequence(i));
+	//
+	// final int len = sequences.size();
+	// for (int k = 0; k < 2 * len - 1; k++) {
+	// for (int i = 0; i < len && i < k + 1; i++) {
+	// for (int j = 0; j < len && i + j < k + 1; j++) {
+	// if (k <= i + j) {
+	// final Sequence s1 = sequences.get(i);
+	// final Sequence s2 = sequences.get(j);
+	// System.out.println(s1.toString() + s2.toString());
+	// }
+	// }
+	// }
+	// }
+	//
+	// }
 
 }
