@@ -454,7 +454,7 @@ public abstract class ItemsetMiningCore {
 		final StringBuilder sb = new StringBuilder(seq.size() * 2);
 		for (final int item : seq) {
 			sb.append(item);
-			sb.append(" -1");
+			sb.append(" -1 ");
 		}
 		final String code = sb.toString();
 

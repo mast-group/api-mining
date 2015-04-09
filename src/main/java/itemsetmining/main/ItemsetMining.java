@@ -37,7 +37,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 		@Parameter(names = { "-f", "--file" }, description = "Dataset filename")
 		private final File dataset = new File(
-				"/afs/inf.ed.ac.uk/user/j/jfowkes/TOY2.txt");
+				"/afs/inf.ed.ac.uk/user/j/jfowkes/SIGN.txt");
 
 		@Parameter(names = { "-s", "--maxSteps" }, description = "Max structure steps")
 		int maxStructureSteps = 1_000_000;
@@ -46,7 +46,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 		int maxEMIterations = 1_000;
 
 		@Parameter(names = { "-l", "--log-level" }, description = "Log level", converter = LogLevelConverter.class)
-		Level logLevel = Level.FINEST;
+		Level logLevel = Level.FINE;
 
 		@Parameter(names = { "-r", "--runtime" }, description = "Max Runtime (min)")
 		long maxRunTime = 72 * 60; // 12hrs
