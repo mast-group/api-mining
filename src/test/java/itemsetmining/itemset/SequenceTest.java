@@ -74,6 +74,14 @@ public class SequenceTest {
 		expectedC2.or(expectedC1);
 		assertEquals(expectedC3, transC.getCovered(seqC, expectedC2));
 
+		// Test covering with single item sequence
+		final Sequence transI = new Sequence(12763,12823,34913);
+		final Sequence seqI = new Sequence(34913);
+		final BitSet expectedI = new BitSet(transI.size());
+		expectedI.set(2);
+		
+		assertEquals(expectedI, transI.getCovered(seqI, new BitSet()));
+		
 	}
 
 }

@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
-import com.clearspring.analytics.util.Lists;
+import com.google.common.collect.Lists;
 
 public class Sequence extends AbstractSequence implements Serializable {
 	private static final long serialVersionUID = -2766830126344921771L;

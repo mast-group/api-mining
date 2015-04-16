@@ -46,6 +46,15 @@ public abstract class AbstractSequence extends AbstractCollection<Integer>
 	}
 
 	/**
+	 * Get the items in this sequence
+	 *
+	 * @return the items
+	 */
+	public List<Integer> getItems() {
+		return this.items;
+	}
+
+	/**
 	 * Add items to this sequence
 	 *
 	 * @param items
@@ -64,7 +73,7 @@ public abstract class AbstractSequence extends AbstractCollection<Integer>
 	public boolean contains(final AbstractSequence seq) {
 		int pos = 0;
 		boolean containsItem;
-		for (final Integer item : seq.items) {
+		for (final int item : seq.items) {
 			containsItem = false;
 			for (int i = pos; i < this.items.size(); i++) {
 				if (this.items.get(i) == item) {
@@ -125,7 +134,7 @@ public abstract class AbstractSequence extends AbstractCollection<Integer>
 		int pos = startIndex;
 		boolean containsItem;
 		final BitSet coveredItems = new BitSet(this.size());
-		for (final Integer item : seq.items) {
+		for (final int item : seq.items) {
 			containsItem = false;
 			for (int i = pos; i < this.items.size(); i++) {
 				if (this.items.get(i) == item) {
