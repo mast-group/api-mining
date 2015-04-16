@@ -37,7 +37,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 		@Parameter(names = { "-f", "--file" }, description = "Dataset filename")
 		private final File dataset = new File(
-				"/afs/inf.ed.ac.uk/user/j/jfowkes/SIGN.txt");
+				"/afs/inf.ed.ac.uk/user/j/jfowkes/GAZELLE1.txt");
 
 		@Parameter(names = { "-s", "--maxSteps" }, description = "Max structure steps")
 		int maxStructureSteps = 100_000;
@@ -92,11 +92,10 @@ public class ItemsetMining extends ItemsetMiningCore {
 			final File logFile) throws IOException {
 
 		// Set up logging
-		// if (logFile != null)
-		// Logging.setUpFileLogger(logger, LOG_LEVEL, logFile);
-		// else
-		// Logging.setUpConsoleLogger(logger, LOG_LEVEL);
-		Logging.setUpConsoleAndFileLogger(logger, LOG_LEVEL, logFile);
+		if (logFile != null)
+			Logging.setUpConsoleAndFileLogger(logger, LOG_LEVEL, logFile);
+		else
+			Logging.setUpConsoleLogger(logger, LOG_LEVEL);
 
 		// Echo input parameters
 		logger.info("========== INTERESTING SEQUENCE MINING ============");
