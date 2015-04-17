@@ -37,7 +37,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 		@Parameter(names = { "-f", "--file" }, description = "Dataset filename")
 		private final File dataset = new File(
-				"/afs/inf.ed.ac.uk/user/j/jfowkes/GAZELLE1.txt");
+				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/LEVIATHAN.txt");
 
 		@Parameter(names = { "-s", "--maxSteps" }, description = "Max structure steps")
 		int maxStructureSteps = 100_000;
@@ -70,7 +70,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 			// Set loglevel, runtime, timestamp and log file
 			LOG_LEVEL = params.logLevel;
 			MAX_RUNTIME = params.maxRunTime * 60 * 1_000;
-			final File logFile = Logging.getLogFileName("IIM",
+			final File logFile = Logging.getLogFileName("ISM",
 					params.timestampLog, LOG_DIR, params.dataset);
 
 			// Mine interesting sequences
