@@ -19,7 +19,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.LineIterator;
 
 import scala.Tuple2;
 
@@ -50,7 +49,7 @@ public abstract class ItemsetMiningCore {
 	 */
 	protected static HashMap<Sequence, Double> structuralEM(
 			final TransactionDatabase transactions,
-			final Multiset<Integer> singletons, final File inputFile,
+			final Multiset<Integer> singletons,
 			final InferenceAlgorithm inferenceAlgorithm,
 			final int maxStructureSteps, final int maxEMIterations) {
 
@@ -107,10 +106,9 @@ public abstract class ItemsetMiningCore {
 			// Learn structure
 			logger.finer("\n----- Itemset Combination at Step " + iteration
 					+ "\n");
-			combineSequencesStep(sequences, transactions, inputFile,
-					rejected_seqs, inferenceAlgorithm, maxStructureSteps,
-					supportOrdering, supports, candidateSupportOrdering,
-					candidateSupports);
+			combineSequencesStep(sequences, transactions, rejected_seqs,
+					inferenceAlgorithm, maxStructureSteps, supportOrdering,
+					supports, candidateSupportOrdering, candidateSupports);
 			if (transactions.getIterationLimitExceeded())
 				breakLoop = true;
 			logger.finer(String.format(" Average cost: %.2f%n",
@@ -225,7 +223,7 @@ public abstract class ItemsetMiningCore {
 	 */
 	private static void combineSequencesStep(
 			final HashMap<Sequence, Double> sequences,
-			final TransactionDatabase transactions, final File inputFile,
+			final TransactionDatabase transactions,
 			final Set<Sequence> rejected_seqs,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps,
 			final Ordering<Sequence> sequenceSupportOrdering,
@@ -259,8 +257,10 @@ public abstract class ItemsetMiningCore {
 						// Add candidate to queue
 						if (cand != null && !rejected_seqs.contains(cand)) {
 							if (!candidateSupports.containsKey(cand))
-								candidateSupports.put(cand,
-										getSupportOfSequence(inputFile, cand));
+								candidateSupports
+										.put(cand,
+												getSupportOfSequence(
+														transactions, cand));
 							candidateQueue.add(cand);
 							iteration++;
 						}
@@ -377,7 +377,7 @@ public abstract class ItemsetMiningCore {
 	 */
 	public static HashMap<Sequence, Double> calculateInterestingness(
 			final HashMap<Sequence, Double> sequences,
-			final TransactionDatabase transactions, final File inputFile) {
+			final TransactionDatabase transactions) {
 
 		final HashMap<Sequence, Double> interestingnessMap = Maps.newHashMap();
 
@@ -385,7 +385,7 @@ public abstract class ItemsetMiningCore {
 		final long noTransactions = transactions.size();
 		for (final Sequence seq : sequences.keySet()) {
 			final double interestingness = sequences.get(seq) * noTransactions
-					/ (double) getSupportOfSequence(inputFile, seq);
+					/ (double) getSupportOfSequence(transactions, seq);
 			interestingnessMap.put(seq, interestingness);
 		}
 
@@ -432,17 +432,13 @@ public abstract class ItemsetMiningCore {
 	}
 
 	/**
-	 * This method scans the input database to calculate the support of a
+	 * This method scans the cached input database to calculate the support of a
 	 * sequence.
 	 *
-	 * @param inputFile
-	 *            the input file
 	 * @return the support of the requested sequence
-	 * @deprecated slooowwww
 	 */
-	@Deprecated
-	public static int getSupportOfSequence(final File inputFile,
-			final Sequence seq) {
+	public static int getSupportOfSequence(
+			final TransactionDatabase transactions, final Sequence seq) {
 
 		// Convert sequence to regex
 		final StringBuilder sb = new StringBuilder(seq.size() * 2 + 1);
@@ -455,21 +451,15 @@ public abstract class ItemsetMiningCore {
 		sb.append(" ");
 		final Pattern pattern = Pattern.compile(sb.toString());
 
-		// for each line (transaction) until the end of file
+		// for each line (transaction) until end of database
 		int support = 0;
-		try {
-			final LineIterator it = FileUtils.lineIterator(inputFile, "UTF-8");
-			while (it.hasNext()) {
-				final Matcher matcher = pattern.matcher(it.nextLine());
-				while (matcher.find())
-					support++;
-			}
-			// close the input file
-			LineIterator.closeQuietly(it);
-		} catch (final IOException e) {
-			throw new RuntimeException(e.getMessage());
+		for (final String line : transactions.getCachedDB()) {
+			final Matcher matcher = pattern.matcher(line);
+			while (matcher.find())
+				support++;
 		}
 
 		return support;
 	}
+
 }

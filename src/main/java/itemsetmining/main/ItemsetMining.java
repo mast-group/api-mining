@@ -40,7 +40,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/LEVIATHAN.txt");
 
 		@Parameter(names = { "-s", "--maxSteps" }, description = "Max structure steps")
-		int maxStructureSteps = 100_000;
+		int maxStructureSteps = 500_000;
 
 		@Parameter(names = { "-i", "--iterations" }, description = "Max iterations")
 		int maxEMIterations = 1_000;
@@ -74,9 +74,8 @@ public class ItemsetMining extends ItemsetMiningCore {
 					params.timestampLog, LOG_DIR, params.dataset);
 
 			// Mine interesting sequences
-			final Map<Sequence, Double> sequences = mineSequences(
-					params.dataset, inferenceAlg, params.maxStructureSteps,
-					params.maxEMIterations, logFile);
+			mineSequences(params.dataset, inferenceAlg,
+					params.maxStructureSteps, params.maxEMIterations, logFile);
 
 		} catch (final ParameterException e) {
 			System.out.println(e.getMessage());
@@ -125,7 +124,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 		// Run inference to find interesting sequences
 		logger.fine("\n============= SEQUENCE INFERENCE =============\n");
 		final HashMap<Sequence, Double> sequences = structuralEM(transactions,
-				singletons, inputFile, inferenceAlgorithm, maxStructureSteps,
+				singletons, inferenceAlgorithm, maxStructureSteps,
 				maxEMIterations);
 		if (LOG_LEVEL.equals(Level.FINEST))
 			logger.finest("\n======= Transaction Database =======\n"
@@ -133,7 +132,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 		// Sort sequences by interestingness
 		final HashMap<Sequence, Double> intMap = calculateInterestingness(
-				sequences, transactions, inputFile);
+				sequences, transactions);
 		final Map<Sequence, Double> sortedSequences = sortSequences(sequences,
 				intMap);
 
@@ -152,6 +151,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 			throws IOException {
 
 		final List<Transaction> transactions = Lists.newArrayList();
+		final List<String> cachedLines = Lists.newArrayList();
 
 		// for each line (transaction) until the end of file
 		final LineIterator it = FileUtils.lineIterator(inputFile, "UTF-8");
@@ -165,6 +165,9 @@ public class ItemsetMining extends ItemsetMiningCore {
 				continue;
 			}
 
+			// cache line as string (for fast support counting)
+			cachedLines.add(line);
+
 			// split the transaction into items
 			final String[] lineSplited = line.split(" ");
 			// convert to Transaction class and add it to the structure
@@ -174,7 +177,11 @@ public class ItemsetMining extends ItemsetMiningCore {
 		// close the input file
 		LineIterator.closeQuietly(it);
 
-		return new TransactionList(transactions);
+		// Convert cached lines to array
+		final String[] cachedDB = cachedLines.toArray(new String[cachedLines
+				.size()]);
+
+		return new TransactionList(transactions, cachedDB);
 	}
 
 	/**

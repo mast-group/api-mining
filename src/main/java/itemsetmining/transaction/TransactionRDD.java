@@ -9,11 +9,13 @@ public class TransactionRDD extends TransactionDatabase {
 
 	private JavaRDD<Transaction> transactions;
 	private final long noTransactions;
+	private final String[] cachedDB;
 
 	public TransactionRDD(final JavaRDD<Transaction> transactions,
-			final long noTransactions) {
+			final long noTransactions, final String[] cachedDB) {
 		this.transactions = transactions;
 		this.noTransactions = noTransactions;
+		this.cachedDB = cachedDB;
 	}
 
 	@Override
@@ -35,6 +37,11 @@ public class TransactionRDD extends TransactionDatabase {
 	@Override
 	public long size() {
 		return noTransactions;
+	}
+
+	@Override
+	public String[] getCachedDB() {
+		return cachedDB;
 	}
 
 }
