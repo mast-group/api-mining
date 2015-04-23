@@ -27,11 +27,11 @@ public class FrequentItemsetMining {
 	public static void main(final String[] args) throws IOException {
 
 		// FIM parameters
-		final String dataset = "LEVIATHAN";
-		final double minSupp = 0.15; // relative support
-		final String dbPath = "/afs/inf.ed.ac.uk/user/j/jfowkes/" + dataset
-				+ ".txt";
-		final String saveFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/FIM/Sequences/"
+		final String dataset = "GAZELLE1";
+		final double minSupp = 0.002; // relative support
+		final String dbPath = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/"
+				+ dataset + ".txt";
+		final String saveFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/FIM/"
 				+ dataset + ".txt";
 
 		mineFrequentSequencesPrefixSpan(dbPath, saveFile, minSupp);

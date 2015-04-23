@@ -14,14 +14,16 @@ import com.google.common.collect.Sets;
 public class ItemsetSymmetricDistance {
 
 	private static final int topN = 100;
-	private static final String baseDir = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Itemsets/";
+	private static final String baseDir = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/";
 
 	public static void main(final String[] args) throws IOException {
 
 		final String[] ISMlogs = new String[] {
-				"IIM-SIGN-09.04.2015-14:31:52.log",
-				"IIM-LEVIATHAN-09.04.2015-14:51:30.log" };
-		final String[] FSMlogs = new String[] { "SIGN.txt", "LEVIATHAN.txt" };
+				"ISM-SIGN-16.04.2015-12:10:24.log",
+				"ISM-LEVIATHAN-22.04.2015-17:14:04.log",
+				"ISM-GAZELLE1-21.04.2015-16:04:19.log" };
+		final String[] FSMlogs = new String[] { "SIGN.txt", "LEVIATHAN.txt",
+				"GAZELLE1.txt" };
 
 		for (int i = 0; i < ISMlogs.length; i++) {
 
@@ -30,8 +32,7 @@ public class ItemsetSymmetricDistance {
 
 			// Read in interesting sequences
 			final Map<Sequence, Double> intItemsets = ItemsetMiningCore
-					.readISMSequences(new File(baseDir + "Logs/Sequences/"
-							+ ISMlogs[i]));
+					.readISMSequences(new File(baseDir + "Logs/" + ISMlogs[i]));
 			System.out.println("\nISM Sequences\n-----------");
 			System.out.println("No sequences: " + intItemsets.size());
 			System.out.println("No items: "
@@ -45,9 +46,13 @@ public class ItemsetSymmetricDistance {
 			double avgMaxSpur = calculateSpuriousness(intItemsets);
 			System.out.println("Avg no. subseq: " + avgMaxSpur);
 
+			// Calculate size
+			double avgSize = calculateAverageSize(intItemsets);
+			System.out.println("Avg subseq size: " + avgSize);
+
 			// Read in frequent sequences
 			final SortedMap<Sequence, Integer> freqItemsets = FrequentItemsetMining
-					.readFrequentSequences(new File(baseDir + "FIM/Sequences/"
+					.readFrequentSequences(new File(baseDir + "FIM/"
 							+ FSMlogs[i]));
 			System.out.println("\nFSM Sequences\n------------");
 			System.out.println("No sequences: " + freqItemsets.size());
@@ -61,6 +66,10 @@ public class ItemsetSymmetricDistance {
 			// Calculate spuriousness
 			avgMaxSpur = calculateSpuriousness(freqItemsets);
 			System.out.println("Avg no. subseq: " + avgMaxSpur);
+
+			// Calculate size
+			avgSize = calculateAverageSize(freqItemsets);
+			System.out.println("Avg subseq size: " + avgSize);
 
 			System.out.println();
 
@@ -86,7 +95,7 @@ public class ItemsetSymmetricDistance {
 			System.out.println("Not enough non-singleton sequences in set: "
 					+ count);
 
-		int avgMinDiff = 0;
+		double avgMinDiff = 0;
 		for (final Sequence set1 : topItemsets) {
 
 			int minDiff = Integer.MAX_VALUE;
@@ -142,13 +151,21 @@ public class ItemsetSymmetricDistance {
 	}
 
 	/**
-	 * Count the number of items in the sequence
+	 * Count the number of distinct items in the set of sequences
 	 */
 	public static int countNoItems(final Set<Sequence> sequences) {
 		final Set<Integer> items = Sets.newHashSet();
 		for (final Sequence seq : sequences)
 			items.addAll(seq.getItems());
 		return items.size();
+	}
+
+	private static <V> double calculateAverageSize(
+			final Map<Sequence, V> itemsets) {
+		double avgSize = 0;
+		for (final Sequence seq : itemsets.keySet())
+			avgSize += seq.size();
+		return avgSize / itemsets.size();
 	}
 
 	private static <V> double calculateSpuriousness(
