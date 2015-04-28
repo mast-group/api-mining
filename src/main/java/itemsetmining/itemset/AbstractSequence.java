@@ -88,6 +88,25 @@ public abstract class AbstractSequence extends AbstractCollection<Integer>
 		return true;
 	}
 
+	// /**
+	// * Check if this sequence contains given sequence *without gaps*
+	// *
+	// * @param sequence
+	// */
+	// public boolean contains(final AbstractSequence seq) {
+	// outer: for (int i = 0; i < this.items.size() - seq.items.size() + 1; i++)
+	// {
+	// if (this.items.get(i).equals(seq.items.get(0))) {
+	// for (int j = 1; j < seq.items.size(); j++) {
+	// if (!this.items.get(i + j).equals(seq.items.get(j)))
+	// continue outer;
+	// }
+	// return true;
+	// }
+	// }
+	// return false;
+	// }
+
 	/**
 	 * Check if first BitSet contains second BitSet
 	 */
@@ -129,7 +148,6 @@ public abstract class AbstractSequence extends AbstractCollection<Integer>
 	 * @param sequence
 	 * @return BitSet of items in order with the covered items set true
 	 */
-	// TODO remove containsItem check? This should always be true...
 	public BitSet getCovered(final AbstractSequence seq, final int startIndex) {
 		int pos = startIndex;
 		boolean containsItem;
@@ -151,6 +169,32 @@ public abstract class AbstractSequence extends AbstractCollection<Integer>
 		}
 		return coveredItems;
 	}
+
+	// /**
+	// * Return the items in this sequence covered *without gaps* by the given
+	// * sequence
+	// *
+	// * @param sequence
+	// * @return BitSet of items in order with the covered items set true
+	// */
+	// public BitSet getCovered(final AbstractSequence seq, final int
+	// startIndex) {
+	// final BitSet coveredItems = new BitSet(this.size());
+	// outer: for (int i = startIndex; i < this.items.size()
+	// - seq.items.size() + 1; i++) {
+	// if (this.items.get(i).equals(seq.items.get(0))) {
+	// for (int j = 1; j < seq.items.size(); j++) {
+	// if (!this.items.get(i + j).equals(seq.items.get(j)))
+	// continue outer;
+	// }
+	// for (int j = 0; j < seq.items.size(); j++)
+	// coveredItems.set(i + j);
+	// return coveredItems;
+	// }
+	// }
+	// coveredItems.clear();
+	// return coveredItems;
+	// }
 
 	/**
 	 * Number of items in this sequence
