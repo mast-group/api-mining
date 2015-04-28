@@ -11,6 +11,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -19,9 +20,7 @@ import java.util.Set;
 
 import org.apache.commons.io.LineIterator;
 
-import com.google.common.collect.Maps;
-
-public class ClassificationTask {
+public class ParityClassificationTask {
 
 	private static final boolean VERBOSE = false;
 
@@ -31,7 +30,7 @@ public class ClassificationTask {
 		final int M = 3;
 		final int L = 5;
 		final int noInstances = 1_000;
-		final String baseFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/";
+		final String baseFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Classification/";
 		final File dbFile = new File(baseFolder + "PARITY.txt");
 
 		// Generate parity database
@@ -186,7 +185,7 @@ public class ClassificationTask {
 	}
 
 	static <V> Map<Sequence, V> removeSingletons(final Map<Sequence, V> oldSeqs) {
-		final Map<Sequence, V> newSeqs = Maps.newHashMap();
+		final Map<Sequence, V> newSeqs = new HashMap<>();
 		for (final Entry<Sequence, V> entry : oldSeqs.entrySet()) {
 			if (entry.getKey().size() > 1)
 				newSeqs.put(entry.getKey(), entry.getValue());
