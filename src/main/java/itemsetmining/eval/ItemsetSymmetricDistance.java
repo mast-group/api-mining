@@ -5,11 +5,10 @@ import itemsetmining.main.ItemsetMiningCore;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
-
-import com.google.common.collect.Sets;
 
 public class ItemsetSymmetricDistance {
 
@@ -82,7 +81,7 @@ public class ItemsetSymmetricDistance {
 
 		// Filter out singletons
 		int count = 0;
-		final Set<Sequence> topItemsets = Sets.newHashSet();
+		final Set<Sequence> topItemsets = new HashSet<>();
 		for (final Sequence set : itemsets.keySet()) {
 			if (set.size() != 1) {
 				topItemsets.add(set);
@@ -154,7 +153,7 @@ public class ItemsetSymmetricDistance {
 	 * Count the number of distinct items in the set of sequences
 	 */
 	public static int countNoItems(final Set<Sequence> sequences) {
-		final Set<Integer> items = Sets.newHashSet();
+		final Set<Integer> items = new HashSet<>();
 		for (final Sequence seq : sequences)
 			items.addAll(seq.getItems());
 		return items.size();
@@ -173,7 +172,7 @@ public class ItemsetSymmetricDistance {
 
 		// Filter out singletons
 		int count = 0;
-		final Set<Sequence> topItemsets = Sets.newHashSet();
+		final Set<Sequence> topItemsets = new HashSet<>();
 		for (final Sequence set : itemsets.keySet()) {
 			if (set.size() != 1) {
 				topItemsets.add(set);

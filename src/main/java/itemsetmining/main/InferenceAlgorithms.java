@@ -111,7 +111,7 @@ public class InferenceAlgorithms {
 	// @Override
 	// public HashSet<Itemset> infer(final Transaction transaction) {
 	//
-	// final HashSet<Itemset> covering = Sets.newHashSet();
+	// final HashSet<Itemset> covering = new HashSet<>();
 	// final Random rand = new Random();
 	// final List<Integer> notCoveredItems = Lists
 	// .newArrayList(transaction);
@@ -120,7 +120,7 @@ public class InferenceAlgorithms {
 	// .getCachedItemsets();
 	//
 	// // Calculate costs
-	// final HashMap<Itemset, Double> costs = Maps.newHashMap();
+	// final HashMap<Itemset, Double> costs = new HashMap<>();
 	// for (final Entry<Itemset, Double> entry : cachedItemsets.entrySet()) {
 	// costs.put(entry.getKey(), -Math.log(entry.getValue()));
 	// }

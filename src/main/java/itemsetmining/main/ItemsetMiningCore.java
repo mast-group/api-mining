@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
@@ -24,12 +25,8 @@ import scala.Tuple2;
 
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
-import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 
 public abstract class ItemsetMiningCore {
 
@@ -66,9 +63,9 @@ public abstract class ItemsetMiningCore {
 
 		// Intialize sequences with singleton seqs and their relative support
 		// as well as supports with singletons and their actual supports
-		final HashMap<Sequence, Double> sequences = Maps.newHashMap();
-		final HashMap<Sequence, Integer> supports = Maps.newHashMap();
-		for (final Entry<Sequence> entry : singletons.entrySet()) {
+		final HashMap<Sequence, Double> sequences = new HashMap<>();
+		final HashMap<Sequence, Integer> supports = new HashMap<>();
+		for (final Multiset.Entry<Sequence> entry : singletons.entrySet()) {
 			final Sequence seq = entry.getElement();
 			final int support = entry.getCount();
 			sequences.put(seq, support / (double) transactions.size());
@@ -77,7 +74,7 @@ public abstract class ItemsetMiningCore {
 		logger.fine(" Initial sequences: " + sequences + "\n");
 
 		// Initialize list of rejected seqs
-		final Set<Sequence> rejected_seqs = Sets.newHashSet();
+		final Set<Sequence> rejected_seqs = new HashSet<>();
 
 		// Define decreasing support ordering for sequences
 		final Ordering<Sequence> supportOrdering = new Ordering<Sequence>() {
@@ -88,7 +85,7 @@ public abstract class ItemsetMiningCore {
 		}.compound(Ordering.usingToString());
 
 		// Define decreasing support ordering for candidate sequences
-		final HashMap<Sequence, Integer> candidateSupports = Maps.newHashMap();
+		final HashMap<Sequence, Integer> candidateSupports = new HashMap<>();
 		final Ordering<Sequence> candidateSupportOrdering = new Ordering<Sequence>() {
 			@Override
 			public int compare(final Sequence seq1, final Sequence seq2) {
@@ -237,8 +234,8 @@ public abstract class ItemsetMiningCore {
 				maxSteps, candidateSupportOrdering);
 
 		// Sort sequences according to given ordering
-		final ArrayList<Sequence> sortedSequences = Lists
-				.newArrayList(sequences.keySet());
+		final ArrayList<Sequence> sortedSequences = new ArrayList<>(
+				sequences.keySet());
 		Collections.sort(sortedSequences, sequenceSupportOrdering);
 
 		// Find maxSteps superseqs for all seqs
@@ -380,7 +377,7 @@ public abstract class ItemsetMiningCore {
 			final HashMap<Sequence, Double> sequences,
 			final TransactionDatabase transactions) {
 
-		final HashMap<Sequence, Double> interestingnessMap = Maps.newHashMap();
+		final HashMap<Sequence, Double> interestingnessMap = new HashMap<>();
 
 		// Calculate interestingness
 		final long noTransactions = transactions.size();
@@ -396,8 +393,8 @@ public abstract class ItemsetMiningCore {
 	/** Read output sequences from file (sorted by interestingness) */
 	public static Map<Sequence, Double> readISMSequences(final File output)
 			throws IOException {
-		final HashMap<Sequence, Double> sequences = Maps.newHashMap();
-		final HashMap<Sequence, Double> intMap = Maps.newHashMap();
+		final HashMap<Sequence, Double> sequences = new HashMap<>();
+		final HashMap<Sequence, Double> intMap = new HashMap<>();
 
 		final String[] lines = FileUtils.readFileToString(output).split("\n");
 

@@ -19,7 +19,6 @@ import ca.pfv.spmf.patterns.itemset_list_integers_without_support.Itemset;
 
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 
 public class FrequentItemsetMining {
@@ -65,7 +64,7 @@ public class FrequentItemsetMining {
 		if (patterns == null) {
 			return null;
 		} else {
-			final HashMap<Sequence, Integer> sequences = Maps.newHashMap();
+			final HashMap<Sequence, Integer> sequences = new HashMap<>();
 			for (final List<SequentialPattern> level : patterns.levels) {
 				for (final SequentialPattern pattern : level) {
 					final Sequence seq = new Sequence();
@@ -86,7 +85,7 @@ public class FrequentItemsetMining {
 	/** Read in frequent sequences */
 	public static SortedMap<Sequence, Integer> readFrequentSequences(
 			final File output) throws IOException {
-		final HashMap<Sequence, Integer> sequences = Maps.newHashMap();
+		final HashMap<Sequence, Integer> sequences = new HashMap<>();
 
 		final LineIterator it = FileUtils.lineIterator(output);
 		while (it.hasNext()) {

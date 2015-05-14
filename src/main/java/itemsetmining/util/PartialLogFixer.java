@@ -17,7 +17,6 @@
 //
 //import org.apache.commons.io.input.ReversedLinesFileReader;
 //
-//import com.google.common.collect.Maps;
 //import com.google.common.collect.Multiset;
 //
 ///**
@@ -47,7 +46,7 @@
 //
 //	public static HashMap<Itemset, Double> readLastEMStepItemsets(
 //			final File logFile) throws IOException {
-//		final HashMap<Itemset, Double> itemsets = Maps.newHashMap();
+//		final HashMap<Itemset, Double> itemsets = new HashMap<>();
 //
 //		final ReversedLinesFileReader reader = new ReversedLinesFileReader(
 //				logFile);

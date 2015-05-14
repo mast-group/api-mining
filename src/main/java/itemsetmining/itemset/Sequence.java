@@ -1,10 +1,9 @@
 package itemsetmining.itemset;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import com.google.common.collect.Lists;
 
 public class Sequence extends AbstractSequence implements Serializable {
 	private static final long serialVersionUID = -2766830126344921771L;
@@ -16,7 +15,7 @@ public class Sequence extends AbstractSequence implements Serializable {
 	 * Constructor
 	 */
 	public Sequence() {
-		this.items = Lists.newArrayList();
+		this.items = new ArrayList<>();
 	}
 
 	/**
@@ -36,7 +35,7 @@ public class Sequence extends AbstractSequence implements Serializable {
 	 *            a list of items that should be added to the new sequence
 	 */
 	public Sequence(final List<Integer> items) {
-		this.items = Lists.newArrayList(items);
+		this.items = new ArrayList<>(items);
 	}
 
 	/**
@@ -46,7 +45,7 @@ public class Sequence extends AbstractSequence implements Serializable {
 	 *            an array of items that should be added to the new sequence
 	 */
 	public Sequence(final Integer... items) {
-		this.items = Lists.newArrayList(Arrays.asList(items));
+		this.items = new ArrayList<>(Arrays.asList(items));
 	}
 
 	/**
@@ -67,7 +66,7 @@ public class Sequence extends AbstractSequence implements Serializable {
 	 *            two sequences that should be joined
 	 */
 	public Sequence(final Sequence seq1, final Sequence seq2) {
-		this.items = Lists.newArrayList(seq1.items);
+		this.items = new ArrayList<>(seq1.items);
 		this.items.addAll(seq2.items);
 		this.occurrence = Math.min(seq1.occurrence, seq2.occurrence);
 	}

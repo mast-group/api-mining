@@ -4,6 +4,7 @@ import itemsetmining.itemset.AbstractSequence;
 import itemsetmining.itemset.Sequence;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -11,8 +12,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.clearspring.analytics.util.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 
 /** A transaction is an ordered list of items */
@@ -28,7 +27,7 @@ public class Transaction extends AbstractSequence implements Serializable {
 
 	public void initializeCachedSequences(final Multiset<Sequence> singletons,
 			final long noTransactions) {
-		cachedSequences = Maps.newHashMap();
+		cachedSequences = new HashMap<>();
 		for (final com.google.common.collect.Multiset.Entry<Sequence> entry : singletons
 				.entrySet()) {
 			if (this.contains(entry.getElement()))
@@ -120,7 +119,7 @@ public class Transaction extends AbstractSequence implements Serializable {
 	 * Constructor
 	 */
 	public Transaction() {
-		this.items = Lists.newArrayList();
+		this.items = new ArrayList<>();
 	}
 
 	/**
@@ -130,7 +129,7 @@ public class Transaction extends AbstractSequence implements Serializable {
 	 *            an array of items that should be added to the new sequence
 	 */
 	public Transaction(final Integer... items) {
-		this.items = Lists.newArrayList(Arrays.asList(items));
+		this.items = new ArrayList<>(Arrays.asList(items));
 	}
 
 }
