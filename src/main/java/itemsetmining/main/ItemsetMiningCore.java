@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
@@ -49,7 +50,7 @@ public abstract class ItemsetMiningCore {
 	 */
 	protected static HashMap<Sequence, Double> structuralEM(
 			final TransactionDatabase transactions,
-			final Multiset<Integer> singletons,
+			final Multiset<Sequence> singletons,
 			final InferenceAlgorithm inferenceAlgorithm,
 			final int maxStructureSteps, final int maxEMIterations) {
 
@@ -67,8 +68,8 @@ public abstract class ItemsetMiningCore {
 		// as well as supports with singletons and their actual supports
 		final HashMap<Sequence, Double> sequences = Maps.newHashMap();
 		final HashMap<Sequence, Integer> supports = Maps.newHashMap();
-		for (final Multiset.Entry<Integer> entry : singletons.entrySet()) {
-			final Sequence seq = new Sequence(entry.getElement());
+		for (final Entry<Sequence> entry : singletons.entrySet()) {
+			final Sequence seq = entry.getElement();
 			final int support = entry.getCount();
 			sequences.put(seq, support / (double) transactions.size());
 			supports.put(seq, support);
@@ -244,10 +245,10 @@ public abstract class ItemsetMiningCore {
 		// final long startTime = System.nanoTime();
 		int iteration = 0;
 		final int len = sortedSequences.size();
-		outerLoop: for (int k = 0; k < 2 * len - 1; k++) {
+		outerLoop: for (int k = 0; k < 2 * len - 2; k++) {
 			for (int i = 0; i < len && i < k + 1; i++) {
 				for (int j = 0; j < len && i + j < k + 1; j++) {
-					if (k <= i + j) {
+					if (k <= i + j && i != j) {
 
 						// Create new candidates by joining seqs
 						final Sequence seq1 = sortedSequences.get(i);
@@ -440,6 +441,9 @@ public abstract class ItemsetMiningCore {
 	public static int getSupportOfSequence(
 			final TransactionDatabase transactions, final Sequence seq) {
 
+		// Get sequence occurence
+		final int occurence = seq.getOccurence();
+
 		// Convert sequence to regex
 		final StringBuilder sb = new StringBuilder(seq.size() * 2 + 1);
 		String prefix = "(^| )";
@@ -455,7 +459,10 @@ public abstract class ItemsetMiningCore {
 		int support = 0;
 		for (final String line : transactions.getCachedDB()) {
 			final Matcher matcher = pattern.matcher(line);
+			int maxOccurence = 0;
 			while (matcher.find())
+				maxOccurence++;
+			if (occurence <= maxOccurence)
 				support++;
 		}
 

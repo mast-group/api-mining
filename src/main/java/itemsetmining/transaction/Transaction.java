@@ -6,6 +6,7 @@ import itemsetmining.itemset.Sequence;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -22,16 +23,17 @@ public class Transaction extends AbstractSequence implements Serializable {
 	private HashMap<Sequence, Double> cachedSequences;
 
 	/** Cached covering for this transaction */
-	private Multiset<Sequence> cachedCovering;
-	private Multiset<Sequence> tempCachedCovering;
+	private HashSet<Sequence> cachedCovering;
+	private HashSet<Sequence> tempCachedCovering;
 
-	public void initializeCachedSequences(final Multiset<Integer> singletons,
+	public void initializeCachedSequences(final Multiset<Sequence> singletons,
 			final long noTransactions) {
 		cachedSequences = Maps.newHashMap();
-		for (final Multiset.Entry<Integer> entry : singletons.entrySet()) {
+		for (final com.google.common.collect.Multiset.Entry<Sequence> entry : singletons
+				.entrySet()) {
 			if (this.contains(entry.getElement()))
-				cachedSequences.put(new Sequence(entry.getElement()),
-						entry.getCount() / (double) noTransactions);
+				cachedSequences.put(entry.getElement(), entry.getCount()
+						/ (double) noTransactions);
 		}
 	}
 
@@ -63,10 +65,9 @@ public class Transaction extends AbstractSequence implements Serializable {
 	public double getCachedCost() {
 		double totalCost = 0;
 		for (final Entry<Sequence, Double> entry : cachedSequences.entrySet()) {
-			if (cachedCovering.contains(entry.getKey())) {
-				for (int i = 0; i < cachedCovering.count(entry.getKey()); i++)
-					totalCost += -Math.log(entry.getValue());
-			} else
+			if (cachedCovering.contains(entry.getKey()))
+				totalCost += -Math.log(entry.getValue());
+			else
 				totalCost += -Math.log(1 - entry.getValue());
 		}
 		return totalCost;
@@ -84,35 +85,34 @@ public class Transaction extends AbstractSequence implements Serializable {
 
 	/** Calculate cached cost for structural EM-step */
 	private double calculateCachedCost(final Map<Sequence, Double> sequences,
-			final Multiset<Sequence> covering) {
+			final HashSet<Sequence> covering) {
 		double totalCost = 0;
 		for (final Entry<Sequence, Double> entry : cachedSequences.entrySet()) {
 			final Sequence seq = entry.getKey();
 			final Double prob = sequences.get(seq);
 			if (prob != null) {
-				if (covering.contains(seq)) {
-					for (int i = 0; i < covering.count(seq); i++)
-						totalCost += -Math.log(prob);
-				} else
+				if (covering.contains(seq))
+					totalCost += -Math.log(prob);
+				else
 					totalCost += -Math.log(1 - prob);
 			}
 		}
 		return totalCost;
 	}
 
-	public void setCachedCovering(final Multiset<Sequence> covering) {
+	public void setCachedCovering(final HashSet<Sequence> covering) {
 		cachedCovering = covering;
 	}
 
-	public Multiset<Sequence> getCachedCovering() {
+	public HashSet<Sequence> getCachedCovering() {
 		return cachedCovering;
 	}
 
-	public void setTempCachedCovering(final Multiset<Sequence> covering) {
+	public void setTempCachedCovering(final HashSet<Sequence> covering) {
 		tempCachedCovering = covering;
 	}
 
-	public Multiset<Sequence> getTempCachedCovering() {
+	public HashSet<Sequence> getTempCachedCovering() {
 		return tempCachedCovering;
 	}
 

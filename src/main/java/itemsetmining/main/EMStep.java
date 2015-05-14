@@ -8,6 +8,7 @@ import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionDatabase;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -22,7 +23,7 @@ public class EMStep {
 	/** Initialize cached itemsets */
 	static void initializeCachedItemsets(
 			final TransactionDatabase transactions,
-			final Multiset<Integer> singletons) {
+			final Multiset<Sequence> singletons) {
 		final long noTransactions = transactions.size();
 		transactions
 				.getTransactionList()
@@ -42,11 +43,11 @@ public class EMStep {
 		final Map<Sequence, Long> coveringWithCounts = transactions
 				.parallelStream()
 				.map(t -> {
-					final Multiset<Sequence> covering = inferenceAlgorithm
+					final HashSet<Sequence> covering = inferenceAlgorithm
 							.infer(t);
 					t.setCachedCovering(covering);
 					return covering;
-				}).flatMap(Multiset::stream)
+				}).flatMap(HashSet::stream)
 				.collect(groupingBy(identity(), counting()));
 
 		// M-step
@@ -89,13 +90,13 @@ public class EMStep {
 				.map(t -> {
 					if (t.contains(candidate)) {
 						t.addSequenceCache(candidate, 1.0);
-						final Multiset<Sequence> covering = inferenceAlgorithm
+						final HashSet<Sequence> covering = inferenceAlgorithm
 								.infer(t);
 						t.setTempCachedCovering(covering);
 						return covering;
 					}
 					return t.getCachedCovering();
-				}).flatMap(Multiset::stream)
+				}).flatMap(HashSet::stream)
 				.collect(groupingBy(identity(), counting()));
 
 		// M-step
@@ -141,13 +142,13 @@ public class EMStep {
 				.map(t -> {
 					if (t.contains(candidate)) {
 						t.addSequenceCache(candidate, prob);
-						final Multiset<Sequence> covering = t
+						final HashSet<Sequence> covering = t
 								.getTempCachedCovering();
 						t.setCachedCovering(covering);
 						return covering;
 					}
 					return t.getCachedCovering();
-				}).flatMap(Multiset::stream)
+				}).flatMap(HashSet::stream)
 				.collect(groupingBy(identity(), counting()));
 
 		// M-step

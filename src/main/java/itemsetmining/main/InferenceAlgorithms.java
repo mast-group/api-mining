@@ -6,17 +6,15 @@ import itemsetmining.transaction.Transaction;
 import java.io.Serializable;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map.Entry;
-
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Multiset;
 
 /** Container class for Inference Algorithms */
 public class InferenceAlgorithms {
 
 	/** Interface for the different inference algorithms */
 	public interface InferenceAlgorithm {
-		public Multiset<Sequence> infer(final Transaction transaction);
+		public HashSet<Sequence> infer(final Transaction transaction);
 	}
 
 	/**
@@ -30,9 +28,9 @@ public class InferenceAlgorithms {
 		private static final long serialVersionUID = 9173178089235828142L;
 
 		@Override
-		public Multiset<Sequence> infer(final Transaction transaction) {
+		public HashSet<Sequence> infer(final Transaction transaction) {
 
-			final Multiset<Sequence> covering = HashMultiset.create();
+			final HashSet<Sequence> covering = new HashSet<>();
 			final int transactionSize = transaction.size();
 			final BitSet coveredItems = new BitSet(transactionSize);
 
@@ -47,7 +45,11 @@ public class InferenceAlgorithms {
 				for (final Entry<Sequence, Double> entry : cachedSequences
 						.entrySet()) {
 
-					// How many additional items does S cover?
+					// Ignore sequences which already cover
+					if (covering.contains(entry.getKey()))
+						continue;
+
+					// How many additional items does sequence cover?
 					final BitSet currentCoveredItems = transaction.getCovered(
 							entry.getKey(), coveredItems);
 					// Ignore sequences which don't cover anything
@@ -69,7 +71,12 @@ public class InferenceAlgorithms {
 				}
 
 				if (bestSeq != null) {
-					covering.add(bestSeq);
+					if (covering.contains(bestSeq)) { // Shallow copy bestSeq
+						final Sequence repeatedSeq = new Sequence(bestSeq);
+						recursiveSetOccurrence(repeatedSeq, covering);
+						covering.add(repeatedSeq);
+					} else
+						covering.add(bestSeq);
 					coveredItems.or(bestCoveredItems);
 				} else { // Allow incomplete coverings
 					break;
@@ -77,6 +84,15 @@ public class InferenceAlgorithms {
 
 			}
 			return covering;
+		}
+
+		// Set the occurrence of the seq in this transaction
+		private void recursiveSetOccurrence(final Sequence repeatedSeq,
+				final HashSet<Sequence> covering) {
+			repeatedSeq.incrementOccurence();
+			if (covering.contains(repeatedSeq)) {
+				recursiveSetOccurrence(repeatedSeq, covering);
+			}
 		}
 
 	}

@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -37,7 +38,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 		@Parameter(names = { "-f", "--file" }, description = "Dataset filename")
 		private final File dataset = new File(
-				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/Alice/alice.dat");
+				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/SIGN.txt");
 
 		@Parameter(names = { "-s", "--maxSteps" }, description = "Max structure steps")
 		int maxStructureSteps = 100_000;
@@ -108,18 +109,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 		final TransactionList transactions = readTransactions(inputFile);
 
 		// Determine most frequent singletons
-		final Multiset<Integer> singletons = scanDatabaseToDetermineFrequencyOfSingleItems(inputFile);
-
-		// Apply the algorithm to build the itemset tree
-		// FIXME implement sequence tree
-		// final ItemsetTree tree = new ItemsetTree(singletons);
-		// tree.buildTree(inputFile);
-		// if (LOG_LEVEL.equals(Level.FINE))
-		// tree.printStatistics(logger);
-		// if (LOG_LEVEL.equals(Level.FINEST)) {
-		// logger.finest("THIS IS THE TREE:\n");
-		// logger.finest(tree.toString());
-		// }
+		final Multiset<Sequence> singletons = scanDatabaseToDetermineFrequencyOfSingleItems(inputFile);
 
 		// Run inference to find interesting sequences
 		logger.fine("\n============= SEQUENCE INFERENCE =============\n");
@@ -211,12 +201,12 @@ public class ItemsetMining extends ItemsetMiningCore {
 	 *
 	 * @param inputFile
 	 *            the input file
-	 * @return a multiset for storing the support of each item
+	 * @return a multiset for storing the support of each singleton
 	 */
-	public static Multiset<Integer> scanDatabaseToDetermineFrequencyOfSingleItems(
+	public static Multiset<Sequence> scanDatabaseToDetermineFrequencyOfSingleItems(
 			final File inputFile) throws IOException {
 
-		final Multiset<Integer> singletons = HashMultiset.create();
+		final Multiset<Sequence> singletons = HashMultiset.create();
 
 		// for each line (transaction) until the end of file
 		final LineIterator it = FileUtils.lineIterator(inputFile, "UTF-8");
@@ -233,18 +223,30 @@ public class ItemsetMining extends ItemsetMiningCore {
 			// split the line into items
 			final String[] lineSplit = line.split(" ");
 			// for each item
+			final HashSet<Sequence> seenItems = new HashSet<>();
 			for (final String itemString : lineSplit) {
 				final int item = Integer.parseInt(itemString);
 				if (item >= 0) { // ignore end of itemset/sequence tags
-					// increase the support count of the item
-					singletons.add(item);
+					final Sequence seq = new Sequence(item);
+					recursiveSetOccurrence(seq, seenItems); // set occurrence
+					seenItems.add(seq); // add item to seen
 				}
 			}
+			singletons.addAll(seenItems); // increase the support of the items
 		}
+
 		// close the input file
 		LineIterator.closeQuietly(it);
 
 		return singletons;
+	}
+
+	private static void recursiveSetOccurrence(final Sequence seq,
+			final HashSet<Sequence> seenItems) {
+		if (seenItems.contains(seq)) {
+			seq.incrementOccurence();
+			recursiveSetOccurrence(seq, seenItems);
+		}
 	}
 
 	/** Convert string level to level class */
