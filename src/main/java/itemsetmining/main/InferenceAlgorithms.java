@@ -71,12 +71,7 @@ public class InferenceAlgorithms {
 				}
 
 				if (bestSeq != null) {
-					if (covering.contains(bestSeq)) { // Shallow copy bestSeq
-						final Sequence repeatedSeq = new Sequence(bestSeq);
-						recursiveSetOccurrence(repeatedSeq, covering);
-						covering.add(repeatedSeq);
-					} else
-						covering.add(bestSeq);
+					covering.add(bestSeq);
 					coveredItems.or(bestCoveredItems);
 				} else { // Allow incomplete coverings
 					break;
@@ -84,15 +79,6 @@ public class InferenceAlgorithms {
 
 			}
 			return covering;
-		}
-
-		// Set the occurrence of the seq in this transaction
-		private void recursiveSetOccurrence(final Sequence repeatedSeq,
-				final HashSet<Sequence> covering) {
-			repeatedSeq.incrementOccurence();
-			if (covering.contains(repeatedSeq)) {
-				recursiveSetOccurrence(repeatedSeq, covering);
-			}
 		}
 
 	}
