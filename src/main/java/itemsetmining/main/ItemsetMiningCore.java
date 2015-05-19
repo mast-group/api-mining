@@ -3,7 +3,6 @@ package itemsetmining.main;
 import itemsetmining.itemset.Sequence;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
 import itemsetmining.transaction.TransactionDatabase;
-import itemsetmining.transaction.TransactionRDD;
 
 import java.io.File;
 import java.io.IOException;
@@ -134,11 +133,12 @@ public abstract class ItemsetMiningCore {
 
 			// Spark: checkpoint every 100 iterations to avoid StackOverflow
 			// errors due to long lineage (http://tinyurl.com/ouswhrc)
-			if (iteration % 100 == 0 && transactions instanceof TransactionRDD) {
-				transactions.getTransactionRDD().cache();
-				transactions.getTransactionRDD().checkpoint();
-				transactions.getTransactionRDD().count();
-			}
+			// if (iteration % 100 == 0 && transactions instanceof
+			// TransactionRDD) {
+			// transactions.getTransactionRDD().cache();
+			// transactions.getTransactionRDD().checkpoint();
+			// transactions.getTransactionRDD().count();
+			// }
 
 			if (iteration == maxEMIterations)
 				logger.warning("\nEM iteration limit exceeded.\n");
