@@ -2,6 +2,7 @@ package itemsetmining.main;
 
 import itemsetmining.itemset.Sequence;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
+import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionDatabase;
 
 import java.io.File;
@@ -15,8 +16,6 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 
@@ -39,7 +38,7 @@ public abstract class ItemsetMiningCore {
 
 	/** Variable settings */
 	protected static Level LOG_LEVEL = Level.FINE;
-	protected static long MAX_RUNTIME = 6 * 60 * 60 * 1_000; // 6hrs
+	protected static long MAX_RUNTIME = 24 * 60 * 60 * 1_000; // 24hrs
 
 	/**
 	 * Learn itemsets model using structural EM
@@ -404,7 +403,14 @@ public abstract class ItemsetMiningCore {
 			if (found && !line.trim().isEmpty()) {
 				final Sequence sequence = new Sequence();
 				final String[] splitLine = line.split("\t");
-				final String[] items = splitLine[0].split(",");
+				final String[] seq = splitLine[0].split("\\^");
+				if (seq.length > 1) {
+					final int occur = Integer.parseInt(seq[1].replaceAll(
+							"[()]", ""));
+					for (int i = 0; i < occur - 1; i++)
+						sequence.incrementOccurence();
+				}
+				final String[] items = seq[0].split(",");
 				items[0] = items[0].replace("[", "");
 				items[items.length - 1] = items[items.length - 1].replace("]",
 						"");
@@ -438,28 +444,9 @@ public abstract class ItemsetMiningCore {
 	public static int getSupportOfSequence(
 			final TransactionDatabase transactions, final Sequence seq) {
 
-		// Get sequence occurence
-		final int occurence = seq.getOccurence();
-
-		// Convert sequence to regex
-		final StringBuilder sb = new StringBuilder(seq.size() * 2 + 1);
-		String prefix = "(^| )";
-		for (final int item : seq) {
-			sb.append(prefix);
-			sb.append(item);
-			prefix = " .*? ";
-		}
-		sb.append(" ");
-		final Pattern pattern = Pattern.compile(sb.toString());
-
-		// for each line (transaction) until end of database
 		int support = 0;
-		for (final String line : transactions.getCachedDB()) {
-			final Matcher matcher = pattern.matcher(line);
-			int maxOccurence = 0;
-			while (matcher.find())
-				maxOccurence++;
-			if (occurence <= maxOccurence)
+		for (final Transaction trans : transactions.getTransactionList()) {
+			if (trans.contains(seq))
 				support++;
 		}
 

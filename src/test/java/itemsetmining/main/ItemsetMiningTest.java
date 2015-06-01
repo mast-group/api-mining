@@ -22,7 +22,9 @@ public class ItemsetMiningTest {
 		final double p1 = 0.4;
 		final Sequence s2 = new Sequence(7, 9);
 		final double p2 = 0.3;
-		final Sequence s3 = new Sequence(8, 4, 5, 6);
+		// final Sequence s3 = new Sequence(8, 4, 5, 6); // with overlap
+		// final double p3 = 0.2;
+		final Sequence s3 = new Sequence(8, 6);
 		final double p3 = 0.2;
 
 		// Transaction #1
@@ -37,11 +39,16 @@ public class ItemsetMiningTest {
 		expected1.add(s1);
 		expected1.add(s2);
 		expected1.add(s3);
+		final HashSet<Integer> order1 = new HashSet<>();
+		order1.add(0);
+		order1.add(1);
+		order1.add(2);
 
 		// Test greedy
 		final InferenceAlgorithm inferGreedy = new InferGreedy();
 		final HashSet<Sequence> actual = inferGreedy.infer(transaction1);
 		assertEquals(expected1, actual);
+		// assertTrue(order1.containsAll(actual.values()));
 
 		// Subsequences
 		final Sequence s4 = new Sequence(1, 2);
@@ -66,42 +73,21 @@ public class ItemsetMiningTest {
 		expected2.add(s4);
 		expected2.add(s42);
 		expected2.add(s43);
+		final HashSet<Integer> order2 = new HashSet<>();
+		order2.add(0);
+		order2.add(2);
+		order2.add(4);
 
 		// final double expectedCost2 = -Math.log(p4);
 
 		// Test greedy
 		final HashSet<Sequence> actual2 = inferGreedy.infer(transaction2);
 		assertEquals(expected2, actual2);
-		transaction2.setCachedCovering(actual2);
+		// assertTrue(order2.containsAll(actual2.values()));
+		// transaction2.setCachedCovering(actual2);
 		// assertEquals(expectedCost2, transaction2.getCachedCost(), 1e-15);
 
 	}
-
-	// @Test
-	// public void testGetSupportOfSequence() throws IOException {
-	// final File inputFile = new File(
-	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/TOY.txt");
-	// final TransactionList dBase = ItemsetMining.readTransactions(inputFile);
-	//
-	// final Sequence seq = new Sequence(1, 3);
-	// int expectedSupp = 4;
-	// assertEquals(expectedSupp,
-	// ItemsetMiningCore.getSupportOfSequence(dBase, seq));
-	//
-	// final Sequence seq2 = new Sequence(1, 3);
-	// seq2.incrementOccurence();
-	// expectedSupp = 1;
-	// assertEquals(expectedSupp,
-	// ItemsetMiningCore.getSupportOfSequence(dBase, seq2));
-	//
-	// final Sequence seq3 = new Sequence(1, 3);
-	// seq3.incrementOccurence();
-	// seq3.incrementOccurence();
-	// expectedSupp = 0;
-	// assertEquals(expectedSupp,
-	// ItemsetMiningCore.getSupportOfSequence(dBase, seq3));
-	//
-	// }
 
 	// @Test
 	// public void testCombLoop() {

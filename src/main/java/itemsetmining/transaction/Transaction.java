@@ -9,8 +9,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import com.google.common.collect.Multiset;
 
@@ -55,6 +57,8 @@ public class Transaction extends AbstractSequence implements Serializable {
 			final Double newProb = newSequences.get(entry.getKey());
 			if (newProb != null)
 				entry.setValue(newProb);
+			else if (entry.getKey().size() == 1)
+				entry.setValue(0.); // so we can fill incomplete coverings
 			else
 				it.remove();
 		}
@@ -63,10 +67,15 @@ public class Transaction extends AbstractSequence implements Serializable {
 	/** Get cost of cached covering for hard EM-step */
 	public double getCachedCost() {
 		double totalCost = 0;
+		int lenCovering = 0;
 		for (final Entry<Sequence, Double> entry : cachedSequences.entrySet()) {
-			if (cachedCovering.contains(entry.getKey()))
-				totalCost += -Math.log(entry.getValue());
-			else
+			final Sequence seq = entry.getKey();
+			if (cachedCovering.contains(seq) && !entry.getValue().equals(0.)) {
+				totalCost += -Math.log(entry.getValue())
+						+ sumLogRange(lenCovering + 1, lenCovering + seq.size())
+						- sumLogRange(1, seq.size());
+				lenCovering += seq.size();
+			} else
 				totalCost += -Math.log(1 - entry.getValue());
 		}
 		return totalCost;
@@ -84,19 +93,31 @@ public class Transaction extends AbstractSequence implements Serializable {
 
 	/** Calculate cached cost for structural EM-step */
 	private double calculateCachedCost(final Map<Sequence, Double> sequences,
-			final HashSet<Sequence> covering) {
+			final Set<Sequence> covering) {
 		double totalCost = 0;
+		int lenCovering = 0;
 		for (final Entry<Sequence, Double> entry : cachedSequences.entrySet()) {
 			final Sequence seq = entry.getKey();
 			final Double prob = sequences.get(seq);
 			if (prob != null) {
-				if (covering.contains(seq))
-					totalCost += -Math.log(prob);
-				else
+				if (covering.contains(seq) && !entry.getValue().equals(0.)) {
+					totalCost += -Math.log(prob)
+							+ sumLogRange(lenCovering + 1,
+									lenCovering + seq.size())
+							- sumLogRange(1, seq.size());
+					lenCovering += seq.size();
+				} else
 					totalCost += -Math.log(1 - prob);
 			}
 		}
 		return totalCost;
+	}
+
+	private double sumLogRange(final int a, final int b) {
+		double sum = 0;
+		for (int i = a; i <= b; i++)
+			sum += Math.log(i);
+		return sum;
 	}
 
 	public void setCachedCovering(final HashSet<Sequence> covering) {
@@ -115,6 +136,27 @@ public class Transaction extends AbstractSequence implements Serializable {
 		return tempCachedCovering;
 	}
 
+	// /** Get the sequence transitions for this transaction */
+	// public HashMap<Sequence, Sequence> getTransitions() {
+	// final HashMap<Sequence, Sequence> transitions = new HashMap<>();
+	// for (final Entry<Sequence, Integer> entry1 : cachedCovering.entrySet()) {
+	// final int position1 = entry1.getValue();
+	// Sequence nextSeq = null;
+	// int nextPosition = Integer.MAX_VALUE;
+	// for (final Entry<Sequence, Integer> entry2 : cachedCovering
+	// .entrySet()) {
+	// final int position2 = entry2.getValue();
+	// if (!entry1.equals(entry2) && position1 <= position2
+	// && position2 < nextPosition) {
+	// nextSeq = entry2.getKey();
+	// nextPosition = position2;
+	// }
+	// }
+	// transitions.put(entry1.getKey(), nextSeq);
+	// }
+	// return transitions;
+	// }
+
 	/**
 	 * Constructor
 	 */
@@ -130,6 +172,16 @@ public class Transaction extends AbstractSequence implements Serializable {
 	 */
 	public Transaction(final Integer... items) {
 		this.items = new ArrayList<>(Arrays.asList(items));
+	}
+
+	/**
+	 * Constructor
+	 *
+	 * @param items
+	 *            a List of items that should be added to the new sequence
+	 */
+	public Transaction(final List<Integer> items) {
+		this.items = new ArrayList<>(items);
 	}
 
 }

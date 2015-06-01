@@ -105,4 +105,11 @@ public class Sequence extends AbstractSequence implements Serializable {
 		return true;
 	}
 
+	@Override
+	public boolean contains(final Sequence seq) {
+		if (this.occurrence == 1 && seq.occurrence == 1)
+			return super.contains(seq);
+		throw new UnsupportedOperationException();
+	}
+
 }

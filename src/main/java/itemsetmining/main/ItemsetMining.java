@@ -38,7 +38,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 		@Parameter(names = { "-f", "--file" }, description = "Dataset filename")
 		private final File dataset = new File(
-				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/SIGN.txt");
+				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/libgdx/libgdx.dat");
 
 		@Parameter(names = { "-s", "--maxSteps" }, description = "Max structure steps")
 		int maxStructureSteps = 100_000;

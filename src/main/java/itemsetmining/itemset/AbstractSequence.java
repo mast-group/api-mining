@@ -70,8 +70,28 @@ public abstract class AbstractSequence extends AbstractCollection<Integer>
 	 *
 	 * @param sequence
 	 */
-	public boolean contains(final AbstractSequence seq) {
+	public boolean contains(final Sequence seq) {
 		int pos = 0;
+		for (int occ = 0; occ < seq.getOccurence(); occ++) {
+			pos = this.contains(seq, pos);
+			if (pos == -1)
+				return false;
+		}
+		return true;
+	}
+
+	/** Code for covering sequences *with gaps* */
+
+	/**
+	 * Check if this sequence contains given sequence (allowing gaps) from
+	 * startIndex onwards
+	 *
+	 * @param sequence
+	 * @return index after which contained seq finishes or -1 if seq is not
+	 *         contained
+	 */
+	public int contains(final AbstractSequence seq, final int startIndex) {
+		int pos = startIndex;
 		boolean containsItem;
 		for (final int item : seq.items) {
 			containsItem = false;
@@ -83,79 +103,53 @@ public abstract class AbstractSequence extends AbstractCollection<Integer>
 				}
 			}
 			if (!containsItem)
-				return false;
+				return -1;
 		}
-		return true;
+		return pos;
 	}
 
+	/** Code for covering sequences *without gaps* */
+	//
 	// /**
-	// * Check if this sequence contains given sequence *without gaps*
+	// * Check if this sequence contains given sequence (without gaps) from
+	// * startIndex onwards
 	// *
 	// * @param sequence
+	// * @return index after which contained seq finishes or -1 if seq is not
+	// * contained
 	// */
-	// public boolean contains(final AbstractSequence seq) {
-	// outer: for (int i = 0; i < this.items.size() - seq.items.size() + 1; i++)
-	// {
+	// public int contains(final AbstractSequence seq, final int startIndex) {
+	// outer: for (int i = startIndex; i < this.items.size()
+	// - seq.items.size() + 1; i++) {
 	// if (this.items.get(i).equals(seq.items.get(0))) {
 	// for (int j = 1; j < seq.items.size(); j++) {
 	// if (!this.items.get(i + j).equals(seq.items.get(j)))
 	// continue outer;
 	// }
-	// return true;
+	// return i + seq.items.size();
 	// }
 	// }
-	// return false;
+	// return -1;
 	// }
 
-	/**
-	 * Check if first BitSet contains second BitSet
-	 */
-	public boolean contains(final BitSet set1, final BitSet set2) {
-		final BitSet copy = (BitSet) set2.clone();
-		copy.and(set1);
-		return copy.equals(set2);
-	}
+	/** Code for covering sequences *with gaps* but *without overlap* */
 
 	/**
-	 * Return the items in this sequence covered by the given sequence, allowing
-	 * for multiple covering matches if the first match is already fully covered
-	 *
-	 * <p>
-	 * This is intended to allow the covering of 1 2 1 2 1 2 by 1 2.
+	 * Return items in this sequence covered by given sequence (with gaps,
+	 * without overlap)
 	 *
 	 * @param sequence
 	 * @return BitSet of items in order with the covered items set true
 	 */
 	public BitSet getCovered(final AbstractSequence seq,
 			final BitSet alreadyCoveredItems) {
-
-		int index = 0;
-		while (true) {
-			final BitSet coveredItems = getCovered(seq, index);
-			if (coveredItems.isEmpty())
-				return coveredItems;
-			if (contains(alreadyCoveredItems, coveredItems))
-				index = coveredItems.nextSetBit(index) + 1;
-			else
-				return coveredItems;
-		}
-
-	}
-
-	/**
-	 * Return the items in this sequence covered by the given sequence
-	 *
-	 * @param sequence
-	 * @return BitSet of items in order with the covered items set true
-	 */
-	public BitSet getCovered(final AbstractSequence seq, final int startIndex) {
-		int pos = startIndex;
+		int pos = 0;
 		boolean containsItem;
 		final BitSet coveredItems = new BitSet(this.size());
 		for (final int item : seq.items) {
 			containsItem = false;
 			for (int i = pos; i < this.items.size(); i++) {
-				if (this.items.get(i) == item) {
+				if (!alreadyCoveredItems.get(i) && this.items.get(i) == item) {
 					coveredItems.set(i);
 					pos = i + 1;
 					containsItem = true;
@@ -170,9 +164,120 @@ public abstract class AbstractSequence extends AbstractCollection<Integer>
 		return coveredItems;
 	}
 
+	/**
+	 * Code for covering sequences *without gaps* and *without overlap* !!
+	 * Remember to change subsequence contains and support function !!
+	 */
+	//
 	// /**
-	// * Return the items in this sequence covered *without gaps* by the given
-	// * sequence
+	// * Return the items in this sequence covered (without gaps, without
+	// overlap)
+	// * by the given sequence
+	// *
+	// * @param sequence
+	// * @return BitSet of items in order with the covered items set true
+	// */
+	// public BitSet getCovered(final AbstractSequence seq,
+	// final BitSet alreadyCoveredItems) {
+	// final BitSet coveredItems = new BitSet(this.size());
+	// outer: for (int i = 0; i < this.items.size() - seq.items.size() + 1; i++)
+	// {
+	// if (!alreadyCoveredItems.get(i)
+	// && this.items.get(i).equals(seq.items.get(0))) {
+	// for (int j = 1; j < seq.items.size(); j++) {
+	// if (alreadyCoveredItems.get(i + j)
+	// || !this.items.get(i + j).equals(seq.items.get(j)))
+	// continue outer;
+	// }
+	// for (int j = 0; j < seq.items.size(); j++)
+	// coveredItems.set(i + j);
+	// return coveredItems;
+	// }
+	// }
+	// coveredItems.clear();
+	// return coveredItems;
+	// }
+
+	/**
+	 * Code for covering sequences *with gaps* but *with overlap* !! Remember to
+	 * change greedy algorithm and subsequence contains and support function !!
+	 */
+	//
+	// /**
+	// * Check if first BitSet contains second BitSet
+	// */
+	// public boolean contains(final BitSet set1, final BitSet set2) {
+	// final BitSet copy = (BitSet) set2.clone();
+	// copy.and(set1);
+	// return copy.equals(set2);
+	// }
+	//
+	// /**
+	// * Return the items in this sequence covered by the given sequence (with
+	// * gaps, with overlap), allowing for multiple covering matches if the
+	// * first match is already fully covered
+	// *
+	// * <p>
+	// * This is intended to allow the covering of 1 2 1 2 1 2 by 1 2.
+	// *
+	// * @param sequence
+	// * @return BitSet of items in order with the covered items set true
+	// */
+	// public BitSet getCovered(final AbstractSequence seq,
+	// final BitSet alreadyCoveredItems) {
+	//
+	// int index = 0;
+	// while (true) {
+	// final BitSet coveredItems = getCovered(seq, index);
+	// if (coveredItems.isEmpty())
+	// return coveredItems;
+	// if (contains(alreadyCoveredItems, coveredItems))
+	// index = coveredItems.nextSetBit(index) + 1;
+	// else
+	// return coveredItems;
+	// }
+	//
+	// }
+	//
+	// /**
+	// * Return the items in this sequence covered by the given sequence (with
+	// * gaps, with overlap)
+	// *
+	// * @param sequence
+	// * @return BitSet of items in order with the covered items set true
+	// */
+	// public BitSet getCovered(final AbstractSequence seq, final int
+	// startIndex) {
+	// int pos = startIndex;
+	// boolean containsItem;
+	// final BitSet coveredItems = new BitSet(this.size());
+	// for (final int item : seq.items) {
+	// containsItem = false;
+	// for (int i = pos; i < this.items.size(); i++) {
+	// if (this.items.get(i) == item) {
+	// coveredItems.set(i);
+	// pos = i + 1;
+	// containsItem = true;
+	// break;
+	// }
+	// }
+	// if (!containsItem) {
+	// coveredItems.clear();
+	// return coveredItems;
+	// }
+	// }
+	// return coveredItems;
+	// }
+
+	/**
+	 * Code for covering sequences *without gaps* but *with overlap* !! Remember
+	 * to change greedy algorithm and subsequence contains and support function
+	 * !!
+	 */
+	//
+	// /**
+	// * Return the items in this sequence covered (without gaps, with
+	// * overlap) by the given sequence
 	// *
 	// * @param sequence
 	// * @return BitSet of items in order with the covered items set true
