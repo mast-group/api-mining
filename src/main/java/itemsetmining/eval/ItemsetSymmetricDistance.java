@@ -18,11 +18,12 @@ public class ItemsetSymmetricDistance {
 	public static void main(final String[] args) throws IOException {
 
 		final String[] ISMlogs = new String[] {
-				"ISM-SIGN-16.04.2015-12:10:24.log",
-				"ISM-LEVIATHAN-22.04.2015-17:14:04.log",
-				"ISM-GAZELLE1-21.04.2015-16:04:19.log" };
-		final String[] FSMlogs = new String[] { "SIGN.txt", "LEVIATHAN.txt",
-				"GAZELLE1.txt" };
+				"ISM-SIGN-27.05.2015-15:12:45.log",
+				"ISM-alice_punc-27.05.2015-13:05:46.log",
+				"ISM-alice_nostop-28.05.2015-10:17:38.log" };
+		final String[] FSMlogs = new String[] { "SIGN.txt", "alice_punc.txt",
+				"alice_nostop.txt" };
+		// "LEVIATHAN.txt","GAZELLE1.txt" };
 
 		for (int i = 0; i < ISMlogs.length; i++) {
 

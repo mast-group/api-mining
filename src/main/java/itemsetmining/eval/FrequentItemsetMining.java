@@ -26,8 +26,8 @@ public class FrequentItemsetMining {
 	public static void main(final String[] args) throws IOException {
 
 		// FIM parameters
-		final String dataset = "GAZELLE1";
-		final double minSupp = 0.002; // relative support
+		final String dataset = "SIGN";
+		final double minSupp = 0.425; // relative support
 		final String dbPath = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/"
 				+ dataset + ".txt";
 		final String saveFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/FIM/"
@@ -82,7 +82,7 @@ public class FrequentItemsetMining {
 		}
 	}
 
-	/** Read in frequent sequences */
+	/** Read in frequent sequences (sorted by support) */
 	public static SortedMap<Sequence, Integer> readFrequentSequences(
 			final File output) throws IOException {
 		final HashMap<Sequence, Integer> sequences = new HashMap<>();

@@ -30,7 +30,7 @@ public class ParityClassificationTask {
 		final int M = 3;
 		final int L = 5;
 		final int noInstances = 1_000;
-		final String baseFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Classification/";
+		final String baseFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Classification/Parity/";
 		final File dbFile = new File(baseFolder + "PARITY.txt");
 
 		// Generate parity database
@@ -45,8 +45,8 @@ public class ParityClassificationTask {
 
 		// Generate freq seq features
 		// seqsFSM = removeSingletons(seqsFSM);
-		generateFeatures(dbTrans, seqsFSM.keySet(), new File(baseFolder
-				+ "FeaturesFSM.txt"), N, M);
+		final File featuresFSM = new File(baseFolder + "FeaturesFSM.txt");
+		generateFeatures(dbTrans, seqsFSM.keySet(), featuresFSM, N, M);
 
 		// Mine int seqs
 		final int maxStructureSteps = 100_000;
@@ -58,12 +58,17 @@ public class ParityClassificationTask {
 
 		// Generate int seq features
 		// seqsISM = removeSingletons(seqsISM);
-		generateFeatures(dbTrans, seqsISM.keySet(), new File(baseFolder
-				+ "FeaturesISM.txt"), N, M);
+		final File featuresISM = new File(baseFolder + "FeaturesISM.txt");
+		generateFeatures(dbTrans, seqsISM.keySet(), featuresISM, N, M);
 
 		// Generate simple features
-		generateSimpleFeatures(dbTrans, new File(baseFolder
-				+ "FeaturesSimple.txt"), N, M);
+		final File featuresSimple = new File(baseFolder + "FeaturesSimple.txt");
+		generateSimpleFeatures(dbTrans, featuresSimple, N, M);
+
+		// Run MALLET Naive Bayes classifier
+		MarkovClassificationTask.classify(baseFolder, featuresFSM);
+		MarkovClassificationTask.classify(baseFolder, featuresISM);
+		MarkovClassificationTask.classify(baseFolder, featuresSimple);
 
 	}
 
