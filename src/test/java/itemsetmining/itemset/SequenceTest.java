@@ -1,44 +1,39 @@
 package itemsetmining.itemset;
 
 import static org.junit.Assert.assertEquals;
-import itemsetmining.main.ItemsetMining;
-import itemsetmining.main.ItemsetMiningCore;
 import itemsetmining.transaction.Transaction;
-import itemsetmining.transaction.TransactionList;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.BitSet;
 
 import org.junit.Test;
 
 public class SequenceTest {
 
-	@Test
-	public void testGetSupportOfSequenceWithGaps() throws IOException {
-		final File inputFile = new File(
-				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/TOY.txt");
-		final TransactionList dBase = ItemsetMining.readTransactions(inputFile);
-
-		final Sequence seq = new Sequence(1, 3);
-		int expectedSupp = 4;
-		assertEquals(expectedSupp,
-				ItemsetMiningCore.getSupportOfSequence(dBase, seq));
-
-		final Sequence seq2 = new Sequence(1, 3);
-		seq2.incrementOccurence();
-		expectedSupp = 1;
-		assertEquals(expectedSupp,
-				ItemsetMiningCore.getSupportOfSequence(dBase, seq2));
-
-		final Sequence seq3 = new Sequence(1, 3);
-		seq3.incrementOccurence();
-		seq3.incrementOccurence();
-		expectedSupp = 0;
-		assertEquals(expectedSupp,
-				ItemsetMiningCore.getSupportOfSequence(dBase, seq3));
-
-	}
+	// @Test
+	// public void testGetSupportOfSequenceWithGaps() throws IOException {
+	// final File inputFile = new File(
+	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/TOY.txt");
+	// final TransactionList dBase = ItemsetMining.readTransactions(inputFile);
+	//
+	// final Sequence seq = new Sequence(1, 3);
+	// int expectedSupp = 4;
+	// assertEquals(expectedSupp,
+	// ItemsetMiningCore.getSupportOfSequence(dBase, seq));
+	//
+	// final Sequence seq2 = new Sequence(1, 3);
+	// seq2.incrementOccurence();
+	// expectedSupp = 1;
+	// assertEquals(expectedSupp,
+	// ItemsetMiningCore.getSupportOfSequence(dBase, seq2));
+	//
+	// final Sequence seq3 = new Sequence(1, 3);
+	// seq3.incrementOccurence();
+	// seq3.incrementOccurence();
+	// expectedSupp = 0;
+	// assertEquals(expectedSupp,
+	// ItemsetMiningCore.getSupportOfSequence(dBase, seq3));
+	//
+	// }
 
 	// @Test
 	// public void testGetSupportOfSequenceWithoutGaps() throws IOException {
