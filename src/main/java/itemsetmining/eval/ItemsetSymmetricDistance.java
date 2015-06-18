@@ -18,12 +18,12 @@ public class ItemsetSymmetricDistance {
 	public static void main(final String[] args) throws IOException {
 
 		final String[] ISMlogs = new String[] {
+				"ISM-alice_nostop-28.05.2015-10:17:38.log",
 				"ISM-SIGN-27.05.2015-15:12:45.log",
-				"ISM-alice_punc-27.05.2015-13:05:46.log",
-				"ISM-alice_nostop-28.05.2015-10:17:38.log" };
-		final String[] FSMlogs = new String[] { "SIGN.txt", "alice_punc.txt",
-				"alice_nostop.txt" };
-		// "LEVIATHAN.txt","GAZELLE1.txt" };
+				"ISM-GAZELLE1-01.06.2015-17:15:17.log",
+				"ISM-libraries_filtered-01.06.2015-18:18:29.log" };
+		final String[] FSMlogs = new String[] { "alice_nostop.txt", "SIGN.txt",
+				"GAZELLE1.txt", "libraries_filtered_small.txt" };
 
 		for (int i = 0; i < ISMlogs.length; i++) {
 
@@ -38,16 +38,23 @@ public class ItemsetSymmetricDistance {
 			System.out.println("No items: "
 					+ countNoItems(intItemsets.keySet()));
 
+			// Get top interesting sequences
+			final Set<Sequence> topIntItemsets = filterSingletons(intItemsets);
+
 			// Calculate redundancy
-			double avgMinDiff = calculateRedundancy(intItemsets);
+			double avgMinDiff = calculateRedundancy(topIntItemsets);
 			System.out.println("\nAvg min edit dist: " + avgMinDiff);
 
 			// Calculate spuriousness
-			double avgMaxSpur = calculateSpuriousness(intItemsets);
+			double avgMaxSpur = calculateSpuriousness(topIntItemsets);
 			System.out.println("Avg no. subseq: " + avgMaxSpur);
 
+			// Calculate no. items
+			int noItems = countNoItems(topIntItemsets);
+			System.out.println("No. items: " + noItems);
+
 			// Calculate size
-			double avgSize = calculateAverageSize(intItemsets);
+			double avgSize = calculateAverageSize(topIntItemsets);
 			System.out.println("Avg subseq size: " + avgSize);
 
 			// Read in frequent sequences
@@ -59,16 +66,23 @@ public class ItemsetSymmetricDistance {
 			System.out.println("No items: "
 					+ countNoItems(freqItemsets.keySet()));
 
+			// Get top frequent sequences
+			final Set<Sequence> topFreqItemsets = filterSingletons(freqItemsets);
+
 			// Calculate redundancy
-			avgMinDiff = calculateRedundancy(freqItemsets);
+			avgMinDiff = calculateRedundancy(topFreqItemsets);
 			System.out.println("\nAvg min edit dist: " + avgMinDiff);
 
 			// Calculate spuriousness
-			avgMaxSpur = calculateSpuriousness(freqItemsets);
+			avgMaxSpur = calculateSpuriousness(topFreqItemsets);
 			System.out.println("Avg no. subseq: " + avgMaxSpur);
 
+			// Calculate no. items
+			noItems = countNoItems(topFreqItemsets);
+			System.out.println("No. items: " + noItems);
+
 			// Calculate size
-			avgSize = calculateAverageSize(freqItemsets);
+			avgSize = calculateAverageSize(topFreqItemsets);
 			System.out.println("Avg subseq size: " + avgSize);
 
 			System.out.println();
@@ -78,22 +92,7 @@ public class ItemsetSymmetricDistance {
 	}
 
 	private static <V> double calculateRedundancy(
-			final Map<Sequence, V> itemsets) {
-
-		// Filter out singletons
-		int count = 0;
-		final Set<Sequence> topItemsets = new HashSet<>();
-		for (final Sequence set : itemsets.keySet()) {
-			if (set.size() != 1) {
-				topItemsets.add(set);
-				count++;
-			}
-			if (count == topN)
-				break;
-		}
-		if (count < 100)
-			System.out.println("Not enough non-singleton sequences in set: "
-					+ count);
+			final Set<Sequence> topItemsets) {
 
 		double avgMinDiff = 0;
 		for (final Sequence set1 : topItemsets) {
@@ -160,18 +159,33 @@ public class ItemsetSymmetricDistance {
 		return items.size();
 	}
 
-	private static <V> double calculateAverageSize(
-			final Map<Sequence, V> itemsets) {
+	private static double calculateAverageSize(final Set<Sequence> topItemsets) {
+
 		double avgSize = 0;
-		for (final Sequence seq : itemsets.keySet())
+		for (final Sequence seq : topItemsets)
 			avgSize += seq.size();
-		return avgSize / itemsets.size();
+		return avgSize / topItemsets.size();
 	}
 
 	private static <V> double calculateSpuriousness(
+			final Set<Sequence> topItemsets) {
+
+		double avgSubseq = 0;
+		for (final Sequence set1 : topItemsets) {
+			for (final Sequence set2 : topItemsets) {
+				if (!set1.equals(set2))
+					avgSubseq += isSubseq(set1, set2);
+			}
+		}
+		avgSubseq /= topItemsets.size();
+
+		return avgSubseq;
+	}
+
+	/** Filter out singletons */
+	private static <V> Set<Sequence> filterSingletons(
 			final Map<Sequence, V> itemsets) {
 
-		// Filter out singletons
 		int count = 0;
 		final Set<Sequence> topItemsets = new HashSet<>();
 		for (final Sequence set : itemsets.keySet()) {
@@ -186,16 +200,7 @@ public class ItemsetSymmetricDistance {
 			System.out.println("Not enough non-singleton sequences in set: "
 					+ count);
 
-		double avgSubseq = 0;
-		for (final Sequence set1 : topItemsets) {
-			for (final Sequence set2 : topItemsets) {
-				if (!set1.equals(set2))
-					avgSubseq += isSubseq(set1, set2);
-			}
-		}
-		avgSubseq /= topItemsets.size();
-
-		return avgSubseq;
+		return topItemsets;
 	}
 
 	private static int isSubseq(final Sequence seq1, final Sequence seq2) {

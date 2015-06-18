@@ -11,9 +11,17 @@ import java.util.SortedMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 
+import ca.pfv.spmf.algorithms.sequentialpatterns.BIDE_and_prefixspan.AlgoBIDEPlus;
 import ca.pfv.spmf.algorithms.sequentialpatterns.BIDE_and_prefixspan.AlgoPrefixSpan;
 import ca.pfv.spmf.algorithms.sequentialpatterns.BIDE_and_prefixspan.SequentialPattern;
 import ca.pfv.spmf.algorithms.sequentialpatterns.BIDE_and_prefixspan.SequentialPatterns;
+import ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.AlgoSPADE;
+import ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.AlgoSPAM_AGP;
+import ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.candidatePatternsGeneration.CandidateGenerator;
+import ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.candidatePatternsGeneration.CandidateGenerator_Qualitative;
+import ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.dataStructures.creators.AbstractionCreator;
+import ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.dataStructures.creators.AbstractionCreator_Qualitative;
+import ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.idLists.creators.IdListCreator_FatBitmap;
 import ca.pfv.spmf.input.sequence_database_list_integers.SequenceDatabase;
 import ca.pfv.spmf.patterns.itemset_list_integers_without_support.Itemset;
 
@@ -26,14 +34,13 @@ public class FrequentItemsetMining {
 	public static void main(final String[] args) throws IOException {
 
 		// FIM parameters
-		final String dataset = "SIGN";
-		final double minSupp = 0.425; // relative support
-		final String dbPath = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/"
-				+ dataset + ".txt";
-		final String saveFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/FIM/"
-				+ dataset + ".txt";
+		final String dataset = "libraries_filtered";
+		final double minSupp = 0.016; // relative support
+		final String dbPath = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/libraries/"
+				+ dataset + ".dat";
+		final String saveFile = "/disk/data1/jfowkes/logs/" + dataset + ".txt";
 
-		mineFrequentSequencesPrefixSpan(dbPath, saveFile, minSupp);
+		mineFrequentSequencesSPAM(dbPath, saveFile, minSupp);
 		final SortedMap<Sequence, Integer> freqItemsets = readFrequentSequences(new File(
 				saveFile));
 		System.out.println("\nFSM Sequences");
@@ -53,6 +60,70 @@ public class FrequentItemsetMining {
 		algo.setShowSequenceIdentifiers(false);
 		final SequentialPatterns patterns = algo.runAlgorithm(sequenceDatabase,
 				minSupp, saveFile);
+		// algo.printStatistics(sequenceDatabase.size());
+
+		return toMap(patterns);
+	}
+
+	/** Run SPADE algorithm */
+	public static SortedMap<Sequence, Integer> mineFrequentSequencesSPADE(
+			final String dataset, final String saveFile, final double minSupp)
+			throws IOException {
+
+		final boolean verbose = true;
+
+		final AbstractionCreator abstractionCreator = AbstractionCreator_Qualitative
+				.getInstance();
+		final ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.dataStructures.database.SequenceDatabase sequenceDatabase = new ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.dataStructures.database.SequenceDatabase(
+				abstractionCreator, IdListCreator_FatBitmap.getInstance());
+		sequenceDatabase.loadFile(dataset, minSupp);
+
+		final AlgoSPADE algo = new AlgoSPADE(minSupp, true, abstractionCreator);
+		final CandidateGenerator candidateGenerator = CandidateGenerator_Qualitative
+				.getInstance();
+		algo.runAlgorithmParallelized(sequenceDatabase, candidateGenerator,
+				true, verbose, saveFile, false);
+		// algo.printStatistics();
+
+		return null;
+	}
+
+	/** Run SPAM algorithm */
+	public static SortedMap<Sequence, Integer> mineFrequentSequencesSPAM(
+			final String dataset, final String saveFile, final double minSupp)
+			throws IOException {
+
+		final boolean verbose = true;
+
+		final AbstractionCreator abstractionCreator = AbstractionCreator_Qualitative
+				.getInstance();
+		final ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.dataStructures.database.SequenceDatabase sequenceDatabase = new ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.dataStructures.database.SequenceDatabase(
+				abstractionCreator, IdListCreator_FatBitmap.getInstance());
+		sequenceDatabase.loadFile(dataset, minSupp);
+
+		final AlgoSPAM_AGP algorithm = new AlgoSPAM_AGP(minSupp);
+		algorithm
+				.runAlgorithm(sequenceDatabase, true, verbose, saveFile, false);
+		// algo.printStatistics();
+
+		return null;
+	}
+
+	/** Run BIDE algorithm */
+	public static SortedMap<Sequence, Integer> mineFrequentClosedSequencesBIDE(
+			final String dataset, final String saveFile, final double minSupp)
+			throws IOException {
+
+		final SequenceDatabase sequenceDatabase = new SequenceDatabase();
+		sequenceDatabase.loadFile(dataset);
+
+		// Convert to absolute support (rounding down)
+		final int absMinSupp = (int) (sequenceDatabase.size() * minSupp);
+
+		final AlgoBIDEPlus algo = new AlgoBIDEPlus();
+		algo.setShowSequenceIdentifiers(false);
+		final SequentialPatterns patterns = algo.runAlgorithm(sequenceDatabase,
+				saveFile, absMinSupp);
 		// algo.printStatistics(sequenceDatabase.size());
 
 		return toMap(patterns);
@@ -92,7 +163,7 @@ public class FrequentItemsetMining {
 			final String line = it.nextLine();
 			if (!line.trim().isEmpty()) {
 				final String[] splitLine = line.split("#SUP:");
-				final String[] items = splitLine[0].split(" -1 ");
+				final String[] items = splitLine[0].trim().split("-1");
 				final Sequence seq = new Sequence();
 				for (final String item : items)
 					seq.add(Integer.parseInt(item.trim()));
