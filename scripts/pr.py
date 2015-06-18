@@ -33,6 +33,7 @@ def main():
     
     cols = ['b','g','r']
     prefixes = ['ISM','MSM','FSM']
+    labels = ['ISM','ISM NoGaps','FSM']	
     
     for prefix in prefixes:
     
@@ -46,7 +47,7 @@ def main():
         plotfigpr(interp_precision,pt_recall,probname,col,1)
         
     plt.figure(1)   
-    plt.legend(prefixes,'lower right')
+    plt.legend(labels,'lower right')
     plt.show()
 
 # Interpolate precision

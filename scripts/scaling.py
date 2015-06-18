@@ -6,9 +6,12 @@ import numpy as np
 rc('xtick', labelsize=16) 
 rc('ytick', labelsize=16) 
 
-trans = [1E3, 1E4, 1E5, 1E6]
-linear_trans = [1E1, 1E2, 1E3, 1E4]
-s64_time = [18.06,53.46,277.16,2715.59]
+trans = [1E3, 1E4]
+#, 1E5, 1E6]
+linear_trans = [1E1, 1E2]
+#, 1E3, 1E4]
+s64_time = [418.57,2386.59]
+#,277.16,2715.59]
 
 plt.figure(1)
 plt.hold(True)
