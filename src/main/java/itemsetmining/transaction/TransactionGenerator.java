@@ -1,7 +1,5 @@
 package itemsetmining.transaction;
 
-import itemsetmining.itemset.Sequence;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -13,6 +11,8 @@ import java.util.Map.Entry;
 import java.util.Random;
 
 import org.apache.commons.io.LineIterator;
+
+import itemsetmining.sequence.Sequence;
 
 public class TransactionGenerator {
 

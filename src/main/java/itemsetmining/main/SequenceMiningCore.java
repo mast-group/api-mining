@@ -1,7 +1,7 @@
 package itemsetmining.main;
 
-import itemsetmining.itemset.Sequence;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
+import itemsetmining.sequence.Sequence;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionDatabase;
 
@@ -26,14 +26,14 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Ordering;
 
-public abstract class ItemsetMiningCore {
+public abstract class SequenceMiningCore {
 
 	/** Main fixed settings */
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
 	private static final double OPTIMIZE_TOL = 1e-5;
 
 	protected static final Logger logger = Logger
-			.getLogger(ItemsetMiningCore.class.getName());
+			.getLogger(SequenceMiningCore.class.getName());
 	public static final File LOG_DIR = new File("/disk/data1/jfowkes/logs/");
 
 	/** Variable settings */

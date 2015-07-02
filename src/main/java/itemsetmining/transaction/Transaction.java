@@ -1,8 +1,5 @@
 package itemsetmining.transaction;
 
-import itemsetmining.itemset.AbstractSequence;
-import itemsetmining.itemset.Sequence;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,6 +12,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.collect.Multiset;
+
+import itemsetmining.sequence.AbstractSequence;
+import itemsetmining.sequence.Sequence;
 
 /** A transaction is an ordered list of items */
 public class Transaction extends AbstractSequence implements Serializable {

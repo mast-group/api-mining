@@ -1,8 +1,8 @@
 package itemsetmining.util;
 
-import itemsetmining.itemset.Sequence;
-import itemsetmining.main.ItemsetMining;
-import itemsetmining.main.ItemsetMiningCore;
+import itemsetmining.main.SequenceMining;
+import itemsetmining.main.SequenceMiningCore;
+import itemsetmining.sequence.Sequence;
 import itemsetmining.transaction.TransactionList;
 
 import java.io.File;
@@ -82,14 +82,14 @@ public class PartialLogFixer {
 			final File transactionDB, final File logFile) throws IOException {
 
 		// Read in transaction database
-		final TransactionList transactions = ItemsetMining
+		final TransactionList transactions = SequenceMining
 				.readTransactions(transactionDB);
 
 		// Sort sequences by interestingness
 		System.out.println("Sorting sequences by interestingness...");
-		final HashMap<Sequence, Double> intMap = ItemsetMiningCore
+		final HashMap<Sequence, Double> intMap = SequenceMiningCore
 				.calculateInterestingness(sequences, transactions);
-		final Map<Sequence, Double> sortedSequences = ItemsetMiningCore
+		final Map<Sequence, Double> sortedSequences = SequenceMiningCore
 				.sortSequences(sequences, intMap);
 
 		System.out.println("Writing out to file...");

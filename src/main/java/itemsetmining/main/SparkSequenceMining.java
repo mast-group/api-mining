@@ -1,3 +1,4 @@
+package itemsetmining.main;
 //package itemsetmining.main;
 //
 //import itemsetmining.itemset.Itemset;

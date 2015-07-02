@@ -1,7 +1,5 @@
 package itemsetmining.eval;
 
-import itemsetmining.itemset.Sequence;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -24,12 +22,13 @@ import ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.dataStructures.c
 import ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.idLists.creators.IdListCreator_FatBitmap;
 import ca.pfv.spmf.input.sequence_database_list_integers.SequenceDatabase;
 import ca.pfv.spmf.patterns.itemset_list_integers_without_support.Itemset;
+import itemsetmining.sequence.Sequence;
 
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Ordering;
 
-public class FrequentItemsetMining {
+public class FrequentSequenceMining {
 
 	public static void main(final String[] args) throws IOException {
 

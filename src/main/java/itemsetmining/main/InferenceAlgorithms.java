@@ -1,6 +1,6 @@
 package itemsetmining.main;
 
-import itemsetmining.itemset.Sequence;
+import itemsetmining.sequence.Sequence;
 import itemsetmining.transaction.Transaction;
 
 import java.io.Serializable;

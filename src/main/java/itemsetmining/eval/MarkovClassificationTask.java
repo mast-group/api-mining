@@ -1,8 +1,8 @@
 package itemsetmining.eval;
 
-import itemsetmining.itemset.Sequence;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
-import itemsetmining.main.ItemsetMining;
+import itemsetmining.sequence.Sequence;
+import itemsetmining.main.SequenceMining;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionList;
 
@@ -62,11 +62,11 @@ public class MarkovClassificationTask {
 		// Generate Sequence database
 		final int[] labels = generateMarkovProblem(noSteps, noInstances,
 				matrices, starts, dbFile);
-		final TransactionList dbTrans = ItemsetMining.readTransactions(dbFile);
+		final TransactionList dbTrans = SequenceMining.readTransactions(dbFile);
 
 		// Mine freq seqs
 		final double minSup = 0.8;
-		final Map<Sequence, Integer> seqsFSM = FrequentItemsetMining
+		final Map<Sequence, Integer> seqsFSM = FrequentSequenceMining
 				.mineFrequentSequencesPrefixSpan(dbFile.getPath(), null, minSup);
 		System.out.println(seqsFSM);
 
@@ -78,7 +78,7 @@ public class MarkovClassificationTask {
 		// Mine int seqs
 		final int maxStructureSteps = 100_000;
 		final int maxEMIterations = 1_000;
-		final Map<Sequence, Double> seqsISM = ItemsetMining.mineSequences(
+		final Map<Sequence, Double> seqsISM = SequenceMining.mineSequences(
 				dbFile, new InferGreedy(), maxStructureSteps, maxEMIterations,
 				null);
 		System.out.println(seqsISM);

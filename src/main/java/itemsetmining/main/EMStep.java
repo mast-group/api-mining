@@ -3,8 +3,9 @@ package itemsetmining.main;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
-import itemsetmining.itemset.Sequence;
+
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
+import itemsetmining.sequence.Sequence;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionDatabase;
 

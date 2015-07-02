@@ -1,9 +1,10 @@
 package itemsetmining.main;
 
 import static org.junit.Assert.assertEquals;
-import itemsetmining.itemset.Sequence;
+
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
 import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
+import itemsetmining.sequence.Sequence;
 import itemsetmining.transaction.Transaction;
 
 import java.util.HashSet;
@@ -12,7 +13,7 @@ import org.junit.Test;
 
 import com.google.common.collect.HashMultiset;
 
-public class ItemsetMiningTest {
+public class SequenceMiningTest {
 
 	@Test
 	public void testDoInference() {

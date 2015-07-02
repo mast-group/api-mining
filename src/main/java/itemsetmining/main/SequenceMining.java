@@ -1,12 +1,5 @@
 package itemsetmining.main;
 
-import itemsetmining.itemset.Sequence;
-import itemsetmining.main.InferenceAlgorithms.InferGreedy;
-import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
-import itemsetmining.transaction.Transaction;
-import itemsetmining.transaction.TransactionList;
-import itemsetmining.util.Logging;
-
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -31,14 +24,21 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 import com.google.common.io.Files;
 
-public class ItemsetMining extends ItemsetMiningCore {
+import itemsetmining.main.InferenceAlgorithms.InferGreedy;
+import itemsetmining.main.InferenceAlgorithms.InferenceAlgorithm;
+import itemsetmining.sequence.Sequence;
+import itemsetmining.transaction.Transaction;
+import itemsetmining.transaction.TransactionList;
+import itemsetmining.util.Logging;
+
+public class SequenceMining extends SequenceMiningCore {
 
 	/** Main function parameters */
 	public static class Parameters {
 
 		@Parameter(names = { "-f", "--file" }, description = "Dataset filename")
 		private final File dataset = new File(
-				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/libgdx/libgdx.dat");
+				"/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/java/java.dat");
 
 		@Parameter(names = { "-s", "--maxSteps" }, description = "Max structure steps")
 		int maxStructureSteps = 100_000;
@@ -71,12 +71,10 @@ public class ItemsetMining extends ItemsetMiningCore {
 			// Set loglevel, runtime, timestamp and log file
 			LOG_LEVEL = params.logLevel;
 			MAX_RUNTIME = params.maxRunTime * 60 * 1_000;
-			final File logFile = Logging.getLogFileName("ISM",
-					params.timestampLog, LOG_DIR, params.dataset);
+			final File logFile = Logging.getLogFileName("ISM", params.timestampLog, LOG_DIR, params.dataset);
 
 			// Mine interesting sequences
-			mineSequences(params.dataset, inferenceAlg,
-					params.maxStructureSteps, params.maxEMIterations, logFile);
+			mineSequences(params.dataset, inferenceAlg, params.maxStructureSteps, params.maxEMIterations, logFile);
 
 		} catch (final ParameterException e) {
 			System.out.println(e.getMessage());
@@ -86,10 +84,8 @@ public class ItemsetMining extends ItemsetMiningCore {
 	}
 
 	/** Mine interesting sequences */
-	public static Map<Sequence, Double> mineSequences(final File inputFile,
-			final InferenceAlgorithm inferenceAlgorithm,
-			final int maxStructureSteps, final int maxEMIterations,
-			final File logFile) throws IOException {
+	public static Map<Sequence, Double> mineSequences(final File inputFile, final InferenceAlgorithm inferenceAlgorithm,
+			final int maxStructureSteps, final int maxEMIterations, final File logFile) throws IOException {
 
 		// Set up logging
 		if (logFile != null)
@@ -99,11 +95,9 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 		// Echo input parameters
 		logger.info("========== INTERESTING SEQUENCE MINING ============");
-		logger.info("\n Time: "
-				+ new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
-						.format(new Date()));
-		logger.info("\n Inputs: -f " + inputFile + " -s " + maxStructureSteps
-				+ " -i " + maxEMIterations + " -r " + MAX_RUNTIME / 60_000);
+		logger.info("\n Time: " + new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss").format(new Date()));
+		logger.info("\n Inputs: -f " + inputFile + " -s " + maxStructureSteps + " -i " + maxEMIterations + " -r "
+				+ MAX_RUNTIME / 60_000);
 
 		// Read in transaction database
 		final TransactionList transactions = readTransactions(inputFile);
@@ -113,23 +107,19 @@ public class ItemsetMining extends ItemsetMiningCore {
 
 		// Run inference to find interesting sequences
 		logger.fine("\n============= SEQUENCE INFERENCE =============\n");
-		final HashMap<Sequence, Double> sequences = structuralEM(transactions,
-				singletons, inferenceAlgorithm, maxStructureSteps,
-				maxEMIterations);
+		final HashMap<Sequence, Double> sequences = structuralEM(transactions, singletons, inferenceAlgorithm,
+				maxStructureSteps, maxEMIterations);
 		if (LOG_LEVEL.equals(Level.FINEST))
-			logger.finest("\n======= Transaction Database =======\n"
-					+ Files.toString(inputFile, Charsets.UTF_8) + "\n");
+			logger.finest(
+					"\n======= Transaction Database =======\n" + Files.toString(inputFile, Charsets.UTF_8) + "\n");
 
 		// Sort sequences by interestingness
-		final HashMap<Sequence, Double> intMap = calculateInterestingness(
-				sequences, transactions);
-		final Map<Sequence, Double> sortedSequences = sortSequences(sequences,
-				intMap);
+		final HashMap<Sequence, Double> intMap = calculateInterestingness(sequences, transactions);
+		final Map<Sequence, Double> sortedSequences = sortSequences(sequences, intMap);
 
 		logger.info("\n============= INTERESTING SEQUENCES =============\n");
 		for (final Entry<Sequence, Double> entry : sortedSequences.entrySet()) {
-			logger.info(String.format("%s\tprob: %1.5f \tint: %1.5f %n",
-					entry.getKey(), entry.getValue(),
+			logger.info(String.format("%s\tprob: %1.5f \tint: %1.5f %n", entry.getKey(), entry.getValue(),
 					intMap.get(entry.getKey())));
 		}
 		logger.info("\n");
@@ -137,8 +127,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 		return sortedSequences;
 	}
 
-	public static TransactionList readTransactions(final File inputFile)
-			throws IOException {
+	public static TransactionList readTransactions(final File inputFile) throws IOException {
 
 		final List<Transaction> transactions = new ArrayList<>();
 		final List<String> cachedLines = new ArrayList<>();
@@ -150,8 +139,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 			final String line = it.nextLine();
 			// if the line is a comment, is empty or is a
 			// kind of metadata
-			if (line.isEmpty() == true || line.charAt(0) == '#'
-					|| line.charAt(0) == '%' || line.charAt(0) == '@') {
+			if (line.isEmpty() == true || line.charAt(0) == '#' || line.charAt(0) == '%' || line.charAt(0) == '@') {
 				continue;
 			}
 
@@ -168,8 +156,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 		LineIterator.closeQuietly(it);
 
 		// Convert cached lines to array
-		final String[] cachedDB = cachedLines.toArray(new String[cachedLines
-				.size()]);
+		final String[] cachedDB = cachedLines.toArray(new String[cachedLines.size()]);
 
 		return new TransactionList(transactions, cachedDB);
 	}
@@ -203,8 +190,8 @@ public class ItemsetMining extends ItemsetMiningCore {
 	 *            the input file
 	 * @return a multiset for storing the support of each singleton
 	 */
-	public static Multiset<Sequence> scanDatabaseToDetermineFrequencyOfSingleItems(
-			final File inputFile) throws IOException {
+	public static Multiset<Sequence> scanDatabaseToDetermineFrequencyOfSingleItems(final File inputFile)
+			throws IOException {
 
 		final Multiset<Sequence> singletons = HashMultiset.create();
 
@@ -215,8 +202,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 			final String line = it.nextLine();
 			// if the line is a comment, is empty or is a
 			// kind of metadata
-			if (line.isEmpty() == true || line.charAt(0) == '#'
-					|| line.charAt(0) == '%' || line.charAt(0) == '@') {
+			if (line.isEmpty() == true || line.charAt(0) == '#' || line.charAt(0) == '%' || line.charAt(0) == '@') {
 				continue;
 			}
 
@@ -241,8 +227,7 @@ public class ItemsetMining extends ItemsetMiningCore {
 		return singletons;
 	}
 
-	private static void recursiveSetOccurrence(final Sequence seq,
-			final HashSet<Sequence> seenItems) {
+	private static void recursiveSetOccurrence(final Sequence seq, final HashSet<Sequence> seenItems) {
 		if (seenItems.contains(seq)) {
 			seq.incrementOccurence();
 			recursiveSetOccurrence(seq, seenItems);

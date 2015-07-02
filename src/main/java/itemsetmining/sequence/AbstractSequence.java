@@ -1,4 +1,4 @@
-package itemsetmining.itemset;
+package itemsetmining.sequence;
 
 import java.io.Serializable;
 import java.util.AbstractCollection;

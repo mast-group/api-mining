@@ -1,7 +1,7 @@
 package itemsetmining.eval;
 
-import itemsetmining.itemset.Sequence;
-import itemsetmining.main.ItemsetMiningCore;
+import itemsetmining.main.SequenceMiningCore;
+import itemsetmining.sequence.Sequence;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 
-public class ItemsetSymmetricDistance {
+public class SequenceSymmetricDistance {
 
 	private static final int topN = 100;
 	private static final String baseDir = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/";
@@ -31,7 +31,7 @@ public class ItemsetSymmetricDistance {
 					+ FSMlogs[i].substring(0, FSMlogs[i].lastIndexOf('.')));
 
 			// Read in interesting sequences
-			final Map<Sequence, Double> intItemsets = ItemsetMiningCore
+			final Map<Sequence, Double> intItemsets = SequenceMiningCore
 					.readISMSequences(new File(baseDir + "Logs/" + ISMlogs[i]));
 			System.out.println("\nISM Sequences\n-----------");
 			System.out.println("No sequences: " + intItemsets.size());
@@ -58,7 +58,7 @@ public class ItemsetSymmetricDistance {
 			System.out.println("Avg subseq size: " + avgSize);
 
 			// Read in frequent sequences
-			final SortedMap<Sequence, Integer> freqItemsets = FrequentItemsetMining
+			final SortedMap<Sequence, Integer> freqItemsets = FrequentSequenceMining
 					.readFrequentSequences(new File(baseDir + "FIM/"
 							+ FSMlogs[i]));
 			System.out.println("\nFSM Sequences\n------------");

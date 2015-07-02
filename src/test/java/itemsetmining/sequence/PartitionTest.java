@@ -1,6 +1,8 @@
-package itemsetmining.itemset;
+package itemsetmining.sequence;
 
 import static org.junit.Assert.assertEquals;
+
+import itemsetmining.sequence.Sequence;
 import itemsetmining.transaction.Transaction;
 import itemsetmining.transaction.TransactionGenerator;
 

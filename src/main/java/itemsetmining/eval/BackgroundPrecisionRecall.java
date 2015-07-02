@@ -1,9 +1,9 @@
 package itemsetmining.eval;
 
-import itemsetmining.itemset.Sequence;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
-import itemsetmining.main.ItemsetMining;
-import itemsetmining.main.ItemsetMiningCore;
+import itemsetmining.sequence.Sequence;
+import itemsetmining.main.SequenceMining;
+import itemsetmining.main.SequenceMiningCore;
 import itemsetmining.util.Logging;
 
 import java.io.File;
@@ -47,7 +47,7 @@ public class BackgroundPrecisionRecall {
 	public static void main(final String[] args) throws IOException {
 
 		// Read in background distribution
-		final Map<Sequence, Double> sequences = ItemsetMiningCore
+		final Map<Sequence, Double> sequences = SequenceMiningCore
 				.readISMSequences(sequenceLog);
 
 		// final HashMap<Sequence, Double> sequences = TransactionGenerator
@@ -85,13 +85,13 @@ public class BackgroundPrecisionRecall {
 			// FrequentItemsetMining
 			// .mineFrequentSequencesPrefixSpan(dbFile.getAbsolutePath(),
 			// logFile.getAbsolutePath(), minSup);
-			minedSequences = FrequentItemsetMining
+			minedSequences = FrequentSequenceMining
 					.readFrequentSequences(
 							new File(
 									"/disk/data1/jfowkes/logs/FSM-sequence-28.05.2015-10:16:27.log"))
 					.keySet();
 		} else if (algorithm.equals("ISM")) {
-			final Map<Sequence, Double> minedIntSeqs = ItemsetMining
+			final Map<Sequence, Double> minedIntSeqs = SequenceMining
 					.mineSequences(dbFile, new InferGreedy(),
 							maxStructureSteps, noIterations, logFile);
 			// final Map<Sequence, Double> minedIntSeqs = ItemsetMining

@@ -1,9 +1,9 @@
 package itemsetmining.eval;
 
-import itemsetmining.itemset.Sequence;
 import itemsetmining.main.InferenceAlgorithms.InferGreedy;
-import itemsetmining.main.ItemsetMining;
-import itemsetmining.main.ItemsetMiningCore;
+import itemsetmining.sequence.Sequence;
+import itemsetmining.main.SequenceMining;
+import itemsetmining.main.SequenceMiningCore;
 import itemsetmining.transaction.TransactionGenerator;
 import itemsetmining.util.Logging;
 
@@ -18,7 +18,7 @@ import java.util.Map.Entry;
 
 import org.apache.commons.io.output.TeeOutputStream;
 
-public class ItemsetScaling {
+public class SequenceScaling {
 
 	/** Main Settings */
 	private static final File dbFile = new File(
@@ -57,7 +57,7 @@ public class ItemsetScaling {
 		System.setOut(ps);
 
 		// Read in previously mined sequences
-		final Map<Sequence, Double> sequences = ItemsetMiningCore
+		final Map<Sequence, Double> sequences = SequenceMiningCore
 				.readISMSequences(itemsetLog);
 		System.out.print("\n============= ACTUAL SEQUENCES =============\n");
 		for (final Entry<Sequence, Double> entry : sequences.entrySet()) {
@@ -81,7 +81,7 @@ public class ItemsetScaling {
 			final File logFile = Logging.getLogFileName("IIM", true, saveDir,
 					dbFile);
 			final long startTime = System.currentTimeMillis();
-			ItemsetMining.mineSequences(dbFile, new InferGreedy(),
+			SequenceMining.mineSequences(dbFile, new InferGreedy(),
 					maxStructureSteps, maxEMIterations, logFile);
 
 			final long endTime = System.currentTimeMillis();
