@@ -1,0 +1,10 @@
+	public static IOpenable getJavaInput(IEditorPart part) {
+		IEditorInput editorInput= part.getEditorInput();
+		if (editorInput != null) {
+			IJavaElement input= javaUIgetEditorInputJavaElement(editorInput);
+			if (input instanceof IOpenable) {
+				return (IOpenable) input;
+			}
+		}
+		return null;	
+	}
