@@ -1,0 +1,27 @@
+*.class
+
+.metadata
+bin/
+tmp/
+target/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.loadpath
+.directory
+.DS_Store
+.__afs*
+
+# External tool builders
+.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+# Repository specific
+*.ser
+runParameters.txt
+default.properties
+.settings/
