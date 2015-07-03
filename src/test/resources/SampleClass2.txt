@@ -1,0 +1,60 @@
+package junit.framework;
+
+import java.util.List;
+import java.util.ArrayList;
+
+/**
+ * This is just a piece of code from JUnit. Not necessarily working.
+ * A <code>TestResult</code> collects the results of executing
+ * a test case. It is an instance of the Collecting Parameter pattern.
+ * The test framework distinguishes between <i>failures</i> and <i>errors</i>.
+ * A failure is anticipated and checked for with assertions. Errors are
+ * unanticipated problems like an {@link ArrayIndexOutOfBoundsException}.
+ *
+ * @see Test
+ */
+public class TestResult extends Object {
+    protected List<TestFailure> fFailures;
+
+    public TestResult() {
+        fFailures = new ArrayList<TestFailure>();
+        fErrors = new ArrayList<TestFailure>();
+        fListeners = new ArrayList<TestListener>();
+        fRunTests = 0;
+        fStop = false;
+    }
+
+    /**
+     * Adds an error to the list of errors. The passed in exception
+     * caused the error.
+     */
+    public synchronized void addError(Test test, Throwable t) {
+        fErrors.add(new TestFailure(test, t));
+        for (TestListener each : cloneListeners()) {
+            each.addError(test, t);
+        }
+    }
+
+
+    /**
+     * Runs a TestCase.
+     */
+    public void runProtected(final Test test, Protectable p) {
+        try {
+            p.protect();
+        } catch (AssertionFailedError e) {
+            addFailure(test, e);
+        } catch (ThreadDeath e) { // don't catch ThreadDeath by accident
+            throw e;
+        } catch (Throwable e) {
+            addError(test, e);
+        }
+    }
+
+    /**
+     * Checks whether the test run should stop
+     */
+    public synchronized boolean shouldStop() {
+        return fStop;
+    }
+}
