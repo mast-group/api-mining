@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 
@@ -18,62 +19,81 @@ import apimining.java.ASTVisitors.WildcardImportVisitor;
  */
 public class WildcardNamespaceCollector {
 
-	private static final File srcFolder = new File("/afs/inf.ed.ac.uk/user/j/jfowkes/Code/API/netty/");
-	private static final File corpusFolder = new File("/afs/inf.ed.ac.uk/user/j/jfowkes/Code/API/netty/");
+	private static final String libFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/API/java_libraries/";
 	private static final String namespaceFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/API/namespaces/";
+
+	private static final String[] projFolders = new String[] { "androidLocation", "androidWifi", "elasticsearch",
+			"hadoop", "hibernate", "jgit", "jsoup", "lucene", "neo4j", "netty", "opennlp", "rabbitmq", "rhino",
+			"spatial4j", "twitter4j" };
+	private static final String[] packageNames = new String[] { "android.location", "android.net.wifi",
+			"org.elasticsearch", "org.apache.hadoop", "org.hibernate", "org.eclipse.jgit", "org.jsoup",
+			"org.apache.lucene", "org.neo4j", "io.netty", "opennlp", "com.rabbitmq", "org.mozilla.javascript",
+			"com.spatial4j", "twitter4j" };
 
 	public static void main(final String[] args) throws IOException {
 
-		// Get wildcarded imports
-		final WildcardImportVisitor wiv = new WildcardImportVisitor("io\\.netty.*");
+		for (int i = 0; i < packageNames.length; i++) {
+			System.out.println("===== Package " + projFolders[i] + ", namespace " + packageNames[i]);
 
-		final List<File> files = (List<File>) FileUtils.listFiles(srcFolder, new String[] { "java" }, true);
-		Collections.sort(files);
+			final List<File> files = (List<File>) FileUtils.listFiles(new File(libFolder + projFolders[i]),
+					new String[] { "java" }, true);
+			Collections.sort(files);
 
-		int count = 0;
+			final WildcardImportVisitor wiv = getWildcardImports(packageNames[i], files);
+
+			writeNamespaces("class", wiv.wildcardImports, files);
+			writeNamespaces("method", wiv.wildcardMethodImports, files);
+		}
+
+	}
+
+	public static WildcardImportVisitor getWildcardImports(final String packageName, final List<File> files) {
+
+		final WildcardImportVisitor wiv = new WildcardImportVisitor(packageName.replaceAll("\\.", "\\\\.") + ".*");
+
 		for (final File file : files) {
 
 			if (file.length() == 0)
 				continue; // Ignore empty files
 
-			if (count % 50 == 0)
-				System.out.println("At file " + count + " of " + files.size());
-			count++;
-
-			wiv.process(APICallExtractor.getAST(file));
+			wiv.process(ASTVisitors.getAST(file));
 		}
 
-		// Get wildcarded namespaces
-		for (final String namespace : wiv.wildcardImports) {
+		return wiv;
+	}
+
+	public static void writeNamespaces(final String type, final Set<String> namespaces, final List<File> files)
+			throws IOException {
+		if (!namespaces.isEmpty())
+			System.out.println("Looking for " + type + " namespaces for: ");
+
+		// Class namespaces
+		for (final String namespace : namespaces) {
+			System.out.println("      " + namespace);
 
 			final FQImportVisitor fqiv = new FQImportVisitor(namespace.replaceAll("\\.", "\\\\.") + ".*");
-
-			final List<File> files2 = (List<File>) FileUtils.listFiles(corpusFolder, new String[] { "java" }, true);
-			Collections.sort(files2);
-
-			int count2 = 0;
-			for (final File file : files2) {
+			for (final File file : files) {
 
 				if (file.length() == 0)
 					continue; // Ignore empty files
 
-				if (count2 % 50 == 0)
-					System.out.println("At file " + count2 + " of " + files2.size());
-				count2++;
-
-				fqiv.process(APICallExtractor.getAST(file));
+				fqiv.process(ASTVisitors.getAST(file));
 			}
 
-			final File outFile = new File(namespaceFolder + "/class/" + namespace);
-			final PrintWriter out = new PrintWriter(outFile, "UTF-8");
+			Set<String> fqImports;
+			if (type.equals("class"))
+				fqImports = fqiv.fqImports;
+			else
+				fqImports = fqiv.fqMethodImports;
 
-			for (final String fqName : fqiv.fqImports)
-				out.println(fqName);
-
-			out.close();
-
+			if (!fqImports.isEmpty()) {
+				final PrintWriter out = new PrintWriter(new File(namespaceFolder + "/" + type + "/" + namespace),
+						"UTF-8");
+				for (final String fqName : fqImports)
+					out.println(fqName);
+				out.close();
+			}
 		}
-
 	}
 
 }

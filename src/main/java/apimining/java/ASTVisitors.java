@@ -1,5 +1,6 @@
 package apimining.java;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -10,6 +11,8 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
+
+import codemining.java.codeutils.JavaASTExtractor;
 
 /**
  * Container class for AST Visitors
@@ -202,6 +205,23 @@ public class ASTVisitors {
 	}
 
 	private ASTVisitors() {
+	}
+
+	/**
+	 * Get AST for source file
+	 *
+	 * @author Jaroslav Fowkes
+	 */
+	public static CompilationUnit getAST(final File fin) {
+	
+		CompilationUnit cu = null;
+		final JavaASTExtractor ext = new JavaASTExtractor(false, true);
+		try {
+			cu = ext.getAST(fin);
+		} catch (final Exception exc) {
+			System.out.println("=+=+=+=+= AST Parse " + exc);
+		}
+		return cu;
 	}
 
 }

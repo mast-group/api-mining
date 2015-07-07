@@ -43,6 +43,9 @@ import com.google.common.collect.Maps;
 public class JavaApproximateTypeInferencer extends ASTVisitor {
 	private int nextDeclarId = 0;
 
+	/** Root node of current AST */
+	protected final CompilationUnit rootNode;
+
 	protected String currentPackage = "";
 
 	/**
@@ -291,8 +294,12 @@ public class JavaApproximateTypeInferencer extends ASTVisitor {
 		return variableTypes;
 	}
 
-	public void process(final CompilationUnit unit) {
-		unit.accept(this);
+	public JavaApproximateTypeInferencer(final CompilationUnit node) {
+		rootNode = node;
+	}
+
+	public void process() {
+		rootNode.accept(this);
 	}
 
 }
