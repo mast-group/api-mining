@@ -15,6 +15,14 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
+  <!-- Maven Repository on GitHub -->
+  <repositories>
+      <repository>
+          <id>maven-repo</id>
+          <url>https://github.com/mast-group/maven-repo/raw/master/repository/</url>
+      </repository>
+  </repositories>
+
   <build>
      <plugins>
         <plugin>
@@ -64,6 +72,16 @@
 	  <artifactId>jcommander</artifactId>
 	  <version>1.35</version>
     </dependency> 
+    <dependency>
+	  <groupId>codemining.deps</groupId>
+	  <artifactId>spmf</artifactId>
+	  <version>0.96r13</version>
+    </dependency>
+    <dependency>
+	  <groupId>nz.ac.waikato.cms.weka</groupId>
+	  <artifactId>weka-stable</artifactId>
+	  <version>3.6.6</version>
+	</dependency>
   </dependencies>
   
   <reporting>
