@@ -1,7 +1,9 @@
 package apimining.java;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -10,6 +12,9 @@ import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.PackageDeclaration;
+import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 
 import codemining.java.codeutils.JavaASTExtractor;
@@ -20,32 +25,60 @@ import codemining.java.codeutils.JavaASTExtractor;
 public class ASTVisitors {
 
 	/**
-	 * Visitor to find names of locally declared classes
+	 * Visitor to find fully qualified names of locally declared classes and
+	 * methods
 	 *
 	 * @author Jaroslav Fowkes <jaroslav.fowkes@ed.ac.uk>
 	 */
-	public static class ClassDeclarationVisitor extends ASTVisitor {
+	public static class MethodClassDeclarationVisitor extends ASTVisitor {
 
-		public Set<String> decClasses = new HashSet<>();
+		private String currentPackage = "";
+		private final StringBuilder scopeName = new StringBuilder();
+		public final Set<String> decClasses = new HashSet<>();
+		public final Map<String, Type> methodReturnTypes = new HashMap<>();
+
+		@Override
+		public boolean visit(final PackageDeclaration node) {
+			currentPackage = node.getName().getFullyQualifiedName();
+			return false;
+		}
 
 		@Override
 		public boolean visit(final TypeDeclaration node) {
-			decClasses.add(node.getName().toString());
+			scopeName.append("." + node.getName().toString());
+			decClasses.add(currentPackage + scopeName);
 			return super.visit(node);
+		}
+
+		@Override
+		public void endVisit(final TypeDeclaration node) {
+			scopeName.delete(scopeName.lastIndexOf("."), scopeName.length());
 		}
 
 		@Override
 		public boolean visit(final EnumDeclaration node) {
-			decClasses.add(node.getName().toString());
+			scopeName.append("." + node.getName().toString());
+			decClasses.add(currentPackage + scopeName);
 			return super.visit(node);
 		}
 
-	}
+		@Override
+		public void endVisit(final EnumDeclaration node) {
+			scopeName.delete(scopeName.lastIndexOf("."), scopeName.length());
+		}
 
-	public static Set<String> getDeclaredClasses(final CompilationUnit root) {
-		final ClassDeclarationVisitor cdv = new ClassDeclarationVisitor();
-		root.accept(cdv);
-		return cdv.decClasses;
+		@Override
+		public boolean visit(final MethodDeclaration node) {
+			final String name = node.getName().toString();
+			final Type returnType = node.getReturnType2();
+			methodReturnTypes.put(currentPackage + scopeName + "." + name, returnType);
+			return super.visit(node);
+		}
+
+		public void process(final CompilationUnit unit) {
+			unit.accept(this);
+		}
+
 	}
 
 	/**
@@ -94,7 +127,8 @@ public class ASTVisitors {
 			if (this.fStart <= nodeStart && nodeEnd <= this.fEnd) {
 				if (this.fCoveringBlock == node) { // nodeStart == fStart &&
 													// nodeEnd == fEnd
-					return true; // look further for node with same length as
+					return true; // look further for node with same length
+									// as
 									// parent
 				}
 				return false;
@@ -204,16 +238,13 @@ public class ASTVisitors {
 
 	}
 
-	private ASTVisitors() {
-	}
-
 	/**
 	 * Get AST for source file
 	 *
 	 * @author Jaroslav Fowkes
 	 */
 	public static CompilationUnit getAST(final File fin) {
-	
+
 		CompilationUnit cu = null;
 		final JavaASTExtractor ext = new JavaASTExtractor(false, true);
 		try {
@@ -222,6 +253,9 @@ public class ASTVisitors {
 			System.out.println("=+=+=+=+= AST Parse " + exc);
 		}
 		return cu;
+	}
+
+	private ASTVisitors() {
 	}
 
 }

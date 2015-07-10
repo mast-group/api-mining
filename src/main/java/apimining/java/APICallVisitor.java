@@ -2,13 +2,13 @@ package apimining.java;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Stack;
 
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ArrayAccess;
@@ -18,6 +18,7 @@ import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConditionalExpression;
+import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
@@ -29,29 +30,43 @@ import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
-import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.Type;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.TypeLiteral;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Table;
 import com.google.common.io.Files;
 
+import apimining.java.ASTVisitors.MethodClassDeclarationVisitor;
 import apimining.java.ASTVisitors.WildcardImportVisitor;
 
 /**
- * Visit all API calls (method invocations and class instance creations) in
+ * Visit all API calls (method invocations, and class instance creations) in
  * given AST and approximately resolve their fully qualified names.
  *
  * Optionally supply namespace files to resolve wildcard imports.
+ *
+ * <p>
+ * <b>Caveats:</b> Resolving nested method calls has severe limitations.
+ * Currently local methods are not in-lined (ala MAPO) Currently there is no way
+ * of knowing if wildcard imports have been fully resolved (i.e. if the supplied
+ * namespace is complete), therefore package local classes/methods are not
+ * resolved when wildcard imports are present. Superclass methods (and their
+ * return types) are not resolved. Super method/constructor invocations are not
+ * considered, neither are class cast expressions.
  *
  * @author Jaroslav Fowkes <jaroslav.fowkes@ed.ac.uk>
  */
 public class APICallVisitor extends JavaApproximateTypeInferencer {
 
-	/** Locally declared classes */
+	/** fqNames for declared classes */
 	private final Set<String> decClasses;
+
+	/** Map between declared method fqNames and their return types */
+	private final Map<String, Type> methodReturnTypes;
 
 	/** Folder with namespaces for wildcarded imports */
 	private final String wildcardNameSpaceFolder;
@@ -62,44 +77,26 @@ public class APICallVisitor extends JavaApproximateTypeInferencer {
 	/** Wildcarded static imports */
 	private final Set<String> wildcardMethodImports;
 
-	/** A map between statically imported methodNames and their fqName */
+	/** Map between statically imported method names and their fqName */
 	private final Map<String, String> methodImports = new HashMap<>();
 
-	/** A map between declared methods and their return types */
-	private final Map<String, Type> methodReturnTypes = new HashMap<>();
+	/** Multimap between declared methods and API Calls */
+	private final LinkedListMultimap<MethodDeclaration, Expression> apiCalls = LinkedListMultimap.create();
 
-	/** API Calls */
-	private final List<Expression> apiCalls = new ArrayList<>();
+	/** Declared method stack */
+	private final Stack<MethodDeclaration> methodStack = new Stack<MethodDeclaration>();
+
+	/** Map between declared methods and their fqName */
+	private final Map<MethodDeclaration, String> methodNames = new HashMap<>();
+
+	/** Class scope name */
+	private final StringBuilder scopeName = new StringBuilder();
 
 	/** Unresolved class names */
 	private final Set<String> unresClasses = new HashSet<>();
 
 	/** Unresolved method names */
 	private final Set<String> unresMethods = new HashSet<>();
-
-	@Override
-	protected final String getFullyQualifiedNameFor(final String name) {
-		final String className = name.replace(".", "$"); // Nested classes
-		if (importedNames.containsKey(className))
-			return importedNames.get(className);
-		for (final String wildcardImport : wildcardImports) { // java.util.* etc
-			try {
-				return Class.forName(wildcardImport + "." + className).getName();
-			} catch (final ClassNotFoundException e) {
-			}
-		}
-		try {
-			return Class.forName("java.lang." + className).getName();
-		} catch (final ClassNotFoundException e) {
-		}
-		if (decClasses.contains(className))
-			return "LOCAL." + className;
-		// No wildcard imports, thus it's in the current package
-		if (wildcardImports.isEmpty())
-			return "LOCAL." + className;
-		unresClasses.add(className);
-		return "UNRESOLVED." + className;
-	}
 
 	@Override
 	public boolean visit(final ImportDeclaration node) {
@@ -116,28 +113,52 @@ public class APICallVisitor extends JavaApproximateTypeInferencer {
 
 	@Override
 	public boolean visit(final MethodDeclaration node) {
+		methodStack.push(node);
 		final String name = node.getName().toString();
-		final Type returnType = node.getReturnType2();
-		methodReturnTypes.put(name, returnType);
+		methodNames.put(node, currentPackage + scopeName + "." + name);
 		return super.visit(node);
+	}
+
+	@Override
+	public void endVisit(final MethodDeclaration node) {
+		final MethodDeclaration curNode = methodStack.pop();
+		assert curNode == node; // node was top of stack
 	}
 
 	@Override
 	public boolean visit(final MethodInvocation node) {
-		apiCalls.add(node);
-		return super.visit(node);
-	}
-
-	@Override
-	public boolean visit(final SuperMethodInvocation node) {
-		apiCalls.add(node);
+		if (methodStack.size() > 0) // ignore class-level calls
+			apiCalls.put(methodStack.peek(), node);
 		return super.visit(node);
 	}
 
 	@Override
 	public boolean visit(final ClassInstanceCreation node) {
-		apiCalls.add(node);
+		if (methodStack.size() > 0) // ignore class-level calls
+			apiCalls.put(methodStack.peek(), node);
 		return super.visit(node);
+	}
+
+	@Override
+	public boolean visit(final TypeDeclaration node) {
+		scopeName.append("." + node.getName().toString());
+		return super.visit(node);
+	}
+
+	@Override
+	public void endVisit(final TypeDeclaration node) {
+		scopeName.delete(scopeName.lastIndexOf("."), scopeName.length());
+	}
+
+	@Override
+	public boolean visit(final EnumDeclaration node) {
+		scopeName.append("." + node.getName().toString());
+		return super.visit(node);
+	}
+
+	@Override
+	public void endVisit(final EnumDeclaration node) {
+		scopeName.delete(scopeName.lastIndexOf("."), scopeName.length());
 	}
 
 	public APICallVisitor(final CompilationUnit unit) {
@@ -154,7 +175,10 @@ public class APICallVisitor extends JavaApproximateTypeInferencer {
 
 		this.wildcardNameSpaceFolder = wildcardNameSpaceFolder;
 
-		decClasses = ASTVisitors.getDeclaredClasses(unit);
+		final MethodClassDeclarationVisitor mcdv = new MethodClassDeclarationVisitor();
+		mcdv.process(unit);
+		decClasses = mcdv.decClasses;
+		methodReturnTypes = mcdv.methodReturnTypes;
 
 		final WildcardImportVisitor wiv = new WildcardImportVisitor(".*");
 		wiv.process(unit);
@@ -198,28 +222,40 @@ public class APICallVisitor extends JavaApproximateTypeInferencer {
 		rootNode.accept(this);
 	}
 
-	private String getFQMethodClassFor(final Expression expression,
-			final Table<ASTNode, String, String> variableScopeNameTypes, final ASTNode parent) {
-		if (expression == null && parent.getNodeType() == ASTNode.METHOD_INVOCATION) { // method1().method2()
-			final String name = ((MethodInvocation) parent).getName().toString();
-			if (methodReturnTypes.containsKey(name))
-				return getNameOfType(methodReturnTypes.get(name));
-			return "UNRESOLVED";
+	@Override
+	protected final String getFullyQualifiedNameFor(final String className) {
+		if (importedNames.containsKey(className))
+			return importedNames.get(className);
+		for (final String wildcardImport : wildcardImports) { // java.util.* etc
+			try {
+				return Class.forName(wildcardImport + "." + className.replace(".", "$")).getName();
+			} catch (final ClassNotFoundException | NoClassDefFoundError | ExceptionInInitializerError e) {
+			}
 		}
-		if (expression.getNodeType() == ASTNode.THIS_EXPRESSION && parent.getNodeType() == ASTNode.METHOD_INVOCATION) {
-			final String name = ((MethodInvocation) parent).getName().toString(); // this.method1().method2()
-			if (methodReturnTypes.containsKey(name))
-				return getNameOfType(methodReturnTypes.get(name));
-			return "UNRESOLVED";
+		try {
+			return Class.forName("java.lang." + className.replace(".", "$")).getName();
+		} catch (final ClassNotFoundException e) {
 		}
-		if (expression.getNodeType() == ASTNode.SUPER_METHOD_INVOCATION) // super().method1().method2()
-			return "UNRESOLVED";
+		for (final String fqClassName : decClasses) { // Local classes
+			if (fqClassName.endsWith(className))
+				return fqClassName;
+		}
+		// No wildcard imports, thus it's in the current package
+		if (wildcardImports.isEmpty())
+			return currentPackage + "." + className;
+		unresClasses.add(className);
+		return "UNRESOLVED." + className;
+	}
+
+	private String getFQMethodClassFor(final Expression expression, final String parentClassName,
+			final Table<ASTNode, String, String> variableScopeNameTypes) {
 		if (expression.getNodeType() == ASTNode.QUALIFIED_NAME)
 			return ((QualifiedName) expression).getFullyQualifiedName();
 		if (expression.getNodeType() == ASTNode.SIMPLE_NAME) {
 			final String name = ((SimpleName) expression).toString();
 			final ASTNode scope = ASTVisitors.getCoveringBlock(rootNode, expression);
-			if (variableScopeNameTypes.contains(scope, name)) // variable name
+			if (variableScopeNameTypes.contains(scope, name)) // variable
+																// name
 				return variableScopeNameTypes.get(scope, name);
 			return getFullyQualifiedNameFor(name); // class name
 		}
@@ -250,25 +286,44 @@ public class APICallVisitor extends JavaApproximateTypeInferencer {
 			final MethodInvocation inv = (MethodInvocation) expression;
 			if (inv.getName().toString().equals("forName")) { // Class.forName()
 				final Expression reqClass = (Expression) inv.arguments().get(0);
-				return getFQMethodClassFor(reqClass, variableScopeNameTypes, expression);
-			} else // Handle nested method calls
-				return getFQMethodClassFor(inv.getExpression(), variableScopeNameTypes, expression);
+				return getFQMethodClassFor(reqClass, parentClassName, variableScopeNameTypes);
+			} else { // Handle nested method calls
+				if (inv.getExpression() == null) { // method1().method2()
+					final String name = ((MethodInvocation) expression).getName().toString();
+					if (methodReturnTypes.containsKey(parentClassName + "." + name))
+						return getNameOfType(methodReturnTypes.get(parentClassName + "." + name));
+					return "UNRESOLVED";
+				}
+				if (inv.getExpression().getNodeType() == ASTNode.THIS_EXPRESSION) {
+					final String name = ((MethodInvocation) expression).getName().toString(); // this.method1().method2()
+					if (methodReturnTypes.containsKey(parentClassName + "." + name))
+						return getNameOfType(methodReturnTypes.get(parentClassName + "." + name));
+					return "UNRESOLVED";
+				}
+				if (inv.getExpression().getNodeType() == ASTNode.SIMPLE_NAME) // variable.method1().method2()
+					return "UNRESOLVED"; // TODO could do better here?
+				if (inv.getExpression().getNodeType() == ASTNode.METHOD_INVOCATION) // method1().method2().method3()
+					return "UNRESOLVED"; // TODO could do better here?
+				return "UNRESOLVED"; // TODO could do better in some of these?
+			}
 		}
+		if (expression.getNodeType() == ASTNode.SUPER_METHOD_INVOCATION) // super().method1().method2()
+			return "UNRESOLVED";
 		if (expression.getNodeType() == ASTNode.PARENTHESIZED_EXPRESSION) {
 			final ParenthesizedExpression par = (ParenthesizedExpression) expression;
-			return getFQMethodClassFor(par.getExpression(), variableScopeNameTypes, null);
+			return getFQMethodClassFor(par.getExpression(), parentClassName, variableScopeNameTypes);
 		}
 		if (expression.getNodeType() == ASTNode.ARRAY_ACCESS) {
 			final ArrayAccess array = (ArrayAccess) expression;
-			return getFQMethodClassFor(array.getArray(), variableScopeNameTypes, null).replace("[]", "");
+			return getFQMethodClassFor(array.getArray(), parentClassName, variableScopeNameTypes).replace("[]", "");
 		}
 		if (expression.getNodeType() == ASTNode.PREFIX_EXPRESSION) {
 			final PrefixExpression prefix = (PrefixExpression) expression;
-			return getFQMethodClassFor(prefix.getOperand(), variableScopeNameTypes, null);
+			return getFQMethodClassFor(prefix.getOperand(), parentClassName, variableScopeNameTypes);
 		}
 		if (expression.getNodeType() == ASTNode.POSTFIX_EXPRESSION) {
 			final PostfixExpression postfix = (PostfixExpression) expression;
-			return getFQMethodClassFor(postfix.getOperand(), variableScopeNameTypes, null);
+			return getFQMethodClassFor(postfix.getOperand(), parentClassName, variableScopeNameTypes);
 		}
 		if (expression.getNodeType() == ASTNode.INFIX_EXPRESSION) {
 			final InfixExpression infix = (InfixExpression) expression;
@@ -276,59 +331,63 @@ public class APICallVisitor extends JavaApproximateTypeInferencer {
 					&& (infix.getLeftOperand().toString().contains("toString()")
 							|| infix.getRightOperand().toString().contains("toString()")))
 				return "java.lang.String"; // toString() String concat.
-			final String fqLeftName = getFQMethodClassFor(infix.getLeftOperand(), variableScopeNameTypes, null);
-			final String fqRightName = getFQMethodClassFor(infix.getRightOperand(), variableScopeNameTypes, null);
+			final String fqLeftName = getFQMethodClassFor(infix.getLeftOperand(), parentClassName,
+					variableScopeNameTypes);
+			final String fqRightName = getFQMethodClassFor(infix.getRightOperand(), parentClassName,
+					variableScopeNameTypes);
 			if (fqLeftName.equals(fqRightName))
 				return fqLeftName; // general case
 			if (infix.getOperator() == InfixExpression.Operator.PLUS
 					&& (fqLeftName.equals("java.lang.String") || fqRightName.equals("java.lang.String")
 							|| fqLeftName.equals("java.lang.Character") || fqRightName.equals("java.lang.Character")))
 				return "java.lang.String"; // implicit String concat.
+			return "UNRESOLVED";
 		}
 		if (expression.getNodeType() == ASTNode.CONDITIONAL_EXPRESSION) {
 			final ConditionalExpression cond = (ConditionalExpression) expression;
-			final String fqThenName = getFQMethodClassFor(cond.getThenExpression(), variableScopeNameTypes, null);
-			final String fqElseName = getFQMethodClassFor(cond.getElseExpression(), variableScopeNameTypes, null);
+			final String fqThenName = getFQMethodClassFor(cond.getThenExpression(), parentClassName,
+					variableScopeNameTypes);
+			final String fqElseName = getFQMethodClassFor(cond.getElseExpression(), parentClassName,
+					variableScopeNameTypes);
 			if (fqThenName.equals("java.lang.String") || fqElseName.equals("java.lang.String"))
 				return "java.lang.String";
 			if (fqThenName.equals(fqElseName))
 				return fqThenName; // boolExp ? thenExp : elseExp
+			return "UNRESOLVED";
 		}
 		if (expression.getNodeType() == ASTNode.ASSIGNMENT) {
 			final Assignment ass = (Assignment) expression;
-			return getFQMethodClassFor(ass.getLeftHandSide(), variableScopeNameTypes, null);
+			return getFQMethodClassFor(ass.getLeftHandSide(), parentClassName, variableScopeNameTypes);
 		}
 		throw new RuntimeException("Unhandled Expression ASTNode. Please implement.");
 	}
 
-	public String getFullyQualifiedMethodNameFor(final Table<ASTNode, String, String> variableScopeNameTypes,
-			final Expression exp) {
+	public String getFullyQualifiedMethodNameFor(final Expression exp, final String parentClassName,
+			final Table<ASTNode, String, String> variableScopeNameTypes) {
 		String fqName;
 		String name;
 		if (exp.getNodeType() == ASTNode.CLASS_INSTANCE_CREATION) {
 			name = "<init>";
 			fqName = getNameOfType(((ClassInstanceCreation) exp).getType());
-		} else if (exp.getNodeType() == ASTNode.SUPER_METHOD_INVOCATION) {
-			final SuperMethodInvocation node = (SuperMethodInvocation) exp;
-			name = node.getName().toString();
-			if (node.getQualifier() != null && node.getQualifier().isQualifiedName())
-				fqName = ((QualifiedName) node.getQualifier()).getFullyQualifiedName();
-			else
-				fqName = "LOCAL";
 		} else { // MethodInvocation
 			final MethodInvocation node = (MethodInvocation) exp;
 			name = node.getName().toString();
 			if (node.getExpression() == null) {
 				if (methodImports.containsKey(name))
 					fqName = methodImports.get(name);
+				else if (methodReturnTypes.containsKey(parentClassName + "." + name))
+					fqName = parentClassName; // local
 				else if (wildcardMethodImports.isEmpty())
-					fqName = "LOCAL"; // local method
+					fqName = currentPackage; // package local method
 				else
 					fqName = "UNRESOLVED";
 			} else if (node.getExpression().getNodeType() == ASTNode.THIS_EXPRESSION) {
-				fqName = "LOCAL";
+				if (methodReturnTypes.containsKey(parentClassName + "." + name))
+					fqName = parentClassName; // local
+				else // superclass method
+					fqName = "SUPER";
 			} else {
-				fqName = getFQMethodClassFor(node.getExpression(), variableScopeNameTypes, null);
+				fqName = getFQMethodClassFor(node.getExpression(), parentClassName, variableScopeNameTypes);
 			}
 		}
 		if (fqName.equals("UNRESOLVED"))
@@ -347,9 +406,14 @@ public class APICallVisitor extends JavaApproximateTypeInferencer {
 		return string;
 	}
 
-	/** Get sequence of fully qualified names of API calls */
-	public ArrayList<String> getAPINames() {
-		final ArrayList<String> fqMethodNames = new ArrayList<>();
+	/**
+	 * Get multimap of fq method names to fully qualified names of API calls
+	 *
+	 * @param namespace
+	 *            API namespace (e.g. org.apache.hadoop), "" for all namespaces
+	 */
+	public LinkedListMultimap<String, String> getAPINames(final String namespace) {
+		final LinkedListMultimap<String, String> fqAPICalls = LinkedListMultimap.create();
 
 		// Get scopes for variables
 		final Table<ASTNode, String, String> variableScopeNameTypes = HashBasedTable.create();
@@ -359,8 +423,16 @@ public class APICallVisitor extends JavaApproximateTypeInferencer {
 				variableScopeNameTypes.put(scope, entry.getKey(), box(variableTypes.get(entry.getValue())));
 		}
 
-		for (final Expression exp : apiCalls)
-			fqMethodNames.add(getFullyQualifiedMethodNameFor(variableScopeNameTypes, exp));
+		for (final MethodDeclaration method : apiCalls.keySet()) {
+			for (final Expression exp : apiCalls.get(method)) {
+				final String fqCallingMethod = methodNames.get(method);
+				final String parentClassName = fqCallingMethod.substring(0, fqCallingMethod.lastIndexOf("."));
+				final String fqMethodCall = getFullyQualifiedMethodNameFor(exp, parentClassName,
+						variableScopeNameTypes);
+				if (fqMethodCall.startsWith(namespace))
+					fqAPICalls.put(fqCallingMethod, fqMethodCall);
+			}
+		}
 
 		for (final String className : unresClasses)
 			System.out.println("+++++ INFO: Unable to resolve class " + className);
@@ -368,7 +440,7 @@ public class APICallVisitor extends JavaApproximateTypeInferencer {
 		for (final String name : unresMethods)
 			System.out.println("+++++ INFO: Unable to resolve method " + name);
 
-		return fqMethodNames;
+		return fqAPICalls;
 	}
 
 }
