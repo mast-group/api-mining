@@ -17,7 +17,7 @@ public class MAPO {
 
 		final String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/calls/hadoop.arff";
 		final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/netty/hadoop/";
-		mineAPICallSequences(arffFile, outFolder, 10, 0.01);
+		mineAPICallSequences(arffFile, outFolder, 10, 0.9);
 
 	}
 
@@ -31,18 +31,26 @@ public class MAPO {
 	public static void mineAPICallSequences(final String arffFile, final String outFolder, final int noClusters,
 			final double minSupp) throws Exception {
 
+		System.out.print("===== Clustering call sequences... ");
 		final Multimap<Integer, String> clusteredCallSeqs = APICallClusterer.clusterAPICallSeqs(arffFile, noClusters);
+		System.out.println("done.");
 
 		int count = 0;
 		for (final Collection<String> callSeqs : clusteredCallSeqs.asMap().values()) {
 
+			System.out.println("+++++ Processing cluster #" + count);
+
+			System.out.print("  Creating temporary transaction DB... ");
 			final File transactionDB = File.createTempFile("APICallDB", ".txt");
 			final BiMap<String, Integer> dictionary = HashBiMap.create();
 			generateTransactionDatabase(callSeqs, dictionary, transactionDB);
+			System.out.println("done.");
 
+			System.out.print("  Mining frequent sequences... ");
 			final File freqSeqs = File.createTempFile("APICallSeqs", ".txt");
 			FrequentSequenceMining.mineFrequentClosedSequencesBIDE(transactionDB.getAbsolutePath(),
 					freqSeqs.getAbsolutePath(), minSupp);
+			System.out.println("done.");
 
 			final File outFile = new File(outFolder + "/Cluster" + count + "FreqCallSeqs.txt");
 			decodeFrequentSequences(freqSeqs, dictionary, outFile);
