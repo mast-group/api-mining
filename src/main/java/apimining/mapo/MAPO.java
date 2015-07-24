@@ -15,9 +15,12 @@ public class MAPO {
 
 	public static void main(final String[] args) throws Exception {
 
-		final String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/calls/hadoop.arff";
-		final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/netty/hadoop/";
-		mineAPICallSequences(arffFile, outFolder, 10, 0.9);
+		final String project = "elasticsearch";
+		final String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/calls/" + project
+				+ ".arff";
+		final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/" + project
+				+ "/mapo/";
+		mineAPICallSequences(arffFile, outFolder, 10, 0.6);
 
 	}
 
@@ -30,6 +33,8 @@ public class MAPO {
 	 */
 	public static void mineAPICallSequences(final String arffFile, final String outFolder, final int noClusters,
 			final double minSupp) throws Exception {
+
+		new File(outFolder).mkdirs();
 
 		System.out.print("===== Clustering call sequences... ");
 		final Multimap<Integer, String> clusteredCallSeqs = APICallClusterer.clusterAPICallSeqs(arffFile, noClusters);
@@ -48,7 +53,7 @@ public class MAPO {
 
 			System.out.print("  Mining frequent sequences... ");
 			final File freqSeqs = File.createTempFile("APICallSeqs", ".txt");
-			FrequentSequenceMining.mineFrequentClosedSequencesBIDE(transactionDB.getAbsolutePath(),
+			FrequentSequenceMining.mineFrequentSequencesSPAM(transactionDB.getAbsolutePath(),
 					freqSeqs.getAbsolutePath(), minSupp);
 			System.out.println("done.");
 
@@ -57,6 +62,7 @@ public class MAPO {
 
 			count++;
 		}
+
 	}
 
 	private static void generateTransactionDatabase(final Collection<String> callSeqs,
