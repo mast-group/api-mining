@@ -1,7 +1,9 @@
 package apimining.mapo;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.Map.Entry;
@@ -15,12 +17,12 @@ public class MAPO {
 
 	public static void main(final String[] args) throws Exception {
 
-		final String project = "andengine";
+		final String project = "cloud9";
 		final String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/calls/" + project
 				+ ".arff";
 		final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/" + project
 				+ "/mapo/";
-		mineAPICallSequences(arffFile, outFolder, 10, 0.15);
+		mineAPICallSequences(arffFile, outFolder, 10);
 
 	}
 
@@ -31,8 +33,8 @@ public class MAPO {
 	 *            API calls in ARF Format. Attributes are fqCaller and fqCalls
 	 *            as space separated string of API calls.
 	 */
-	public static void mineAPICallSequences(final String arffFile, final String outFolder, final int noClusters,
-			final double minSupp) throws Exception {
+	public static void mineAPICallSequences(final String arffFile, final String outFolder, final int noClusters)
+			throws Exception {
 
 		new File(outFolder).mkdirs();
 
@@ -41,31 +43,45 @@ public class MAPO {
 				noClusters);
 		System.out.println("done. Number of clusters: " + clusteredCallSeqs.keySet());
 
-		int count = 0;
-		for (final Collection<String> callSeqs : clusteredCallSeqs.asMap().values()) {
+		double minSupp = 0.1;
+		final BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		while (true) {
 
-			System.out.println("+++++ Processing cluster #" + count);
+			System.out.print("Enter minSupp:");
+			try {
+				minSupp = Double.parseDouble(br.readLine());
+			} catch (final NumberFormatException e) {
+				System.err.println("Invalid Format. Using " + minSupp);
+			}
+			if (minSupp <= 0)
+				break;
 
-			System.out.print("  Creating temporary transaction DB... ");
-			final File transactionDB = File.createTempFile("APICallDB", ".txt");
-			final BiMap<String, Integer> dictionary = HashBiMap.create();
-			generateTransactionDatabase(callSeqs, dictionary, transactionDB);
-			System.out.println("done.");
+			int count = 0;
+			for (final Collection<String> callSeqs : clusteredCallSeqs.asMap().values()) {
 
-			System.out.print("  Mining frequent sequences... ");
-			final File freqSeqs = File.createTempFile("APICallSeqs", ".txt");
-			FrequentSequenceMiner.mineFrequentSequencesSPAM(transactionDB.getAbsolutePath(), freqSeqs.getAbsolutePath(),
-					minSupp);
-			transactionDB.delete();
-			System.out.println("done.");
+				System.out.println("+++++ Processing cluster #" + count);
 
-			final File outFile = new File(outFolder + "/Cluster" + count + "FreqCallSeqs.txt");
-			decodeFrequentSequences(freqSeqs, dictionary, outFile);
-			freqSeqs.delete();
+				System.out.print("  Creating temporary transaction DB... ");
+				final File transactionDB = File.createTempFile("APICallDB", ".txt");
+				final BiMap<String, Integer> dictionary = HashBiMap.create();
+				generateTransactionDatabase(callSeqs, dictionary, transactionDB);
+				System.out.println("done.");
 
-			count++;
+				System.out.print("  Mining frequent sequences... ");
+				final File freqSeqs = File.createTempFile("APICallSeqs", ".txt");
+				FrequentSequenceMiner.mineFrequentSequencesSPAM(transactionDB.getAbsolutePath(),
+						freqSeqs.getAbsolutePath(), minSupp);
+				transactionDB.delete();
+				System.out.println("done.");
+
+				final File outFile = new File(outFolder + "/Cluster" + count + "FreqCallSeqs.txt");
+				decodeFrequentSequences(freqSeqs, dictionary, outFile);
+				freqSeqs.delete();
+
+				count++;
+			}
+
 		}
-
 	}
 
 	private static void generateTransactionDatabase(final Collection<String> callSeqs,
