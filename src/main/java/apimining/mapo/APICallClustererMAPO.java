@@ -23,7 +23,7 @@ import weka.core.converters.ConverterUtils.DataSource;
 import weka.core.neighboursearch.PerformanceStats;
 import weka.gui.hierarchyvisualizer.HierarchyVisualizer;
 
-public class APICallClusterer {
+public class APICallClustererMAPO {
 
 	public static void main(final String[] args) throws Exception {
 
@@ -49,7 +49,7 @@ public class APICallClusterer {
 		// Clusterer settings
 		final HierarchicalClusterer clusterer = new HierarchicalClusterer();
 		clusterer.setOptions(new String[] { "-L", "COMPLETE" }); // link type
-		clusterer.setDebug(false);
+		clusterer.setDebug(true);
 		clusterer.setNumClusters(noClusters);
 		clusterer.setDistanceFunction(MAPOSimilarity);
 		clusterer.setDistanceIsBranchLength(false);
@@ -68,15 +68,15 @@ public class APICallClusterer {
 			assignments.put(id, data.instance(i).stringValue(1));
 		}
 
-		// showDendrogram(clusterer);
+		showDendrogram(clusterer);
 
 		return assignments;
 	}
 
 	public static void showDendrogram(final HierarchicalClusterer clusterer) throws Exception {
 		final JFrame mainFrame = new JFrame("Dendrogram");
-		mainFrame.setSize(600, 400);
-		mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		mainFrame.setSize(1024, 768);
+		mainFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		final Container content = mainFrame.getContentPane();
 		content.setLayout(new GridLayout(1, 1));
 

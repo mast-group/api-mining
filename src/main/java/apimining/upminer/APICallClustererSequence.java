@@ -2,7 +2,9 @@ package apimining.upminer;
 
 import java.awt.Container;
 import java.awt.GridLayout;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
@@ -22,12 +24,12 @@ import weka.core.converters.ConverterUtils.DataSource;
 import weka.core.neighboursearch.PerformanceStats;
 import weka.gui.hierarchyvisualizer.HierarchyVisualizer;
 
-public class APICallClusterer {
+public class APICallClustererSequence {
 
 	public static void main(final String[] args) throws Exception {
 
 		final String dataset = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/calls/netty.arff";
-		final Multimap<Integer, String> assignments = clusterAPICallSeqs(dataset, 10);
+		final Multimap<Integer, String> assignments = clusterAPICallSeqs(dataset, 1);
 
 		// Print assignments
 		for (final int cluster : assignments.keySet()) {
@@ -38,18 +40,18 @@ public class APICallClusterer {
 	}
 
 	/**
-	 * Cluster API call sequences as described in MAPO
+	 * Cluster API call sequences as described in UPMiner
 	 *
 	 * @return Multimap of cluster IDs to API call sequences
 	 */
-	public static Multimap<Integer, String> clusterAPICallSeqs(final String arffFile, final int noClusters)
+	public static Multimap<Integer, String> clusterAPICallSeqs(final String arffFile, final double threshold)
 			throws Exception {
 
 		// Clusterer settings
 		final HierarchicalClusterer clusterer = new HierarchicalClusterer();
 		clusterer.setOptions(new String[] { "-L", "COMPLETE" }); // link type
-		clusterer.setDebug(false);
-		clusterer.setNumClusters(noClusters);
+		clusterer.setDebug(true);
+		clusterer.setNumClusters(1);
 		clusterer.setDistanceFunction(SeqSimilarity);
 		clusterer.setDistanceIsBranchLength(false);
 
@@ -60,22 +62,29 @@ public class APICallClusterer {
 		// Cluster API call seqs
 		clusterer.buildClusterer(data);
 
-		// Assign seqs to clusters
+		// Assign seqs to clusters based on dendrogram
+		String newick = clusterer.graph().replace("Newick:", "");
+		newick = newick.substring(0, newick.length() - 1);
+		final Multimap<Integer, String> clusters = NewickTreeParser.getClusters(newick, threshold);
+		System.out.println("No. clusters: " + clusters.keySet().size());
 		final Multimap<Integer, String> assignments = HashMultimap.create();
 		for (int i = 0; i < data.numInstances(); i++) {
-			final int id = clusterer.clusterInstance(data.instance(i));
-			assignments.put(id, data.instance(i).stringValue(1));
+			for (final int id : clusters.keySet()) {
+				if (clusters.get(id).contains(data.instance(i).stringValue(0)))
+					assignments.put(id, data.instance(i).stringValue(1));
+			}
 		}
 
-		// showDendrogram(clusterer);
+		showDendrogram(clusterer);
 
 		return assignments;
 	}
 
 	public static void showDendrogram(final HierarchicalClusterer clusterer) throws Exception {
-		final JFrame mainFrame = new JFrame("Dendrogram");
-		mainFrame.setSize(600, 400);
-		mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		final String timeStamp = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(new Date());
+		final JFrame mainFrame = new JFrame("Dendrogram " + timeStamp);
+		mainFrame.setSize(1024, 768);
+		mainFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		final Container content = mainFrame.getContentPane();
 		content.setLayout(new GridLayout(1, 1));
 

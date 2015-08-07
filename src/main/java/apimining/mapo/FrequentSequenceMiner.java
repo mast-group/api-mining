@@ -27,7 +27,7 @@ import ca.pfv.spmf.algorithms.sequentialpatterns.spade_spam_AGP.idLists.creators
 import ca.pfv.spmf.input.sequence_database_list_integers.SequenceDatabase;
 import ca.pfv.spmf.patterns.itemset_list_integers_without_support.Itemset;
 
-public class FrequentSequenceMining {
+public class FrequentSequenceMiner {
 
 	/** Run PrefixSpan algorithm */
 	public static SortedMap<Sequence, Integer> mineFrequentSequencesPrefixSpan(final String dataset,

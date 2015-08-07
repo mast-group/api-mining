@@ -12,19 +12,19 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Multimap;
 
-import apimining.mapo.FrequentSequenceMining;
+import apimining.mapo.FrequentSequenceMiner;
 import apimining.mapo.Sequence;
 
 public class UPMiner {
 
 	public static void main(final String[] args) throws Exception {
 
-		final String project = "elasticsearch";
-		final String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/calls/" + project
+		final String project = "andengine";
+		final String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/calls/" + project
 				+ ".arff";
-		final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/" + project
+		final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/" + project
 				+ "/upminer/";
-		mineAPICallSequences(arffFile, outFolder, 10, 0.6);
+		mineAPICallSequences(arffFile, outFolder, 1, 1, 0.3);
 
 	}
 
@@ -35,16 +35,17 @@ public class UPMiner {
 	 *            API calls in ARF Format. Attributes are fqCaller and fqCalls
 	 *            as space separated string of API calls.
 	 */
-	public static void mineAPICallSequences(final String arffFile, final String outFolder, final int noClusters,
-			final double minSupp) throws Exception {
+	public static void mineAPICallSequences(final String arffFile, final String outFolder, final int noClusters1,
+			final int noClusters2, final double minSupp) throws Exception {
 
 		new File(outFolder).mkdirs();
 		final File arffFileFreq = File.createTempFile("FreqCalls", ".arff");
 		writeArffHeader(arffFileFreq);
 
 		System.out.print("===== Clustering call sequences #1... ");
-		final Multimap<Integer, String> clusteredCallSeqs1 = APICallClusterer.clusterAPICallSeqs(arffFile, noClusters);
-		System.out.println("done.");
+		final Multimap<Integer, String> clusteredCallSeqs1 = APICallClustererSequence.clusterAPICallSeqs(arffFile,
+				noClusters1);
+		System.out.println("done. Number of clusters: " + clusteredCallSeqs1.keySet());
 
 		int count = 0;
 		for (final Collection<String> callSeqs : clusteredCallSeqs1.asMap().values()) {
@@ -59,19 +60,22 @@ public class UPMiner {
 
 			System.out.print("  Mining frequent sequences... ");
 			final File freqSeqs = File.createTempFile("APICallSeqs", ".txt");
-			FrequentSequenceMining.mineFrequentClosedSequencesBIDE(transactionDB.getAbsolutePath(),
+			FrequentSequenceMiner.mineFrequentClosedSequencesBIDE(transactionDB.getAbsolutePath(),
 					freqSeqs.getAbsolutePath(), minSupp);
+			transactionDB.delete();
 			System.out.println("done.");
 
 			saveFrequentSequencesArffFile(freqSeqs, dictionary, arffFileFreq);
+			freqSeqs.delete();
 
 			count++;
 		}
 
 		System.out.print("===== Clustering call sequences #2... ");
-		final Multimap<Integer, String> clusteredCallSeqs2 = APICallClusterer
-				.clusterAPICallSeqs(arffFileFreq.getAbsolutePath(), noClusters);
-		System.out.println("done.");
+		final Multimap<Integer, String> clusteredCallSeqs2 = APICallClustererSequence
+				.clusterAPICallSeqs(arffFileFreq.getAbsolutePath(), noClusters2);
+		arffFileFreq.delete();
+		System.out.println("done. Number of clusters: " + clusteredCallSeqs2.keySet());
 
 		count = 0;
 		for (final Collection<String> callSeqs : clusteredCallSeqs2.asMap().values()) {
@@ -118,17 +122,19 @@ public class UPMiner {
 	private static void saveFrequentSequencesArffFile(final File seqFile, final BiMap<String, Integer> dictionary,
 			final File arffFile) throws IOException {
 
-		final SortedMap<Sequence, Integer> freqSeqs = FrequentSequenceMining.readFrequentSequences(seqFile);
+		final SortedMap<Sequence, Integer> freqSeqs = FrequentSequenceMiner.readFrequentSequences(seqFile);
 
 		final PrintWriter out = new PrintWriter(new FileWriter(arffFile, true));
+		int count = 0;
 		for (final Entry<Sequence, Integer> entry : freqSeqs.entrySet()) {
-			out.print("'unknown','");
+			out.print("'unknown" + count + "','");
 			String prefix = "";
 			for (final int item : entry.getKey()) {
 				out.print(prefix + dictionary.inverse().get(item));
 				prefix = " ";
 			}
 			out.println("'");
+			count++;
 		}
 		out.close();
 

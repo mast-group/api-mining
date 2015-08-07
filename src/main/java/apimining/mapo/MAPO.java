@@ -15,12 +15,12 @@ public class MAPO {
 
 	public static void main(final String[] args) throws Exception {
 
-		final String project = "elasticsearch";
-		final String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/calls/" + project
+		final String project = "andengine";
+		final String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/calls/" + project
 				+ ".arff";
-		final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/" + project
+		final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/" + project
 				+ "/mapo/";
-		mineAPICallSequences(arffFile, outFolder, 10, 0.6);
+		mineAPICallSequences(arffFile, outFolder, 10, 0.15);
 
 	}
 
@@ -37,8 +37,9 @@ public class MAPO {
 		new File(outFolder).mkdirs();
 
 		System.out.print("===== Clustering call sequences... ");
-		final Multimap<Integer, String> clusteredCallSeqs = APICallClusterer.clusterAPICallSeqs(arffFile, noClusters);
-		System.out.println("done.");
+		final Multimap<Integer, String> clusteredCallSeqs = APICallClustererMAPO.clusterAPICallSeqs(arffFile,
+				noClusters);
+		System.out.println("done. Number of clusters: " + clusteredCallSeqs.keySet());
 
 		int count = 0;
 		for (final Collection<String> callSeqs : clusteredCallSeqs.asMap().values()) {
@@ -53,12 +54,14 @@ public class MAPO {
 
 			System.out.print("  Mining frequent sequences... ");
 			final File freqSeqs = File.createTempFile("APICallSeqs", ".txt");
-			FrequentSequenceMining.mineFrequentSequencesSPAM(transactionDB.getAbsolutePath(),
-					freqSeqs.getAbsolutePath(), minSupp);
+			FrequentSequenceMiner.mineFrequentSequencesSPAM(transactionDB.getAbsolutePath(), freqSeqs.getAbsolutePath(),
+					minSupp);
+			transactionDB.delete();
 			System.out.println("done.");
 
 			final File outFile = new File(outFolder + "/Cluster" + count + "FreqCallSeqs.txt");
 			decodeFrequentSequences(freqSeqs, dictionary, outFile);
+			freqSeqs.delete();
 
 			count++;
 		}
@@ -90,7 +93,7 @@ public class MAPO {
 	private static void decodeFrequentSequences(final File seqFile, final BiMap<String, Integer> dictionary,
 			final File outFile) throws IOException {
 
-		final SortedMap<Sequence, Integer> freqSeqs = FrequentSequenceMining.readFrequentSequences(seqFile);
+		final SortedMap<Sequence, Integer> freqSeqs = FrequentSequenceMiner.readFrequentSequences(seqFile);
 
 		final PrintWriter out = new PrintWriter(outFile);
 		for (final Entry<Sequence, Integer> entry : freqSeqs.entrySet()) {
