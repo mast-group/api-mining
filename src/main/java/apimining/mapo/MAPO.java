@@ -17,12 +17,12 @@ public class MAPO {
 
 	public static void main(final String[] args) throws Exception {
 
-		final String project = "cloud9";
+		final String project = "webobjects";
 		final String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/calls/" + project
 				+ ".arff";
 		final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/" + project
 				+ "/mapo/";
-		mineAPICallSequences(arffFile, outFolder, 10);
+		mineAPICallSequences(arffFile, outFolder, 0.8);
 
 	}
 
@@ -33,15 +33,15 @@ public class MAPO {
 	 *            API calls in ARF Format. Attributes are fqCaller and fqCalls
 	 *            as space separated string of API calls.
 	 */
-	public static void mineAPICallSequences(final String arffFile, final String outFolder, final int noClusters)
+	public static void mineAPICallSequences(final String arffFile, final String outFolder, final double threshold)
 			throws Exception {
 
 		new File(outFolder).mkdirs();
 
 		System.out.print("===== Clustering call sequences... ");
 		final Multimap<Integer, String> clusteredCallSeqs = APICallClustererMAPO.clusterAPICallSeqs(arffFile,
-				noClusters);
-		System.out.println("done. Number of clusters: " + clusteredCallSeqs.keySet());
+				threshold);
+		System.out.println("done. Number of clusters: " + clusteredCallSeqs.keySet().size());
 
 		double minSupp = 0.1;
 		final BufferedReader br = new BufferedReader(new InputStreamReader(System.in));

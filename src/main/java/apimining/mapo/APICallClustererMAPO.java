@@ -15,6 +15,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
+import apimining.upminer.NewickTreeParser;
 import weka.clusterers.HierarchicalClusterer;
 import weka.core.DistanceFunction;
 import weka.core.Instance;
@@ -43,14 +44,14 @@ public class APICallClustererMAPO {
 	 *
 	 * @return Multimap of cluster IDs to API call sequences
 	 */
-	public static Multimap<Integer, String> clusterAPICallSeqs(final String arffFile, final int noClusters)
+	public static Multimap<Integer, String> clusterAPICallSeqs(final String arffFile, final double threshold)
 			throws Exception {
 
 		// Clusterer settings
 		final HierarchicalClusterer clusterer = new HierarchicalClusterer();
 		clusterer.setOptions(new String[] { "-L", "COMPLETE" }); // link type
 		clusterer.setDebug(true);
-		clusterer.setNumClusters(noClusters);
+		clusterer.setNumClusters(1);
 		clusterer.setDistanceFunction(MAPOSimilarity);
 		clusterer.setDistanceIsBranchLength(false);
 
@@ -61,14 +62,20 @@ public class APICallClustererMAPO {
 		// Cluster API call seqs
 		clusterer.buildClusterer(data);
 
-		// Assign seqs to clusters
+		// Assign seqs to clusters based on dendrogram
+		String newick = clusterer.graph().replace("Newick:", "");
+		newick = newick.substring(0, newick.length() - 1);
+		final Multimap<Integer, String> clusters = NewickTreeParser.getClusters(newick, threshold);
+		System.out.println("No. clusters: " + clusters.keySet().size());
 		final Multimap<Integer, String> assignments = HashMultimap.create();
 		for (int i = 0; i < data.numInstances(); i++) {
-			final int id = clusterer.clusterInstance(data.instance(i));
-			assignments.put(id, data.instance(i).stringValue(1));
+			for (final int id : clusters.keySet()) {
+				if (clusters.get(id).contains(data.instance(i).stringValue(0)))
+					assignments.put(id, data.instance(i).stringValue(1));
+			}
 		}
 
-		showDendrogram(clusterer);
+		// showDendrogram(clusterer);
 
 		return assignments;
 	}

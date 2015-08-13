@@ -24,7 +24,7 @@ import weka.core.converters.ConverterUtils.DataSource;
 import weka.core.neighboursearch.PerformanceStats;
 import weka.gui.hierarchyvisualizer.HierarchyVisualizer;
 
-public class APICallClustererSequence {
+public class APICallClustererUPMiner {
 
 	public static void main(final String[] args) throws Exception {
 
@@ -75,7 +75,7 @@ public class APICallClustererSequence {
 			}
 		}
 
-		showDendrogram(clusterer);
+		// showDendrogram(clusterer);
 
 		return assignments;
 	}
@@ -205,7 +205,7 @@ public class APICallClustererSequence {
 
 	};
 
-	private static Set<List<String>> getNgramSet(final String[] seq) {
+	public static Set<List<String>> getNgramSet(final String[] seq) {
 		final Set<List<String>> ngramSet = new HashSet<>();
 
 		for (int len = 1; len <= seq.length; len++) {

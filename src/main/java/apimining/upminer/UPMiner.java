@@ -21,7 +21,7 @@ public class UPMiner {
 
 	public static void main(final String[] args) throws Exception {
 
-		final String project = "cloud9";
+		final String project = "webobjects";
 		final String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/calls/" + project
 				+ ".arff";
 		final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/" + project
@@ -37,15 +37,15 @@ public class UPMiner {
 	 *            API calls in ARF Format. Attributes are fqCaller and fqCalls
 	 *            as space separated string of API calls.
 	 */
-	public static void mineAPICallSequences(final String arffFile, final String outFolder, final int noClusters1,
-			final int noClusters2) throws Exception {
+	public static void mineAPICallSequences(final String arffFile, final String outFolder, final double threshold1,
+			final double threshold2) throws Exception {
 
 		new File(outFolder).mkdirs();
 
 		System.out.print("===== Clustering call sequences #1... ");
-		final Multimap<Integer, String> clusteredCallSeqs1 = APICallClustererSequence.clusterAPICallSeqs(arffFile,
-				noClusters1);
-		System.out.println("done. Number of clusters: " + clusteredCallSeqs1.keySet());
+		final Multimap<Integer, String> clusteredCallSeqs1 = APICallClustererUPMiner.clusterAPICallSeqs(arffFile,
+				threshold1);
+		System.out.println("done. Number of clusters: " + clusteredCallSeqs1.keySet().size());
 
 		double minSupp = 0.3;
 		final BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -88,10 +88,10 @@ public class UPMiner {
 			}
 
 			System.out.print("===== Clustering call sequences #2... ");
-			final Multimap<Integer, String> clusteredCallSeqs2 = APICallClustererSequence
-					.clusterAPICallSeqs(arffFileFreq.getAbsolutePath(), noClusters2);
+			final Multimap<Integer, String> clusteredCallSeqs2 = APICallClustererUPMiner
+					.clusterAPICallSeqs(arffFileFreq.getAbsolutePath(), threshold2);
 			arffFileFreq.delete();
-			System.out.println("done. Number of clusters: " + clusteredCallSeqs2.keySet());
+			System.out.println("done. Number of clusters: " + clusteredCallSeqs2.keySet().size());
 
 			count = 0;
 			for (final Collection<String> callSeqs : clusteredCallSeqs2.asMap().values()) {
