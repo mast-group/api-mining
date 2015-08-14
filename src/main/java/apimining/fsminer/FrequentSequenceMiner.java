@@ -1,4 +1,4 @@
-package apimining.mapo;
+package apimining.fsminer;
 
 import java.io.File;
 import java.io.IOException;

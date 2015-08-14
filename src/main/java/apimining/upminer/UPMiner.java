@@ -14,8 +14,8 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Multimap;
 
-import apimining.mapo.FrequentSequenceMiner;
-import apimining.mapo.Sequence;
+import apimining.fsminer.FrequentSequenceMiner;
+import apimining.fsminer.Sequence;
 
 public class UPMiner {
 

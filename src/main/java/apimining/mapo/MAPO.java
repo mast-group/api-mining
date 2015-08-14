@@ -13,6 +13,9 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Multimap;
 
+import apimining.fsminer.FrequentSequenceMiner;
+import apimining.fsminer.Sequence;
+
 public class MAPO {
 
 	public static void main(final String[] args) throws Exception {
