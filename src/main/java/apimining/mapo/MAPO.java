@@ -20,12 +20,12 @@ public class MAPO {
 
 	public static void main(final String[] args) throws Exception {
 
-		final String project = "webobjects";
-		final String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/calls/" + project
-				+ ".arff";
-		final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/" + project
-				+ "/mapo/";
-		mineAPICallSequences(arffFile, outFolder, 0.8);
+		final String project = "andengine";
+		final String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/train/calls/"
+				+ project + ".arff";
+		final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/train/"
+				+ project + "/mapo/";
+		mineAPICallSequences(arffFile, outFolder, 0.2);
 
 	}
 

@@ -6,7 +6,10 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
 /**
- * Parse Newick tree string into tree structure
+ * Parse Newick tree string into tree structure.
+ *
+ * Newick Strings of the form (A:0.1,B:0.2,(C:0.3,D:0.4):0.5) require a root
+ * node to be added i.e. (A:0.1,B:0.2,(C:0.3,D:0.4):0.5):0
  *
  * @see https://community.oracle.com/thread/1662917
  */
@@ -50,11 +53,13 @@ public class NewickTreeParser {
 
 	private static int clusterCount;
 
-	public static Multimap<Integer, String> getClusters(final String newick, final double threshold) {
+	/** Cut dendrogram at given relative tree height threshold */
+	public static Multimap<Integer, String> getClusters(final String newick, final double relativeHeightThreshold) {
 		clusterCount = 0;
 		final Multimap<Integer, String> clusters = HashMultimap.create();
 		final Node root = NewickTreeParser.parse(newick);
-		root.traverse(0, 0., clusters, threshold);
+		final double treeHeight = root.getTreeHeight(0.);
+		root.traverse(-1, 0., clusters, treeHeight * relativeHeightThreshold);
 		return clusters;
 	}
 
@@ -94,16 +99,20 @@ public class NewickTreeParser {
 		public void traverse(int clusterLabel, final double prevHeight, final Multimap<Integer, String> clusters,
 				final double threshold) {
 			final double height = prevHeight + value;
-			if (height > threshold) {
-				if (clusterLabel == 0) {
-					clusterLabel = clusterCount;
-					clusterCount++;
-				} else if (this.children.isEmpty())
-					clusters.put(clusterLabel, this.name);
+			if (clusterLabel == -1 && height > threshold) {
+				clusterLabel = clusterCount;
+				clusterCount++;
 			}
+			if (this.children.isEmpty())
+				clusters.put(clusterLabel, this.name);
 			for (final Node node : children)
 				node.traverse(clusterLabel, height, clusters, threshold);
-			return;
+		}
+
+		public double getTreeHeight(final double prevHeight) {
+			if (this.children.isEmpty())
+				return prevHeight;
+			return children.get(0).getTreeHeight(prevHeight + value);
 		}
 
 		// toString method provided for testing purposes
@@ -126,6 +135,9 @@ public class NewickTreeParser {
 	}
 
 	public static void main(final String[] args) {
+		// (A:0.1,B:0.2,(C:0.3,D:0.4):0.5) needs root node as below:
+		System.out.println(parse("(A:0.1,B:0.2,(C:0.3,D:0.4):0.5):0"));
+		// Examples of formats the parser accepts
 		System.out.println(parse("a:1"));
 		System.out.println(parse("(a:1):2"));
 		System.out.println(parse("((a:1,b:2):3,c:4):5"));
