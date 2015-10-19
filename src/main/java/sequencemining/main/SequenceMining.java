@@ -54,6 +54,9 @@ public class SequenceMining extends SequenceMiningCore {
 
 		@Parameter(names = { "-t", "--timestamp" }, description = "Timestamp Logfile", arity = 1)
 		boolean timestampLog = true;
+
+		@Parameter(names = { "-v", "--verbose" }, description = "Print to console instead of logfile")
+		private final boolean verbose = false;
 	}
 
 	public static void main(final String[] args) throws IOException {
@@ -71,7 +74,9 @@ public class SequenceMining extends SequenceMiningCore {
 			// Set loglevel, runtime, timestamp and log file
 			LOG_LEVEL = params.logLevel;
 			MAX_RUNTIME = params.maxRunTime * 60 * 1_000;
-			final File logFile = Logging.getLogFileName("ISM", params.timestampLog, LOG_DIR, params.dataset);
+			File logFile = null;
+			if (!params.verbose)
+				logFile = Logging.getLogFileName("ISM", params.timestampLog, LOG_DIR, params.dataset);
 
 			// Mine interesting sequences
 			mineSequences(params.dataset, inferenceAlg, params.maxStructureSteps, params.maxEMIterations, logFile);
