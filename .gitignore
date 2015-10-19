@@ -1,5 +1,7 @@
 *.class
 
+*.classpath
+*.project
 *.pydevproject
 .metadata
 bin/
