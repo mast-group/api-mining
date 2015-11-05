@@ -15,14 +15,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 
+import com.google.common.base.Function;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.common.collect.TreeBasedTable;
@@ -41,9 +47,14 @@ public class ExampleCoverage {
 	// private static final String callsFolder =
 	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/";
 
+	static final String baseFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/";
 	private static final String exampleFolder = "/disk/data2/jfowkes/example_dataset/java_libraries_examples/";
+	// static final String baseFolder =
+	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/train/";
+	// private static final String exampleFolder =
+	// "/disk/data2/jfowkes/example_dataset/test_train_split/test/";
 	private static final String namespaceFolder = "/disk/data2/jfowkes/example_dataset/namespaces/";
-	private static final String baseFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/";
+	// private static final String ignore = "hadoop";
 
 	public static void main(final String[] args) throws IOException, ClassNotFoundException {
 
@@ -68,15 +79,20 @@ public class ExampleCoverage {
 		final Stats statsDataset = new Stats("Dataset");
 
 		for (int i = 0; i < projects.length; i++) {
-			if (projects[i].matches("hadoop|webobjects|wicket"))
-				continue;
+			// if (projects[i].matches(ignore))
+			// continue;
 
 			System.out.println("\n\n=============== " + projects[i] + " ===============");
 
 			// Examples
 			final Set<List<String>> exampleCalls = getExampleAPICalls(projects[i], projFQNames[i]);
 
-			for (final int topN : range(0, 501, 10)) {
+			// Dataset calls
+			final List<List<String>> datasetCalls = getDatasetAPICalls(projects[i]);
+			calculateDatasetStats(exampleCalls, datasetCalls, projects[i], Integer.MAX_VALUE, statsDataset);
+			// statsDataset.printAverage(Integer.MAX_VALUE);
+
+			for (final int topN : range(10, 501, 10)) {
 				System.out.println("\n\n=+=+=+=+=+=+=+= Top " + topN + " =+=+=+=+=+=+=+=");
 
 				// ISM interestingness ranking
@@ -90,12 +106,12 @@ public class ExampleCoverage {
 				// statsISMProb.printProjectStats(projects[i], topN);
 
 				// MAPO
-				final Set<List<String>> MAPOCalls = getClusteredCalls(projects[i], "mapo", topN);
+				final Set<List<String>> MAPOCalls = getClusteredCalls(projects[i], "mapo", topN, datasetCalls);
 				calculatePrecisionRecall(exampleCalls, MAPOCalls, projects[i], topN, statsMAPO);
 				// statsMAPO.printProjectStats(projects[i], topN);
 
 				// UPMiner
-				final Set<List<String>> UPMinerCalls = getClusteredCalls(projects[i], "upminer", topN);
+				final Set<List<String>> UPMinerCalls = getClusteredCalls(projects[i], "upminer", topN, datasetCalls);
 				calculatePrecisionRecall(exampleCalls, UPMinerCalls, projects[i], topN, statsUPMiner);
 				// statsUPMiner.printProjectStats(projects[i], topN);
 
@@ -105,11 +121,6 @@ public class ExampleCoverage {
 				// statsMAPO.printAverage(topN);
 				// statsUPMiner.printAverage(topN);
 			}
-
-			// Dataset calls
-			final Set<List<String>> datasetCalls = getDatasetAPICalls(projects[i]);
-			calculateDatasetStats(exampleCalls, datasetCalls, projects[i], Integer.MAX_VALUE, statsDataset);
-			// statsDataset.printAverage(Integer.MAX_VALUE);
 
 		}
 
@@ -161,7 +172,7 @@ public class ExampleCoverage {
 	}
 
 	/** Check if first sequence contains second sequence (allowing gaps) */
-	private static boolean containsSeq(final List<String> seq1, final List<String> seq2) {
+	static boolean containsSeq(final List<String> seq1, final List<String> seq2) {
 		int pos = 0;
 		boolean containsItem;
 		for (final String item : seq2) {
@@ -180,14 +191,50 @@ public class ExampleCoverage {
 	}
 
 	/** Calculate upper bound on precision */
-	public static void calculateDatasetStats(final Set<List<String>> examples, final Set<List<String>> dataset,
+	public static void calculateDatasetStats(final Set<List<String>> examples, final List<List<String>> dataset,
 			final String project, final int topN, final Stats stats) {
+
+		final Set<List<String>> coveredSequences = new HashSet<>();
+		for (final List<String> seqEx : examples) {
+			for (final List<String> seq : dataset) {
+				if (containsSeq(seqEx, seq))
+					coveredSequences.add(seq);
+			}
+		}
+		final double sequencePrecision = (double) coveredSequences.size() / dataset.size();
+		stats.sequencePrecision.put(project, topN, sequencePrecision);
+
+		final Set<List<String>> coveredExamples = new HashSet<>();
+		for (final List<String> seqEx : examples) {
+			for (final List<String> seq : dataset) {
+				if (containsSeq(seqEx, seq))
+					coveredExamples.add(seqEx);
+			}
+		}
+		final double sequenceRecall = (double) coveredExamples.size() / examples.size();
+		stats.sequenceRecall.put(project, topN, sequenceRecall);
 
 		final Set<String> exampleMethods = examples.stream().flatMap(List::stream).collect(Collectors.toSet());
 		final Set<String> datasetMethods = dataset.stream().flatMap(List::stream).collect(Collectors.toSet());
 		final double mRecall = (double) Sets.intersection(exampleMethods, datasetMethods).size()
 				/ exampleMethods.size();
 		stats.mRecall.put(project, topN, mRecall);
+
+		double avgMinDiff = 0;
+		for (final List<String> set1 : examples) {
+
+			int minDiff = Integer.MAX_VALUE;
+			for (final List<String> set2 : dataset) {
+				if (!set1.equals(set2)) {
+					final int diff = editDistance(set1, set2);
+					if (diff < minDiff)
+						minDiff = diff;
+				}
+			}
+			avgMinDiff += minDiff;
+		}
+		avgMinDiff /= examples.size();
+		stats.redundancy.put(project, topN, avgMinDiff);
 
 	}
 
@@ -268,60 +315,62 @@ public class ExampleCoverage {
 		return 0;
 	}
 
-	private static Set<List<String>> getClusteredCalls(final String project, final String miner, final int topN)
-			throws IOException {
-		final Set<List<String>> topCalls = new HashSet<>();
-
+	static LinkedHashSet<List<String>> getClusteredCalls(final String project, final String miner, final int topN,
+			final List<List<String>> datasetCalls) throws IOException {
 		final List<File> files = (List<File>) FileUtils.listFiles(new File(baseFolder + project + "/" + miner), null,
 				false);
-		final int topNC = topN / files.size();
-		if (topNC == 0) {
-			System.err
-					.println("ERROR: Less calls than clusters requested. Please increase to at least " + files.size());
-			return topCalls;
-		}
+		final HashMap<BufferedReader, Boolean> brs = new LinkedHashMap<>();
+		for (final File file : files)
+			brs.put(new BufferedReader(new FileReader(file)), true);
 
-		for (final File file : files) {
-			final BufferedReader br = new BufferedReader(new FileReader(file));
-			int count = 0;
-			for (String line; (line = br.readLine()) != null;) {
-				if (!line.trim().isEmpty() && !line.matches("^supp:.*")) {
-					final List<String> call = Arrays.asList(line.split(" "));
-					if (call.size() > 1) {
-						topCalls.add(call);
-						count++;
-					}
-					if (count == topNC)
+		final Set<List<String>> topCalls = new HashSet<>();
+		while (true) {
+			for (final BufferedReader br : brs.keySet()) {
+				while (brs.get(br)) {
+					final String line = br.readLine();
+					if (line == null) {
+						brs.put(br, false);
 						break;
+					}
+					if (!line.trim().isEmpty() && !line.matches("^supp:.*")) {
+						final List<String> call = Arrays.asList(line.split(" "));
+						if (call.size() > 1) {
+							topCalls.add(call);
+							break;
+						}
+					}
 				}
 			}
-			br.close();
-			if (count < topNC)
-				System.out.println("WARNING: Not enough calls in cluster " + file.getName() + ":" + count);
+			if ((topCalls.size() > topN) || !brs.values().contains(true))
+				break;
 		}
-		return topCalls;
+
+		for (final BufferedReader br : brs.keySet())
+			br.close();
+
+		if (topCalls.size() < topN)
+			System.out.println("WARNING: Not enough " + miner + " calls:" + topCalls.size());
+		return orderBySupport(topCalls, datasetCalls, topN);
 	}
 
-	private static Set<List<String>> getISMCalls(final String project, final String itemsetsFile, final int topN)
+	static LinkedHashSet<List<String>> getISMCalls(final String project, final String itemsetsFile, final int topN)
 			throws IOException {
-		final Set<List<String>> topCalls = new HashSet<>();
+		final LinkedHashSet<List<String>> topCalls = new LinkedHashSet<>();
 		final BufferedReader br = new BufferedReader(
 				new FileReader(new File(baseFolder + project + "/" + itemsetsFile)));
-		int count = 0;
 		for (String line; (line = br.readLine()) != null;) {
 			if (line.contains("[")) {
 				final List<String> call = Arrays.asList(line.replaceAll("\\[|\\]|\'", "").split(", "));
 				if (call.size() > 1) {
 					topCalls.add(call);
-					count++;
+					if (topCalls.size() == topN)
+						break;
 				}
-				if (count == topN)
-					break;
 			}
 		}
 		br.close();
-		if (count < topN)
-			System.out.println("WARNING: Not enough interesting sequences:" + count);
+		if (topCalls.size() < topN)
+			System.out.println("WARNING: Not enough interesting sequences:" + topCalls.size());
 		return topCalls;
 	}
 
@@ -360,12 +409,12 @@ public class ExampleCoverage {
 				final APICallVisitor acv = new APICallVisitor(ASTVisitors.getAST(file), namespaceFolder);
 				acv.process();
 				final LinkedListMultimap<String, String> fqAPICalls = acv.getAPINames(projFQName);
-				for (final String fqCaller : fqAPICalls.keySet())
-					allCalls.add(new ArrayList<>(fqAPICalls.get(fqCaller)));
+				for (final String fqCaller : fqAPICalls.keySet()) {
+					final List<String> call = new ArrayList<>(fqAPICalls.get(fqCaller));
+					if (call.size() > 1)
+						allCalls.add(call);
+				}
 			}
-
-			// Filter singletons
-			allCalls = allCalls.stream().filter(l -> l.size() > 1).collect(Collectors.toSet());
 
 			// Serialize calls
 			final ObjectOutputStream writer = new ObjectOutputStream(new FileOutputStream(exampleCallsFile));
@@ -376,8 +425,34 @@ public class ExampleCoverage {
 		}
 	}
 
-	private static Set<List<String>> getDatasetAPICalls(final String project) throws IOException {
-		final Set<List<String>> calls = new HashSet<>();
+	private static LinkedHashSet<List<String>> orderBySupport(final Set<List<String>> calls,
+			final List<List<String>> datasetCalls, final int topN) {
+		final Ordering<List<String>> comp = Ordering.natural().reverse()
+				.onResultOf(new Function<List<String>, Double>() {
+					@Override
+					public Double apply(final List<String> call) {
+						double supp = 0.;
+						for (final List<String> datasetCall : datasetCalls) {
+							if (containsSeq(datasetCall, call))
+								supp++;
+						}
+						return supp;
+					}
+				}).compound(Ordering.usingToString());
+		final ImmutableSortedSet<List<String>> orderedSet = ImmutableSortedSet.copyOf(comp, calls);
+
+		final LinkedHashSet<List<String>> topCalls = new LinkedHashSet<>();
+		for (final List<String> call : orderedSet) {
+			topCalls.add(call);
+			if (topCalls.size() == topN)
+				break;
+		}
+
+		return topCalls;
+	}
+
+	static List<List<String>> getDatasetAPICalls(final String project) throws IOException {
+		final List<List<String>> calls = new ArrayList<>();
 		final BufferedReader br = new BufferedReader(
 				new FileReader(new File(baseFolder + "calls/" + project + ".arff")));
 		boolean found = false;
