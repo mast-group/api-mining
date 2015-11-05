@@ -64,6 +64,8 @@ public class APICallClustererMAPO {
 
 		// Assign seqs to clusters based on dendrogram
 		final String newick = clusterer.graph().replace("Newick:", "") + ":0";
+		if (newick.equals("(no,clusters):0")) // Handle no clusters
+			return HashMultimap.create();
 		final Multimap<Integer, String> clusters = NewickTreeParser.getClusters(newick, threshold);
 		System.out.println("No. clusters: " + clusters.keySet().size());
 		final Multimap<Integer, String> assignments = HashMultimap.create();
