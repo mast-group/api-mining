@@ -126,17 +126,15 @@ public class APICallVisitor extends JavaApproximateTypeInferencer {
 	}
 
 	@Override
-	public boolean visit(final MethodInvocation node) {
+	public void endVisit(final MethodInvocation node) {
 		if (methodStack.size() > 0) // ignore class-level calls
 			apiCalls.put(methodStack.peek(), node);
-		return super.visit(node);
 	}
 
 	@Override
-	public boolean visit(final ClassInstanceCreation node) {
+	public void endVisit(final ClassInstanceCreation node) {
 		if (methodStack.size() > 0) // ignore class-level calls
 			apiCalls.put(methodStack.peek(), node);
-		return super.visit(node);
 	}
 
 	@Override
