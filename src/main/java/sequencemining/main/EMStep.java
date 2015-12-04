@@ -70,10 +70,8 @@ public class EMStep {
 	static void calculateAndSetAverageCost(
 			final TransactionDatabase transactions) {
 		final double noTransactions = transactions.size();
-		final double averageCost = transactions.getTransactionList()
-				.parallelStream().map(Transaction::getCachedCost)
-				.reduce(0., (sum, c) -> sum += c, (sum1, sum2) -> sum1 + sum2)
-				/ noTransactions;
+		final double averageCost = transactions.getTransactionList().parallelStream()
+				.mapToDouble(Transaction::getCachedCost).sum() / noTransactions;
 		transactions.setAverageCost(averageCost);
 	}
 
@@ -109,18 +107,15 @@ public class EMStep {
 								/ noTransactions));
 
 		// Get average cost (removing candidate from supported transactions)
-		final double averageCost = transactions.getTransactionList()
-				.parallelStream().map(t -> {
-					double cost;
-					if (t.contains(candidate))
-						cost = t.getTempCachedCost(newSequences);
-					else
-						cost = t.getCachedCost(newSequences);
-					t.removeSequenceCache(candidate);
-					return cost;
-				})
-				.reduce(0., (sum, c) -> sum += c, (sum1, sum2) -> sum1 + sum2)
-				/ noTransactions;
+		final double averageCost = transactions.getTransactionList().parallelStream().mapToDouble(t -> {
+			double cost;
+			if (t.contains(candidate))
+				cost = t.getTempCachedCost(newSequences);
+			else
+				cost = t.getCachedCost(newSequences);
+			t.removeSequenceCache(candidate);
+			return cost;
+		}).sum() / noTransactions;
 
 		// Get candidate prob
 		Double prob = newSequences.get(candidate);
