@@ -251,10 +251,14 @@ public abstract class SequenceMiningCore {
 
 						// Add candidate to queue
 						if (cand != null && !rejected_seqs.contains(cand)) {
-							if (!candidateSupports.containsKey(cand))
-								candidateSupports.put(cand, EMStep.getSupportOfSequence(transactions, cand));
-							candidateQueue.add(cand);
-							iteration++;
+							Integer supp = candidateSupports.get(cand);
+							if (supp == null)
+								supp = EMStep.getSupportOfSequence(transactions, cand);
+							if (supp > 0) { // ignore unsupported seqs
+								candidateSupports.put(cand, supp);
+								candidateQueue.add(cand);
+								iteration++;
+							}
 						}
 
 						if (iteration >= maxSteps) // Queue limit exceeded
