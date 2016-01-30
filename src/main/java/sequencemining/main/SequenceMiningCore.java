@@ -382,7 +382,7 @@ public abstract class SequenceMiningCore {
 		for (final Sequence seq : sequences.keySet()) {
 			final double interestingness = sequences.get(seq) * noTransactions
 					/ (double) EMStep.getSupportOfSequence(transactions, seq);
-			interestingnessMap.put(seq, interestingness);
+			interestingnessMap.put(seq, Math.round(interestingness * 1E10) / 1E10);
 		}
 
 		return interestingnessMap;
