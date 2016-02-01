@@ -86,7 +86,7 @@
     <dependency>
 	  <groupId>codemining.deps</groupId>
 	  <artifactId>spmf</artifactId>
-	  <version>0.96r13</version>
+	  <version>0.98c</version>
     </dependency>    
      <dependency> <!-- Nice option parser -->
 	  <groupId>com.beust</groupId>
