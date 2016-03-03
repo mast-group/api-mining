@@ -25,14 +25,14 @@ public class MAPO {
 	public static class Parameters {
 
 		@Parameter(names = { "-p", "--project" }, description = "Project name")
-		final String project = "hadoop";
+		String project = "hadoop";
 
 		@Parameter(names = { "-f", "--file" }, description = "Arff file with call sequences")
-		final String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/calls/"
-				+ project + ".arff";
+		String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/calls/" + project
+				+ ".arff";
 
 		@Parameter(names = { "-o", "--outFolder" }, description = "Output Folder")
-		final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/" + project
+		String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/" + project
 				+ "/mapo/";
 
 		@Parameter(names = { "-s", "--support" }, description = "Minimum support threshold")
