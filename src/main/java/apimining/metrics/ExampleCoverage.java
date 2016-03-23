@@ -40,28 +40,15 @@ import apimining.java.ASTVisitors;
 /** Check coverage of API call methods on provided examples */
 public class ExampleCoverage {
 
-	// private static final String exampleFolder =
-	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/API/library_dataset/java_libraries_examples/";
-	// private static final String namespaceFolder =
-	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/API/library_dataset/namespaces/";
-	// private static final String callsFolder =
-	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/";
-
-	static final String baseFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/";
-	private static final String exampleFolder = "/disk/data2/jfowkes/example_dataset/java_libraries_examples/";
 	// static final String baseFolder =
-	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/train/";
+	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/";
 	// private static final String exampleFolder =
-	// "/disk/data2/jfowkes/example_dataset/test_train_split/test/";
+	// "/disk/data2/jfowkes/example_dataset/java_libraries_examples/";
+	static final String baseFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/train/";
+	private static final String exampleFolder = "/disk/data2/jfowkes/example_dataset/test_train_split/test/";
 	private static final String namespaceFolder = "/disk/data2/jfowkes/example_dataset/namespaces/";
-	// private static final String ignore = "hadoop";
 
 	public static void main(final String[] args) throws IOException, ClassNotFoundException {
-
-		// Settings
-		// final String[] projects = new String[] { "netty", "twitter4j" };
-		// final String[] projFQNames = new String[] { "io.netty", "twitter4j"
-		// };
 
 		final String[] projects = new String[] { "netty", "hadoop", "twitter4j", "mahout", "neo4j", "drools",
 				"andengine", "spring-data-neo4j", "camel", "weld", "resteasy", "webobjects", "wicket",
@@ -75,11 +62,11 @@ public class ExampleCoverage {
 		final Stats statsISM = new Stats("ISM-Int");
 		final Stats statsISMProb = new Stats("ISM-Prob");
 		final Stats statsMAPO = new Stats("MAPO");
-		final Stats statsUPMiner = new Stats("UP-Miner");
+		final Stats statsUPMiner = new Stats("UPMiner");
 		final Stats statsDataset = new Stats("Dataset");
 
 		for (int i = 0; i < projects.length; i++) {
-			// if (projects[i].matches(ignore))
+			// if (projects[i].matches("hadoop"))
 			// continue;
 
 			System.out.println("\n\n=============== " + projects[i] + " ===============");
@@ -93,15 +80,17 @@ public class ExampleCoverage {
 			// statsDataset.printAverage(Integer.MAX_VALUE);
 
 			for (final int topN : range(10, 501, 10)) {
-				System.out.println("\n\n=+=+=+=+=+=+=+= Top " + topN + " =+=+=+=+=+=+=+=");
+				// System.out.println("\n\n=+=+=+=+=+=+=+= Top " + topN + "
+				// =+=+=+=+=+=+=+=");
+				System.out.printf(topN + " ");
 
 				// ISM interestingness ranking
-				final Set<List<String>> ISMCalls = getISMCalls(projects[i], "interesting_sequences.txt", topN);
+				final Set<List<String>> ISMCalls = getISMCalls(projects[i], "ISM_seqs_int.txt", topN);
 				calculatePrecisionRecall(exampleCalls, ISMCalls, projects[i], topN, statsISM);
 				// statsISM.printProjectStats(projects[i], topN);
 
 				// ISM probability ranking
-				final Set<List<String>> ISMCallsProb = getISMCalls(projects[i], "interesting_sequences_prob.txt", topN);
+				final Set<List<String>> ISMCallsProb = getISMCalls(projects[i], "ISM_seqs_prob.txt", topN);
 				calculatePrecisionRecall(exampleCalls, ISMCallsProb, projects[i], topN, statsISMProb);
 				// statsISMProb.printProjectStats(projects[i], topN);
 

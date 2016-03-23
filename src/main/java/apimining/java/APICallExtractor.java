@@ -19,27 +19,8 @@ import com.google.common.collect.LinkedListMultimap;
 public class APICallExtractor {
 
 	// private static final String libFolder =
-	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/API/library_dataset/java_libraries/";
-	// private static final String namespaceFolder =
-	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/API/library_dataset/namespaces/";
-	//
-	// private static final String[] projFolders = new String[] {
-	// "androidLocation", "androidWifi", "elasticsearch",
-	// "hadoop", "hibernate", "jgit", "jsoup", "lucene", "neo4j", "netty",
-	// "opennlp", "rabbitmq", "rhino",
-	// "spatial4j", "twitter4j" };
-	// private static final String[] packageNames = new String[] {
-	// "android.location", "android.net.wifi",
-	// "org.elasticsearch", "org.apache.hadoop", "org.hibernate",
-	// "org.eclipse.jgit", "org.jsoup",
-	// "org.apache.lucene", "org.neo4j", "io.netty", "opennlp", "com.rabbitmq",
-	// "org.mozilla.javascript",
-	// "com.spatial4j", "twitter4j" };
-	//
-	// private static final String outFolder =
-	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/srclibs/calls/";
-
-	private static final String libFolder = "/disk/data2/jfowkes/example_dataset/java_libraries/";
+	// "/disk/data2/jfowkes/example_dataset/java_libraries/";
+	private static final String libFolder = "/disk/data2/jfowkes/example_dataset/test_train_split/train/";
 	private static final String namespaceFolder = "/disk/data2/jfowkes/example_dataset/namespaces/";
 
 	private static final String[] projFolders = new String[] { "netty", "hadoop", "twitter4j", "mahout", "neo4j",
@@ -50,7 +31,9 @@ public class APICallExtractor {
 			"org.apache.camel", "org.jboss.weld", "org.jboss.resteasy", "com.webobjects", "org.apache.wicket",
 			"org.restlet", "edu.umd.cloud9", "org.hornetq", "org.springframework.data.mongodb" };
 
-	private static final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/calls/";
+	// private static final String outFolder =
+	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/calls/";
+	private static final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/train/calls/";
 
 	public static void main(final String[] args) throws IOException {
 

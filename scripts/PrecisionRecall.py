@@ -5,8 +5,8 @@ import os
 
 def main():
     
-    baseFolder = '/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/'
-    algs = ['ISM-Prob','MAPO','UP-Miner']
+    baseFolder = '/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/train/'
+    algs = ['ISM-Prob','MAPO','UPMiner']
     ubound = 'Dataset'
     markers = ['o','D','s','v','^','*','x','+','d','.']
     rcParams['axes.color_cycle'] = ['b','g','r','m']
@@ -80,7 +80,7 @@ def plotfigpr(precision,recall,title,xlabel,ylabel,symbol,figno):
 
     plt.figure(figno)
     plt.hold(True)
-    plt.plot(x,y,'.-',linewidth=2,markersize=3,marker=symbol)
+    plt.plot(x,y,'.-',linewidth=2,markersize=5,marker=symbol)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(title)
@@ -99,7 +99,7 @@ def plotfig(x,y,title,xlabel,ylabel,symbol,figno):
 
     plt.figure(figno)
     plt.hold(True)
-    plt.plot(x,y,'.-',linewidth=2,markersize=3,marker=symbol)
+    plt.plot(x,y,'.-',linewidth=2,markersize=5,marker=symbol)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(title)
@@ -108,6 +108,7 @@ def plotfig(x,y,title,xlabel,ylabel,symbol,figno):
 def savepdf(name,folder):
     plt.savefig(folder+name+'.eps',format='eps',dpi=1200)
     os.system('epstopdf '+folder+name+'.eps')
+    os.system('pdfcrop '+folder+name+'.pdf '+folder+name+'.pdf')
     os.system('rm '+folder+name+'.eps')
 
 main()

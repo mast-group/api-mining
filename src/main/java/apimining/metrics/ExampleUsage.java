@@ -3,7 +3,6 @@ package apimining.metrics;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -21,7 +20,6 @@ public class ExampleUsage {
 				"org.neo4j", "org.drools", "org.andengine", "org.springframework.data.neo4j", "org.apache.camel",
 				"org.jboss.weld", "org.jboss.resteasy", "com.webobjects", "org.apache.wicket", "org.restlet",
 				"edu.umd.cloud9", "org.hornetq", "org.springframework.data.mongodb" };
-		final String ignore = "hadoop";
 		final int topN = 10;
 
 		final String use = "twitter4j";
@@ -36,28 +34,28 @@ public class ExampleUsage {
 			// Examples
 			final Set<List<String>> exampleCalls = ExampleCoverage.getExampleAPICalls(projects[i], projFQNames[i]);
 
-			final String[] call = new String[] { "twitter4j.conf.ConfigurationBuilder.<init>",
-					"twitter4j.conf.ConfigurationBuilder.setOAuthConsumerKey",
-					"twitter4j.conf.ConfigurationBuilder.setOAuthConsumerSecret",
-					"twitter4j.conf.ConfigurationBuilder.build" };
-			final List<String> callSeq = Arrays.asList(call);
-			double count = 0;
-			for (final List<String> seqEx : exampleCalls) {
-				if (ExampleCoverage.containsSeq(seqEx, callSeq))
-					count++;
-			}
-			System.out.println("Call prevalance: " + count);
+			// final String[] call = new String[] {
+			// "twitter4j.conf.ConfigurationBuilder.<init>",
+			// "twitter4j.conf.ConfigurationBuilder.setOAuthConsumerKey",
+			// "twitter4j.conf.ConfigurationBuilder.setOAuthConsumerSecret",
+			// "twitter4j.conf.ConfigurationBuilder.build" };
+			// final List<String> callSeq = Arrays.asList(call);
+			// double count = 0;
+			// for (final List<String> seqEx : exampleCalls) {
+			// if (ExampleCoverage.containsSeq(seqEx, callSeq))
+			// count++;
+			// }
+			// System.out.println("Call prevalence: " + count);
 
 			// Dataset calls
 			final List<List<String>> datasetCalls = ExampleCoverage.getDatasetAPICalls(projects[i]);
 
 			// ISM probability ranking
 			final LinkedHashSet<List<String>> ISMCallsProb = ExampleCoverage.getISMCalls(projects[i],
-					"interesting_sequences_prob.txt", 500);
-			printTopCalls(getTopSequences(ISMCallsProb, topN), "ISM Prob Top ", out);
-			printTopCalls(getTopCoveredSequences(exampleCalls, ISMCallsProb, topN), "ISM Prob Covered Top ", out);
-			printTopCalls(getTopNotCoveredSequences(exampleCalls, ISMCallsProb, topN), "ISM Prob Not Covered Top ",
-					out);
+					"ISM_seqs_prob.txt", 500);
+			printTopCalls(getTopSequences(ISMCallsProb, topN), "ISM Top ", out);
+			printTopCalls(getTopCoveredSequences(exampleCalls, ISMCallsProb, topN), "ISM Covered Top ", out);
+			printTopCalls(getTopNotCoveredSequences(exampleCalls, ISMCallsProb, topN), "ISM Not Covered Top ", out);
 
 			// MAPO
 			final LinkedHashSet<List<String>> MAPOCalls = ExampleCoverage.getClusteredCalls(projects[i], "mapo", 500,
