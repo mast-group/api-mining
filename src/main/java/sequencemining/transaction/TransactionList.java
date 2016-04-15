@@ -6,12 +6,9 @@ import java.util.List;
 public class TransactionList extends TransactionDatabase {
 
 	private final List<Transaction> transactions;
-	private final String[] cachedDB;
 
-	public TransactionList(final List<Transaction> transactions,
-			final String[] cachedDB) {
+	public TransactionList(final List<Transaction> transactions) {
 		this.transactions = transactions;
-		this.cachedDB = cachedDB;
 	}
 
 	@Override
@@ -34,10 +31,5 @@ public class TransactionList extends TransactionDatabase {
 	// final JavaRDD<Transaction> updatedTransactions) {
 	// throw new UnsupportedOperationException("This is a list is not a RDD!!");
 	// }
-
-	@Override
-	public String[] getCachedDB() {
-		return cachedDB;
-	}
 
 }

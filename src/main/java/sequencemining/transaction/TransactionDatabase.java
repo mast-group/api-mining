@@ -42,7 +42,4 @@ public abstract class TransactionDatabase {
 	/** Get the number of transactions in this database */
 	public abstract long size();
 
-	/** Get cached transactions as String[] (for fast support counting) */
-	public abstract String[] getCachedDB();
-
 }
