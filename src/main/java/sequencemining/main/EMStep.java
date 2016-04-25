@@ -12,11 +12,11 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.Multiset;
 
-import scala.Tuple2;
 import sequencemining.main.InferenceAlgorithms.InferenceAlgorithm;
 import sequencemining.sequence.Sequence;
 import sequencemining.transaction.Transaction;
 import sequencemining.transaction.TransactionDatabase;
+import sequencemining.util.Tuple2;
 
 /** Class to hold the various transaction EM Steps */
 public class EMStep {

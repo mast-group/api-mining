@@ -14,10 +14,10 @@ import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 
-import scala.Tuple2;
 import sequencemining.main.InferenceAlgorithms.InferenceAlgorithm;
 import sequencemining.sequence.Sequence;
 import sequencemining.transaction.TransactionDatabase;
+import sequencemining.util.Tuple2;
 
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableSortedMap;
