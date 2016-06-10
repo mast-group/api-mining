@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.util.HashSet;
 
 import org.junit.Test;
 
@@ -19,7 +20,11 @@ public class SupportCountingTest {
 
 		final File input = getTestFile("TOY.txt"); // database
 		final TransactionList transactions = SequenceMining.readTransactions(input);
-		assertEquals(1, EMStep.getSupportOfSequence(transactions, new Sequence(7, 3)));
+		final Sequence seq = new Sequence(7, 3);
+		final HashSet<Sequence> seqs = new HashSet<>();
+		seqs.add(seq);
+		final long supp = EMStep.getSupportsOfSequences(transactions, seqs).get(seq);
+		assertEquals(1, supp);
 	}
 
 	public File getTestFile(final String filename) throws UnsupportedEncodingException {

@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.logging.Level;
@@ -14,15 +15,15 @@ import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 
-import sequencemining.main.InferenceAlgorithms.InferenceAlgorithm;
-import sequencemining.sequence.Sequence;
-import sequencemining.transaction.TransactionDatabase;
-import sequencemining.util.Tuple2;
-
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Ordering;
+
+import sequencemining.main.InferenceAlgorithms.InferenceAlgorithm;
+import sequencemining.sequence.Sequence;
+import sequencemining.transaction.TransactionDatabase;
+import sequencemining.util.Tuple2;
 
 public abstract class SequenceMiningCore {
 
@@ -30,8 +31,7 @@ public abstract class SequenceMiningCore {
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
 	private static final double OPTIMIZE_TOL = 1e-5;
 
-	protected static final Logger logger = Logger
-			.getLogger(SequenceMiningCore.class.getName());
+	protected static final Logger logger = Logger.getLogger(SequenceMiningCore.class.getName());
 	public static final File LOG_DIR = new File("/disk/data1/jfowkes/logs/");
 
 	/** Variable settings */
@@ -41,10 +41,8 @@ public abstract class SequenceMiningCore {
 	/**
 	 * Learn itemsets model using structural EM
 	 */
-	protected static HashMap<Sequence, Double> structuralEM(
-			final TransactionDatabase transactions,
-			final Multiset<Sequence> singletons,
-			final InferenceAlgorithm inferenceAlgorithm,
+	protected static HashMap<Sequence, Double> structuralEM(final TransactionDatabase transactions,
+			final Multiset<Sequence> singletons, final InferenceAlgorithm inferenceAlgorithm,
 			final int maxStructureSteps, final int maxEMIterations) {
 
 		// Start timer
@@ -85,8 +83,7 @@ public abstract class SequenceMiningCore {
 		final Ordering<Sequence> candidateSupportOrdering = new Ordering<Sequence>() {
 			@Override
 			public int compare(final Sequence seq1, final Sequence seq2) {
-				return candidateSupports.get(seq2)
-						- candidateSupports.get(seq1);
+				return candidateSupports.get(seq2) - candidateSupports.get(seq1);
 			}
 		}.compound(Ordering.usingToString());
 
@@ -98,23 +95,17 @@ public abstract class SequenceMiningCore {
 		for (int iteration = 1; iteration <= maxEMIterations; iteration++) {
 
 			// Learn structure
-			logger.finer("\n----- Itemset Combination at Step " + iteration
-					+ "\n");
-			combineSequencesStep(sequences, transactions, rejected_seqs,
-					inferenceAlgorithm, maxStructureSteps, supportOrdering,
-					supports, candidateSupportOrdering, candidateSupports);
+			logger.finer("\n----- Itemset Combination at Step " + iteration + "\n");
+			combineSequencesStep(sequences, transactions, rejected_seqs, inferenceAlgorithm, maxStructureSteps,
+					supportOrdering, supports, candidateSupportOrdering, candidateSupports);
 			if (transactions.getIterationLimitExceeded())
 				breakLoop = true;
-			logger.finer(String.format(" Average cost: %.2f%n",
-					transactions.getAverageCost()));
+			logger.finer(String.format(" Average cost: %.2f%n", transactions.getAverageCost()));
 
 			// Optimize parameters of new structure
-			if (iteration % OPTIMIZE_PARAMS_EVERY == 0
-					|| iteration == maxEMIterations || breakLoop == true) {
-				logger.fine("\n***** Parameter Optimization at Step "
-						+ iteration + "\n");
-				expectationMaximizationStep(sequences, transactions,
-						inferenceAlgorithm);
+			if (iteration % OPTIMIZE_PARAMS_EVERY == 0 || iteration == maxEMIterations || breakLoop == true) {
+				logger.fine("\n***** Parameter Optimization at Step " + iteration + "\n");
+				expectationMaximizationStep(sequences, transactions, inferenceAlgorithm);
 			}
 
 			// Break loop if requested
@@ -123,8 +114,7 @@ public abstract class SequenceMiningCore {
 
 			// Check if time exceeded
 			if (System.currentTimeMillis() - startTime > MAX_RUNTIME) {
-				logger.warning("\nRuntime limit of " + MAX_RUNTIME
-						/ (60. * 1000.) + " minutes exceeded.\n");
+				logger.warning("\nRuntime limit of " + MAX_RUNTIME / (60. * 1000.) + " minutes exceeded.\n");
 				break;
 			}
 
@@ -140,9 +130,7 @@ public abstract class SequenceMiningCore {
 			if (iteration == maxEMIterations)
 				logger.warning("\nEM iteration limit exceeded.\n");
 		}
-		logger.info("\nElapsed time: "
-				+ (System.currentTimeMillis() - startTime) / (60. * 1000.)
-				+ " minutes.\n");
+		logger.info("\nElapsed time: " + (System.currentTimeMillis() - startTime) / (60. * 1000.) + " minutes.\n");
 
 		return sequences;
 	}
@@ -154,10 +142,8 @@ public abstract class SequenceMiningCore {
 	 *         <p>
 	 *         NB. zero probability sequences are dropped
 	 */
-	private static void expectationMaximizationStep(
-			final HashMap<Sequence, Double> sequences,
-			final TransactionDatabase transactions,
-			final InferenceAlgorithm inferenceAlgorithm) {
+	private static void expectationMaximizationStep(final HashMap<Sequence, Double> sequences,
+			final TransactionDatabase transactions, final InferenceAlgorithm inferenceAlgorithm) {
 
 		logger.fine(" Structure Optimal Sequences: " + sequences + "\n");
 
@@ -174,15 +160,13 @@ public abstract class SequenceMiningCore {
 			// newItemsets = SparkEMStep.hardEMStep(transactions,
 			// inferenceAlgorithm);
 			// else
-			newSequences = EMStep.hardEMStep(transactions.getTransactionList(),
-					inferenceAlgorithm);
+			newSequences = EMStep.hardEMStep(transactions.getTransactionList(), inferenceAlgorithm);
 
 			// If set has stabilised calculate norm(p_prev - p_new)
 			if (prevSequences.keySet().equals(newSequences.keySet())) {
 				norm = 0;
 				for (final Sequence seq : prevSequences.keySet()) {
-					norm += Math.pow(
-							prevSequences.get(seq) - newSequences.get(seq), 2);
+					norm += Math.pow(prevSequences.get(seq) - newSequences.get(seq), 2);
 				}
 				norm = Math.sqrt(norm);
 			}
@@ -199,8 +183,7 @@ public abstract class SequenceMiningCore {
 		sequences.clear();
 		sequences.putAll(prevSequences);
 		logger.fine(" Parameter Optimal Sequences: " + sequences + "\n");
-		logger.fine(String.format(" Average cost: %.2f%n",
-				transactions.getAverageCost()));
+		logger.fine(String.format(" Average cost: %.2f%n", transactions.getAverageCost()));
 	}
 
 	/**
@@ -216,60 +199,82 @@ public abstract class SequenceMiningCore {
 	 * @param candidateSupports
 	 *            cached candididate supports for the above ordering
 	 */
-	private static void combineSequencesStep(
-			final HashMap<Sequence, Double> sequences,
-			final TransactionDatabase transactions,
-			final Set<Sequence> rejected_seqs,
+	private static void combineSequencesStep(final HashMap<Sequence, Double> sequences,
+			final TransactionDatabase transactions, final Set<Sequence> rejected_seqs,
 			final InferenceAlgorithm inferenceAlgorithm, final int maxSteps,
-			final Ordering<Sequence> sequenceSupportOrdering,
-			final HashMap<Sequence, Integer> supports,
-			final Ordering<Sequence> candidateSupportOrdering,
-			final HashMap<Sequence, Integer> candidateSupports) {
+			final Ordering<Sequence> sequenceSupportOrdering, final HashMap<Sequence, Integer> supports,
+			final Ordering<Sequence> candidateSupportOrdering, final HashMap<Sequence, Integer> candidateSupports) {
 
 		// Set up support-ordered priority queue
-		final PriorityQueue<Sequence> candidateQueue = new PriorityQueue<Sequence>(
-				maxSteps, candidateSupportOrdering);
+		final PriorityQueue<Sequence> candidateQueue = new PriorityQueue<Sequence>(maxSteps, candidateSupportOrdering);
 
 		// Sort sequences according to given ordering
-		final ArrayList<Sequence> sortedSequences = new ArrayList<>(
-				sequences.keySet());
+		final ArrayList<Sequence> sortedSequences = new ArrayList<>(sequences.keySet());
 		Collections.sort(sortedSequences, sequenceSupportOrdering);
 
 		// Find maxSteps superseqs for all seqs
 		// final long startTime = System.nanoTime();
-		int iteration = 0;
+		int noAdded = 0;
+		int istart = 0;
+		int jstart = 0;
+		int kstart = 0;
+		boolean exhausted = true;
 		final int len = sortedSequences.size();
-		outerLoop: for (int k = 0; k < 2 * len - 2; k++) {
-			for (int i = 0; i < len && i < k + 1; i++) {
-				for (int j = 0; j < len && i + j < k + 1; j++) {
-					if (k <= i + j && i != j) {
+		while (noAdded < maxSteps && exhausted) {
+			exhausted = false;
+			int noUncached = 0;
+			final HashSet<Sequence> uncachedCandidates = new HashSet<>();
+			outerLoop: for (int k = kstart; k < 2 * len - 2; k++) {
+				for (int i = istart; i < len && i < k + 1; i++) {
+					for (int j = jstart; j < len && i + j < k + 1; j++) {
+						if (k <= i + j && i != j) {
 
-						// Create new candidates by joining seqs
-						final Sequence seq1 = sortedSequences.get(i);
-						final Sequence seq2 = sortedSequences.get(j);
-						final Sequence cand = new Sequence(seq1, seq2);
+							// Create new candidates by joining seqs
+							final Sequence seq1 = sortedSequences.get(i);
+							final Sequence seq2 = sortedSequences.get(j);
+							final Sequence cand = new Sequence(seq1, seq2);
 
-						// Add candidate to queue
-						if (cand != null && !rejected_seqs.contains(cand)) {
-							Integer supp = candidateSupports.get(cand);
-							if (supp == null)
-								supp = EMStep.getSupportOfSequence(transactions, cand);
-							if (supp > 0) { // ignore unsupported seqs
-								candidateSupports.put(cand, supp);
-								candidateQueue.add(cand);
-								iteration++;
+							// Add candidate to queue
+							if (cand != null && !rejected_seqs.contains(cand)) {
+								final Integer supp = candidateSupports.get(cand);
+								if (supp == null) {
+									uncachedCandidates.add(cand);
+									noUncached++;
+								} else { // add cached candidate to queue
+									candidateQueue.add(cand);
+									noAdded++;
+								}
+							}
+
+							// Possibly found enough candidates
+							if (noAdded + noUncached >= maxSteps) {
+								istart = i;
+								jstart = j + 1;
+								kstart = k;
+								exhausted = true;
+								break outerLoop;
 							}
 						}
-
-						if (iteration >= maxSteps) // Queue limit exceeded
-							break outerLoop; // finished building queue
-
 					}
+					jstart = 0;
+				}
+				istart = 0;
+			}
+
+			// Add uncached candidates to queue
+			final Map<Sequence, Long> candidatesWithSupports = EMStep.getSupportsOfSequences(transactions,
+					uncachedCandidates);
+			for (final Entry<Sequence, Long> entry : candidatesWithSupports.entrySet()) {
+				final Sequence cand = entry.getKey();
+				final int supp = Math.toIntExact(entry.getValue());
+				if (supp > 0) { // ignore unsupported sequences
+					candidateSupports.put(cand, supp);
+					candidateQueue.add(cand);
+					noAdded++;
 				}
 			}
 		}
-		logger.info(" Finished bulding priority queue. Size: "
-				+ candidateQueue.size() + "\n");
+		logger.info(" Finished bulding priority queue. Size: " + candidateQueue.size() + "\n");
 		// logger.info(" Time taken: " + (System.nanoTime() - startTime) / 1e6);
 		// logger.finest(" Structural candidate itemsets: ");
 
@@ -281,8 +286,7 @@ public abstract class SequenceMiningCore {
 			// / (double) transactions.size());
 			counter++;
 			rejected_seqs.add(topCandidate); // candidate seen
-			final boolean accepted = evaluateCandidate(sequences, transactions,
-					inferenceAlgorithm, topCandidate);
+			final boolean accepted = evaluateCandidate(sequences, transactions, inferenceAlgorithm, topCandidate);
 			if (accepted == true) { // Better itemset found
 				// update supports
 				supports.put(topCandidate, candidateSupports.get(topCandidate));
@@ -291,7 +295,7 @@ public abstract class SequenceMiningCore {
 			}
 		}
 
-		if (iteration >= maxSteps) { // Priority queue exhausted
+		if (exhausted) { // Priority queue exhausted
 			logger.warning("\n Priority queue exhausted. Exiting. \n");
 			transactions.setIterationLimitExceeded();
 			// return; // No better itemset found
@@ -304,10 +308,8 @@ public abstract class SequenceMiningCore {
 	}
 
 	/** Evaluate a candidate sequence to see if it should be included */
-	private static boolean evaluateCandidate(
-			final HashMap<Sequence, Double> sequences,
-			final TransactionDatabase transactions,
-			final InferenceAlgorithm inferenceAlgorithm,
+	private static boolean evaluateCandidate(final HashMap<Sequence, Double> sequences,
+			final TransactionDatabase transactions, final InferenceAlgorithm inferenceAlgorithm,
 			final Sequence candidate) {
 
 		logger.finer("\n Candidate: " + candidate);
@@ -318,8 +320,7 @@ public abstract class SequenceMiningCore {
 		// costAndProb = SparkEMStep.structuralEMStep(transactions,
 		// inferenceAlgorithm, candidate);
 		// } else {
-		costAndProb = EMStep.structuralEMStep(transactions, inferenceAlgorithm,
-				candidate);
+		costAndProb = EMStep.structuralEMStep(transactions, inferenceAlgorithm, candidate);
 		// }
 		final double curCost = costAndProb._1;
 		final double prob = costAndProb._2;
@@ -334,8 +335,7 @@ public abstract class SequenceMiningCore {
 			// newItemsets = SparkEMStep.addAcceptedCandidateCache(
 			// transactions, candidate, prob);
 			// } else {
-			newSequences = EMStep.addAcceptedCandidateCache(transactions,
-					candidate, prob);
+			newSequences = EMStep.addAcceptedCandidateCache(transactions, candidate, prob);
 			// }
 			// Update sequences with newly inferred sequences
 			sequences.clear();
@@ -349,20 +349,13 @@ public abstract class SequenceMiningCore {
 	}
 
 	/** Sort sequences by interestingness */
-	public static Map<Sequence, Double> sortSequences(
-			final HashMap<Sequence, Double> sequences,
+	public static Map<Sequence, Double> sortSequences(final HashMap<Sequence, Double> sequences,
 			final HashMap<Sequence, Double> intMap) {
 
-		final Ordering<Sequence> comparator = Ordering
-				.natural()
-				.reverse()
-				.onResultOf(Functions.forMap(intMap))
-				.compound(
-						Ordering.natural().reverse()
-								.onResultOf(Functions.forMap(sequences)))
+		final Ordering<Sequence> comparator = Ordering.natural().reverse().onResultOf(Functions.forMap(intMap))
+				.compound(Ordering.natural().reverse().onResultOf(Functions.forMap(sequences)))
 				.compound(Ordering.usingToString());
-		final Map<Sequence, Double> sortedSequences = ImmutableSortedMap
-				.copyOf(sequences, comparator);
+		final Map<Sequence, Double> sortedSequences = ImmutableSortedMap.copyOf(sequences, comparator);
 
 		return sortedSequences;
 	}
@@ -371,17 +364,18 @@ public abstract class SequenceMiningCore {
 	 * Calculate interestingness as defined by i(S) = |z_S = 1|/|T : S in T|
 	 * where |z_S = 1| is calculated by pi_S*|T| and |T : S in T| = supp(S)
 	 */
-	public static HashMap<Sequence, Double> calculateInterestingness(
-			final HashMap<Sequence, Double> sequences,
+	public static HashMap<Sequence, Double> calculateInterestingness(final HashMap<Sequence, Double> sequences,
 			final TransactionDatabase transactions) {
 
 		final HashMap<Sequence, Double> interestingnessMap = new HashMap<>();
 
+		// Calculate supports
+		final Map<Sequence, Long> supports = EMStep.getSupportsOfSequences(transactions, sequences.keySet());
+
 		// Calculate interestingness
 		final long noTransactions = transactions.size();
 		for (final Sequence seq : sequences.keySet()) {
-			final double interestingness = sequences.get(seq) * noTransactions
-					/ (double) EMStep.getSupportOfSequence(transactions, seq);
+			final double interestingness = sequences.get(seq) * noTransactions / (double) supports.get(seq);
 			interestingnessMap.put(seq, Math.round(interestingness * 1E10) / 1E10);
 		}
 
@@ -389,8 +383,7 @@ public abstract class SequenceMiningCore {
 	}
 
 	/** Read output sequences from file (sorted by interestingness) */
-	public static Map<Sequence, Double> readISMSequences(final File output)
-			throws IOException {
+	public static Map<Sequence, Double> readISMSequences(final File output) throws IOException {
 		final HashMap<Sequence, Double> sequences = new HashMap<>();
 		final HashMap<Sequence, Double> intMap = new HashMap<>();
 
@@ -404,21 +397,17 @@ public abstract class SequenceMiningCore {
 				final String[] splitLine = line.split("\t");
 				final String[] seq = splitLine[0].split("\\^");
 				if (seq.length > 1) {
-					final int occur = Integer.parseInt(seq[1].replaceAll(
-							"[()]", ""));
+					final int occur = Integer.parseInt(seq[1].replaceAll("[()]", ""));
 					for (int i = 0; i < occur - 1; i++)
 						sequence.incrementOccurence();
 				}
 				final String[] items = seq[0].split(",");
 				items[0] = items[0].replace("[", "");
-				items[items.length - 1] = items[items.length - 1].replace("]",
-						"");
+				items[items.length - 1] = items[items.length - 1].replace("]", "");
 				for (final String item : items)
 					sequence.add(Integer.parseInt(item.trim()));
-				final double prob = Double
-						.parseDouble(splitLine[1].split(":")[1]);
-				final double intr = Double
-						.parseDouble(splitLine[2].split(":")[1]);
+				final double prob = Double.parseDouble(splitLine[1].split(":")[1]);
+				final double intr = Double.parseDouble(splitLine[2].split(":")[1]);
 				sequences.put(sequence, prob);
 				intMap.put(sequence, intr);
 			}
@@ -428,8 +417,7 @@ public abstract class SequenceMiningCore {
 		}
 
 		// Sort itemsets by interestingness
-		final Map<Sequence, Double> sortedSequences = sortSequences(sequences,
-				intMap);
+		final Map<Sequence, Double> sortedSequences = sortSequences(sequences, intMap);
 
 		return sortedSequences;
 	}

@@ -123,13 +123,17 @@ public class EMStep {
 		return newSequences;
 	}
 
-	/** Get the support of requested sequence */
-	static int getSupportOfSequence(final TransactionDatabase transactions, final Sequence seq) {
-		return transactions.getTransactionList().parallelStream().mapToInt(t -> {
-			if (t.contains(seq))
-				return 1;
-			return 0;
-		}).sum();
+	/** Get the support of given sequences */
+	static Map<Sequence, Long> getSupportsOfSequences(final TransactionDatabase transactions,
+			final Set<Sequence> sequences) {
+		return transactions.getTransactionList().parallelStream().map(t -> {
+			final HashSet<Sequence> supportedSeqs = new HashSet<>();
+			for (final Sequence seq : sequences) {
+				if (t.contains(seq))
+					supportedSeqs.add(seq);
+			}
+			return supportedSeqs;
+		}).flatMap(Set::stream).collect(groupingBy(identity(), counting()));
 	}
 
 	// /** Calculate and return sequence transition matrix */
