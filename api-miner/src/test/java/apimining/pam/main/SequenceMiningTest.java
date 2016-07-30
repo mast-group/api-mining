@@ -1,4 +1,4 @@
-package apimining.main;
+package apimining.pam.main;
 
 import static org.junit.Assert.assertEquals;
 
@@ -8,10 +8,10 @@ import org.junit.Test;
 
 import com.google.common.collect.HashMultiset;
 
-import apimining.main.InferenceAlgorithms.InferGreedy;
-import apimining.main.InferenceAlgorithms.InferenceAlgorithm;
-import apimining.sequence.Sequence;
-import apimining.transaction.Transaction;
+import apimining.pam.main.InferenceAlgorithms.InferGreedy;
+import apimining.pam.main.InferenceAlgorithms.InferenceAlgorithm;
+import apimining.pam.sequence.Sequence;
+import apimining.pam.transaction.Transaction;
 
 public class SequenceMiningTest {
 

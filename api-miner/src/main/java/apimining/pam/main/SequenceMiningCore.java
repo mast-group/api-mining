@@ -1,4 +1,4 @@
-package apimining.main;
+package apimining.pam.main;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,10 +20,10 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Ordering;
 
-import apimining.main.InferenceAlgorithms.InferenceAlgorithm;
-import apimining.sequence.Sequence;
-import apimining.transaction.TransactionDatabase;
-import apimining.util.Tuple2;
+import apimining.pam.main.InferenceAlgorithms.InferenceAlgorithm;
+import apimining.pam.sequence.Sequence;
+import apimining.pam.transaction.TransactionDatabase;
+import apimining.pam.util.Tuple2;
 
 public abstract class SequenceMiningCore {
 

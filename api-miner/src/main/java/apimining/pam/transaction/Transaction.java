@@ -1,4 +1,4 @@
-package apimining.transaction;
+package apimining.pam.transaction;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -13,8 +13,8 @@ import java.util.Set;
 
 import com.google.common.collect.Multiset;
 
-import apimining.sequence.AbstractSequence;
-import apimining.sequence.Sequence;
+import apimining.pam.sequence.AbstractSequence;
+import apimining.pam.sequence.Sequence;
 
 /** A transaction is an ordered list of items */
 public class Transaction extends AbstractSequence implements Serializable {

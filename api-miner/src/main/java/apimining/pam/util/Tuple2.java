@@ -1,4 +1,4 @@
-package apimining.util;
+package apimining.pam.util;
 
 public class Tuple2<T1, T2> {
 	public final T1 _1;

@@ -1,4 +1,4 @@
-package apimining.main;
+package apimining.pam.main;
 
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.counting;
@@ -12,11 +12,11 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.Multiset;
 
-import apimining.main.InferenceAlgorithms.InferenceAlgorithm;
-import apimining.sequence.Sequence;
-import apimining.transaction.Transaction;
-import apimining.transaction.TransactionDatabase;
-import apimining.util.Tuple2;
+import apimining.pam.main.InferenceAlgorithms.InferenceAlgorithm;
+import apimining.pam.sequence.Sequence;
+import apimining.pam.transaction.Transaction;
+import apimining.pam.transaction.TransactionDatabase;
+import apimining.pam.util.Tuple2;
 
 /** Class to hold the various transaction EM Steps */
 public class EMStep {

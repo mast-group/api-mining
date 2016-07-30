@@ -1,4 +1,4 @@
-package apimining.transaction;
+package apimining.pam.transaction;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package apimining.transaction;
+package apimining.pam.transaction;
 
 import java.io.File;
 import java.io.FileReader;
@@ -12,7 +12,7 @@ import java.util.Random;
 
 import org.apache.commons.io.LineIterator;
 
-import apimining.sequence.Sequence;
+import apimining.pam.sequence.Sequence;
 
 public class TransactionGenerator {
 

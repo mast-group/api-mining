@@ -1,4 +1,4 @@
-package apimining.sequence;
+package apimining.pam.sequence;
 
 import java.io.Serializable;
 import java.util.AbstractCollection;

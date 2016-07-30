@@ -1,4 +1,4 @@
-package apimining.sequence;
+package apimining.pam.sequence;
 
 import static org.junit.Assert.assertEquals;
 
@@ -6,8 +6,8 @@ import java.util.BitSet;
 
 import org.junit.Test;
 
-import apimining.sequence.Sequence;
-import apimining.transaction.Transaction;
+import apimining.pam.sequence.Sequence;
+import apimining.pam.transaction.Transaction;
 
 public class SequenceTest {
 
