@@ -1,16 +1,24 @@
 import matplotlib.pyplot as plt
-from matplotlib import rcParams
+from matplotlib import rc
 from numpy import array, arange, nan
 import os
 
 def main():
+
     
-    baseFolder = '/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/train/'
+    
+    baseFolder = '/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/'
     algs = ['ISM-Prob','MAPO','UPMiner']
     ubound = 'Dataset'
     markers = ['o','D','s','v','^','*','x','+','d','.']
-    rcParams['axes.color_cycle'] = ['b','g','r','m']
-    
+    rc('axes',color_cycle=['b','g','r','m'])
+
+    rc('ps', fonttype=42)
+    rc('pdf', fonttype=42)
+
+    rc('xtick', labelsize=16) 
+    rc('ytick', labelsize=16) 		    
+
     for alg in algs:
     
         seqPrecision = []
@@ -80,12 +88,12 @@ def plotfigpr(precision,recall,title,xlabel,ylabel,symbol,figno):
 
     plt.figure(figno)
     plt.hold(True)
-    plt.plot(x,y,'.-',linewidth=2,markersize=5,marker=symbol)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
+    plt.plot(x,y,'.-',linewidth=2,markersize=5,marker=symbol,clip_on=False)
+    plt.xlabel(xlabel,fontsize=16)
+    plt.ylabel(ylabel,fontsize=16)
     plt.title(title)
-    plt.xlim([0,0.8])
-    plt.ylim([0,0.8])
+    plt.xlim([0,0.5])
+    plt.ylim([0,0.5])
     plt.grid(True)
 
 # Plot dashed horizontal
@@ -99,9 +107,9 @@ def plotfig(x,y,title,xlabel,ylabel,symbol,figno):
 
     plt.figure(figno)
     plt.hold(True)
-    plt.plot(x,y,'.-',linewidth=2,markersize=5,marker=symbol)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
+    plt.plot(x,y,'.-',linewidth=2,markersize=5,marker=symbol,clip_on=False)
+    plt.xlabel(xlabel,fontsize=16)
+    plt.ylabel(ylabel,fontsize=16)
     plt.title(title)
     plt.grid(True)
 
