@@ -1,4 +1,4 @@
-package sequencemining.util;
+package apimining.util;
 
 import java.io.File;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package sequencemining.main;
+package apimining.main;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,12 +24,12 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 import com.google.common.io.Files;
 
-import sequencemining.main.InferenceAlgorithms.InferGreedy;
-import sequencemining.main.InferenceAlgorithms.InferenceAlgorithm;
-import sequencemining.sequence.Sequence;
-import sequencemining.transaction.Transaction;
-import sequencemining.transaction.TransactionList;
-import sequencemining.util.Logging;
+import apimining.main.InferenceAlgorithms.InferGreedy;
+import apimining.main.InferenceAlgorithms.InferenceAlgorithm;
+import apimining.sequence.Sequence;
+import apimining.transaction.Transaction;
+import apimining.transaction.TransactionList;
+import apimining.util.Logging;
 
 public class SequenceMining extends SequenceMiningCore {
 

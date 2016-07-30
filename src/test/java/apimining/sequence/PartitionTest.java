@@ -1,4 +1,4 @@
-package sequencemining.sequence;
+package apimining.sequence;
 
 import static org.junit.Assert.assertEquals;
 
@@ -9,8 +9,9 @@ import java.util.Set;
 
 import org.junit.Test;
 
-import sequencemining.transaction.Transaction;
-import sequencemining.transaction.TransactionGenerator;
+import apimining.sequence.Sequence;
+import apimining.transaction.Transaction;
+import apimining.transaction.TransactionGenerator;
 
 public class PartitionTest {
 

@@ -1,9 +1,4 @@
-package sequencemining.util;
-
-import sequencemining.main.SequenceMining;
-import sequencemining.main.SequenceMiningCore;
-import sequencemining.sequence.Sequence;
-import sequencemining.transaction.TransactionList;
+package apimining.util;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -15,6 +10,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.input.ReversedLinesFileReader;
+
+import apimining.main.SequenceMining;
+import apimining.main.SequenceMiningCore;
+import apimining.sequence.Sequence;
+import apimining.transaction.TransactionList;
 
 /**
  * Read last EM step of partial sequence log and output interesting sequences

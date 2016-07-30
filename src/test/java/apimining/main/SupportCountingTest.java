@@ -1,4 +1,4 @@
-package sequencemining.main;
+package apimining.main;
 
 import static org.junit.Assert.assertEquals;
 
@@ -10,8 +10,10 @@ import java.util.HashSet;
 
 import org.junit.Test;
 
-import sequencemining.sequence.Sequence;
-import sequencemining.transaction.TransactionList;
+import apimining.main.EMStep;
+import apimining.main.SequenceMining;
+import apimining.sequence.Sequence;
+import apimining.transaction.TransactionList;
 
 public class SupportCountingTest {
 

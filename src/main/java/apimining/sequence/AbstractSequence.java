@@ -1,4 +1,4 @@
-package sequencemining.sequence;
+package apimining.sequence;
 
 import java.io.Serializable;
 import java.util.AbstractCollection;

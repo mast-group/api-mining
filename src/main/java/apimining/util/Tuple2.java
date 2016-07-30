@@ -1,4 +1,4 @@
-package sequencemining.util;
+package apimining.util;
 
 public class Tuple2<T1, T2> {
 	public final T1 _1;

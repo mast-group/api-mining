@@ -1,4 +1,4 @@
-package sequencemining.transaction;
+package apimining.transaction;
 
 import java.util.List;
 

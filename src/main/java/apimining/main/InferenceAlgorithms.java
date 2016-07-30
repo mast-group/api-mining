@@ -1,4 +1,4 @@
-package sequencemining.main;
+package apimining.main;
 
 import java.io.Serializable;
 import java.util.BitSet;
@@ -6,8 +6,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
 
-import sequencemining.sequence.Sequence;
-import sequencemining.transaction.Transaction;
+import apimining.sequence.Sequence;
+import apimining.transaction.Transaction;
 
 /** Container class for Inference Algorithms */
 public class InferenceAlgorithms {
