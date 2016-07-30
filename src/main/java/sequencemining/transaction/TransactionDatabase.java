@@ -32,13 +32,6 @@ public abstract class TransactionDatabase {
 	/** Get a list of transactions */
 	public abstract List<Transaction> getTransactionList();
 
-	// /** Get a JavaRDD of transactions */
-	// public abstract JavaRDD<Transaction> getTransactionRDD();
-	//
-	// /** Update the transaction cache */
-	// public abstract void updateTransactionCache(
-	// final JavaRDD<Transaction> updatedTransactions);
-
 	/** Get the number of transactions in this database */
 	public abstract long size();
 

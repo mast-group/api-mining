@@ -136,32 +136,6 @@ public class EMStep {
 		}).flatMap(Set::stream).collect(groupingBy(identity(), counting()));
 	}
 
-	// /** Calculate and return sequence transition matrix */
-	// static Table<Sequence, Sequence, Double> calculateTransitionMatrix(
-	// final TransactionDatabase transactions) {
-	// final double noTransactions = transactions.size();
-	//
-	// // Average transitions across transactions
-	// final Map<Entry<Sequence, Sequence>, Long> transitions = transactions
-	// .getTransactionList().parallelStream()
-	// .map(t -> t.getTransitions().entrySet()).flatMap(Set::stream)
-	// .collect(groupingBy(identity(), counting()));
-	//
-	// // Collect into Table
-	// final Supplier<Table<Sequence, Sequence, Double>> supplier =
-	// HashBasedTable::create;
-	// final Table<Sequence, Sequence, Double> P = transitions
-	// .entrySet()
-	// .parallelStream()
-	// .collect(
-	// supplier,
-	// (t, e) -> t.put(e.getKey().getKey(), e.getKey()
-	// .getValue(), e.getValue() / noTransactions),
-	// Table::putAll);
-	//
-	// return P;
-	// }
-
 	private EMStep() {
 	}
 

@@ -32,7 +32,7 @@ public abstract class SequenceMiningCore {
 	private static final double OPTIMIZE_TOL = 1e-5;
 
 	protected static final Logger logger = Logger.getLogger(SequenceMiningCore.class.getName());
-	public static final File LOG_DIR = new File("/disk/data1/jfowkes/logs/");
+	public static final File LOG_DIR = new File("/disk/data1/jfowkes/logs/examples/train/");
 
 	/** Variable settings */
 	protected static Level LOG_LEVEL = Level.FINE;
@@ -49,11 +49,7 @@ public abstract class SequenceMiningCore {
 		final long startTime = System.currentTimeMillis();
 
 		// Initialize itemset cache
-		// if (transactions instanceof TransactionRDD) {
-		// SparkEMStep.initializeCachedItemsets(transactions, singletons);
-		// } else {
 		EMStep.initializeCachedItemsets(transactions, singletons);
-		// }
 
 		// Intialize sequences with singleton seqs and their relative support
 		// as well as supports with singletons and their actual supports
@@ -118,15 +114,6 @@ public abstract class SequenceMiningCore {
 				break;
 			}
 
-			// Spark: checkpoint every 100 iterations to avoid StackOverflow
-			// errors due to long lineage (http://tinyurl.com/ouswhrc)
-			// if (iteration % 100 == 0 && transactions instanceof
-			// TransactionRDD) {
-			// transactions.getTransactionRDD().cache();
-			// transactions.getTransactionRDD().checkpoint();
-			// transactions.getTransactionRDD().count();
-			// }
-
 			if (iteration == maxEMIterations)
 				logger.warning("\nEM iteration limit exceeded.\n");
 		}
@@ -155,11 +142,6 @@ public abstract class SequenceMiningCore {
 			// Set up storage
 			final Map<Sequence, Double> newSequences;
 
-			// Parallel E-step and M-step combined
-			// if (transactions instanceof TransactionRDD)
-			// newItemsets = SparkEMStep.hardEMStep(transactions,
-			// inferenceAlgorithm);
-			// else
 			newSequences = EMStep.hardEMStep(transactions.getTransactionList(), inferenceAlgorithm);
 
 			// If set has stabilised calculate norm(p_prev - p_new)
@@ -174,10 +156,6 @@ public abstract class SequenceMiningCore {
 			prevSequences = newSequences;
 		}
 
-		// Calculate average cost of last covering
-		// if (transactions instanceof TransactionRDD)
-		// SparkEMStep.calculateAndSetAverageCost(transactions);
-		// else
 		EMStep.calculateAndSetAverageCost(transactions);
 
 		sequences.clear();
@@ -316,12 +294,7 @@ public abstract class SequenceMiningCore {
 
 		// Find cost in parallel
 		Tuple2<Double, Double> costAndProb;
-		// if (transactions instanceof TransactionRDD) {
-		// costAndProb = SparkEMStep.structuralEMStep(transactions,
-		// inferenceAlgorithm, candidate);
-		// } else {
 		costAndProb = EMStep.structuralEMStep(transactions, inferenceAlgorithm, candidate);
-		// }
 		final double curCost = costAndProb._1;
 		final double prob = costAndProb._2;
 		logger.finer(String.format(", cost: %.2f", curCost));
@@ -330,13 +303,7 @@ public abstract class SequenceMiningCore {
 		if (curCost < transactions.getAverageCost()) {
 			logger.finer("\n Candidate Accepted.\n");
 			// Update cache with candidate
-			Map<Sequence, Double> newSequences;
-			// if (transactions instanceof TransactionRDD) {
-			// newItemsets = SparkEMStep.addAcceptedCandidateCache(
-			// transactions, candidate, prob);
-			// } else {
-			newSequences = EMStep.addAcceptedCandidateCache(transactions, candidate, prob);
-			// }
+			final Map<Sequence, Double> newSequences = EMStep.addAcceptedCandidateCache(transactions, candidate, prob);
 			// Update sequences with newly inferred sequences
 			sequences.clear();
 			sequences.putAll(newSequences);
