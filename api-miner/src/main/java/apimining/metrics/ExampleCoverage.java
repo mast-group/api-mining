@@ -59,8 +59,7 @@ public class ExampleCoverage {
 				"edu.umd.cloud9", "org.hornetq", "org.springframework.data.mongodb" };
 
 		// Stats containers
-		final Stats statsISM = new Stats("ISM-Int");
-		final Stats statsISMProb = new Stats("ISM-Prob");
+		final Stats statsPAM = new Stats("PAM");
 		final Stats statsMAPO = new Stats("MAPO");
 		final Stats statsUPMiner = new Stats("UPMiner");
 		final Stats statsDataset = new Stats("Dataset");
@@ -84,15 +83,10 @@ public class ExampleCoverage {
 				// =+=+=+=+=+=+=+=");
 				System.out.printf(topN + " ");
 
-				// ISM interestingness ranking
-				final Set<List<String>> ISMCalls = getISMCalls(projects[i], "ISM_seqs_int.txt", topN);
-				calculatePrecisionRecall(exampleCalls, ISMCalls, projects[i], topN, statsISM);
-				// statsISM.printProjectStats(projects[i], topN);
-
-				// ISM probability ranking
-				final Set<List<String>> ISMCallsProb = getISMCalls(projects[i], "ISM_seqs_prob.txt", topN);
-				calculatePrecisionRecall(exampleCalls, ISMCallsProb, projects[i], topN, statsISMProb);
-				// statsISMProb.printProjectStats(projects[i], topN);
+				// PAM
+				final Set<List<String>> PAMCalls = getPAMCalls(projects[i], "PAM_seqs.txt", topN);
+				calculatePrecisionRecall(exampleCalls, PAMCalls, projects[i], topN, statsPAM);
+				// statsPAM.printProjectStats(projects[i], topN);
 
 				// MAPO
 				final Set<List<String>> MAPOCalls = getClusteredCalls(projects[i], "mapo", topN, datasetCalls);
@@ -105,8 +99,7 @@ public class ExampleCoverage {
 				// statsUPMiner.printProjectStats(projects[i], topN);
 
 				// Print average
-				// statsISM.printAverage(topN);
-				// statsISMProb.printAverage(topN);
+				// statsPAM.printAverage(topN);
 				// statsMAPO.printAverage(topN);
 				// statsUPMiner.printAverage(topN);
 			}
@@ -114,8 +107,7 @@ public class ExampleCoverage {
 		}
 
 		// Save to file
-		statsISM.saveToFile();
-		statsISMProb.saveToFile();
+		statsPAM.saveToFile();
 		statsMAPO.saveToFile();
 		statsUPMiner.saveToFile();
 		statsDataset.saveToFile();
@@ -342,7 +334,7 @@ public class ExampleCoverage {
 		return orderBySupport(topCalls, datasetCalls, topN);
 	}
 
-	static LinkedHashSet<List<String>> getISMCalls(final String project, final String itemsetsFile, final int topN)
+	static LinkedHashSet<List<String>> getPAMCalls(final String project, final String itemsetsFile, final int topN)
 			throws IOException {
 		final LinkedHashSet<List<String>> topCalls = new LinkedHashSet<>();
 		final BufferedReader br = new BufferedReader(

@@ -50,12 +50,12 @@ public class ExampleUsage {
 			// Dataset calls
 			final List<List<String>> datasetCalls = ExampleCoverage.getDatasetAPICalls(projects[i]);
 
-			// ISM probability ranking
-			final LinkedHashSet<List<String>> ISMCallsProb = ExampleCoverage.getISMCalls(projects[i],
-					"ISM_seqs_prob.txt", 500);
-			printTopCalls(getTopSequences(ISMCallsProb, topN), "ISM Top ", out);
-			printTopCalls(getTopCoveredSequences(exampleCalls, ISMCallsProb, topN), "ISM Covered Top ", out);
-			printTopCalls(getTopNotCoveredSequences(exampleCalls, ISMCallsProb, topN), "ISM Not Covered Top ", out);
+			// PAM
+			final LinkedHashSet<List<String>> PAMCallsProb = ExampleCoverage.getPAMCalls(projects[i], "PAM_seqs.txt",
+					500);
+			printTopCalls(getTopSequences(PAMCallsProb, topN), "PAM Top ", out);
+			printTopCalls(getTopCoveredSequences(exampleCalls, PAMCallsProb, topN), "PAM Covered Top ", out);
+			printTopCalls(getTopNotCoveredSequences(exampleCalls, PAMCallsProb, topN), "PAM Not Covered Top ", out);
 
 			// MAPO
 			final LinkedHashSet<List<String>> MAPOCalls = ExampleCoverage.getClusteredCalls(projects[i], "mapo", 500,

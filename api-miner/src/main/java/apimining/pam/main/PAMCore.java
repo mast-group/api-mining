@@ -2,10 +2,13 @@ package apimining.pam.main;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
@@ -14,29 +17,81 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Functions;
+import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Ordering;
+import com.google.common.io.Files;
 
 import apimining.pam.main.InferenceAlgorithms.InferenceAlgorithm;
 import apimining.pam.sequence.Sequence;
+import apimining.pam.transaction.Transaction;
 import apimining.pam.transaction.TransactionDatabase;
+import apimining.pam.transaction.TransactionList;
+import apimining.pam.util.Logging;
 import apimining.pam.util.Tuple2;
 
-public abstract class SequenceMiningCore {
+public abstract class PAMCore {
 
 	/** Main fixed settings */
 	private static final int OPTIMIZE_PARAMS_EVERY = 1;
 	private static final double OPTIMIZE_TOL = 1e-5;
 
-	protected static final Logger logger = Logger.getLogger(SequenceMiningCore.class.getName());
-	public static final File LOG_DIR = new File("/disk/data1/jfowkes/logs/examples/train/");
+	protected static final Logger logger = Logger.getLogger(PAMCore.class.getName());
+	public static final File LOG_DIR = new File("/tmp/");
 
 	/** Variable settings */
 	protected static Level LOG_LEVEL = Level.FINE;
 	protected static long MAX_RUNTIME = 24 * 60 * 60 * 1_000; // 24hrs
+
+	/** Mine interesting sequences */
+	public static Map<Sequence, Double> mineInterestingSequences(final File inputFile,
+			final InferenceAlgorithm inferenceAlgorithm, final int maxStructureSteps, final int maxEMIterations,
+			final File logFile) throws IOException {
+
+		// Set up logging
+		if (logFile != null)
+			Logging.setUpFileLogger(logger, LOG_LEVEL, logFile);
+		else
+			Logging.setUpConsoleLogger(logger, LOG_LEVEL);
+
+		// Echo input parameters
+		logger.info("========== INTERESTING SEQUENCE MINING ============");
+		logger.info("\n Time: " + new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss").format(new Date()));
+		logger.info("\n Inputs: -f " + inputFile + " -s " + maxStructureSteps + " -i " + maxEMIterations + " -r "
+				+ MAX_RUNTIME / 60_000);
+
+		// Read in transaction database
+		final TransactionList transactions = readTransactions(inputFile);
+
+		// Determine most frequent singletons
+		final Multiset<Sequence> singletons = scanDatabaseToDetermineFrequencyOfSingleItems(inputFile);
+
+		// Run inference to find interesting sequences
+		logger.fine("\n============= SEQUENCE INFERENCE =============\n");
+		final HashMap<Sequence, Double> sequences = structuralEM(transactions, singletons, inferenceAlgorithm,
+				maxStructureSteps, maxEMIterations);
+		if (LOG_LEVEL.equals(Level.FINEST))
+			logger.finest(
+					"\n======= Transaction Database =======\n" + Files.toString(inputFile, Charsets.UTF_8) + "\n");
+
+		// Sort sequences by probability
+		final HashMap<Sequence, Double> intMap = calculateInterestingness(sequences, transactions);
+		final Map<Sequence, Double> sortedSequences = sortSequences(sequences, intMap);
+
+		logger.info("\n============= INTERESTING SEQUENCES =============\n");
+		for (final Entry<Sequence, Double> entry : sortedSequences.entrySet()) {
+			logger.info(String.format("%s\tprob: %1.5f \tint: %1.5f %n", entry.getKey(), entry.getValue(),
+					intMap.get(entry.getKey())));
+		}
+		logger.info("\n");
+
+		return sortedSequences;
+	}
 
 	/**
 	 * Learn itemsets model using structural EM
@@ -315,12 +370,12 @@ public abstract class SequenceMiningCore {
 		return false;
 	}
 
-	/** Sort sequences by interestingness */
+	/** Sort sequences by probability */
 	public static Map<Sequence, Double> sortSequences(final HashMap<Sequence, Double> sequences,
 			final HashMap<Sequence, Double> intMap) {
 
-		final Ordering<Sequence> comparator = Ordering.natural().reverse().onResultOf(Functions.forMap(intMap))
-				.compound(Ordering.natural().reverse().onResultOf(Functions.forMap(sequences)))
+		final Ordering<Sequence> comparator = Ordering.natural().reverse().onResultOf(Functions.forMap(sequences))
+				.compound(Ordering.natural().reverse().onResultOf(Functions.forMap(intMap)))
 				.compound(Ordering.usingToString());
 		final Map<Sequence, Double> sortedSequences = ImmutableSortedMap.copyOf(sequences, comparator);
 
@@ -349,7 +404,108 @@ public abstract class SequenceMiningCore {
 		return interestingnessMap;
 	}
 
-	/** Read output sequences from file (sorted by interestingness) */
+	public static TransactionList readTransactions(final File inputFile) throws IOException {
+
+		final List<Transaction> transactions = new ArrayList<>();
+
+		// for each line (transaction) until the end of file
+		final LineIterator it = FileUtils.lineIterator(inputFile, "UTF-8");
+		while (it.hasNext()) {
+
+			final String line = it.nextLine();
+			// if the line is a comment, is empty or is a
+			// kind of metadata
+			if (line.isEmpty() == true || line.charAt(0) == '#' || line.charAt(0) == '%' || line.charAt(0) == '@') {
+				continue;
+			}
+
+			// split the transaction into items
+			final String[] lineSplited = line.split(" ");
+			// convert to Transaction class and add it to the structure
+			transactions.add(getTransaction(lineSplited));
+
+		}
+		// close the input file
+		LineIterator.closeQuietly(it);
+
+		return new TransactionList(transactions);
+	}
+
+	/**
+	 * Create and add the Transaction in the String array
+	 *
+	 * @param integers
+	 *            one line of integers in the sequence database
+	 */
+	public static Transaction getTransaction(final String[] integers) {
+		final Transaction sequence = new Transaction();
+
+		for (int i = 0; i < integers.length; i++) {
+			if (integers[i].equals("-1")) { // end of item
+
+			} else if (integers[i].equals("-2")) { // end of sequence
+				return sequence;
+			} else { // extract the value for an item
+				sequence.add(Integer.parseInt(integers[i]));
+			}
+		}
+		throw new RuntimeException("Corrupt sequence database.");
+	}
+
+	/**
+	 * This method scans the input database to calculate the support of single
+	 * items.
+	 *
+	 * @param inputFile
+	 *            the input file
+	 * @return a multiset for storing the support of each singleton
+	 */
+	public static Multiset<Sequence> scanDatabaseToDetermineFrequencyOfSingleItems(final File inputFile)
+			throws IOException {
+
+		final Multiset<Sequence> singletons = HashMultiset.create();
+
+		// for each line (transaction) until the end of file
+		final LineIterator it = FileUtils.lineIterator(inputFile, "UTF-8");
+		while (it.hasNext()) {
+
+			final String line = it.nextLine();
+			// if the line is a comment, is empty or is a
+			// kind of metadata
+			if (line.isEmpty() == true || line.charAt(0) == '#' || line.charAt(0) == '%' || line.charAt(0) == '@') {
+				continue;
+			}
+
+			// split the line into items
+			final String[] lineSplit = line.split(" ");
+			// for each item
+			final HashSet<Sequence> seenItems = new HashSet<>();
+			for (final String itemString : lineSplit) {
+				final int item = Integer.parseInt(itemString);
+				if (item >= 0) { // ignore end of itemset/sequence tags
+					final Sequence seq = new Sequence(item);
+					PAMCore.recursiveSetOccurrence(seq, seenItems); // set
+																	// occurrence
+					seenItems.add(seq); // add item to seen
+				}
+			}
+			singletons.addAll(seenItems); // increase the support of the items
+		}
+
+		// close the input file
+		LineIterator.closeQuietly(it);
+
+		return singletons;
+	}
+
+	private static void recursiveSetOccurrence(final Sequence seq, final HashSet<Sequence> seenItems) {
+		if (seenItems.contains(seq)) {
+			seq.incrementOccurence();
+			recursiveSetOccurrence(seq, seenItems);
+		}
+	}
+
+	/** Read output sequences from file (sorted by probability) */
 	public static Map<Sequence, Double> readISMSequences(final File output) throws IOException {
 		final HashMap<Sequence, Double> sequences = new HashMap<>();
 		final HashMap<Sequence, Double> intMap = new HashMap<>();
@@ -383,7 +539,7 @@ public abstract class SequenceMiningCore {
 				found = true;
 		}
 
-		// Sort itemsets by interestingness
+		// Sort sequences by probability
 		final Map<Sequence, Double> sortedSequences = sortSequences(sequences, intMap);
 
 		return sortedSequences;

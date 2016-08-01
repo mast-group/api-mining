@@ -8,7 +8,7 @@ def main():
     
     
     baseFolder = '/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/'
-    algs = ['ISM-Prob','MAPO','UPMiner']
+    algs = ['PAM','MAPO','UPMiner']
     ubound = 'Dataset'
     markers = ['o','D','s','v','^','*','x','+','d','.']
     rc('axes',color_cycle=['b','g','r','m'])
@@ -54,7 +54,6 @@ def main():
     fu.close()   
     plotdashed(mRecallMax,2)
 
-    algs[algs.index('ISM-Prob')] = 'PAM'
     plt.figure(1)
     plt.legend(algs,loc='lower right')
     plt.savefig(baseFolder+'SequencePrecisionRecall.png',dpi=150)

@@ -46,7 +46,7 @@
                               <resource>reference.conf</resource>
                           </transformer>
 		      	  <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  	      <mainClass>sequencemining.main.SequenceMining</mainClass>
+                  	      <mainClass>apimining.pam.main.PAM</mainClass>
                 	  </transformer>
                       </transformers>
                   </configuration>

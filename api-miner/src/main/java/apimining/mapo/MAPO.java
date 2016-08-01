@@ -9,6 +9,8 @@ import java.util.Collection;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 
+import org.apache.commons.io.FilenameUtils;
+
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
@@ -24,16 +26,11 @@ public class MAPO {
 	/** Main function parameters */
 	public static class Parameters {
 
-		@Parameter(names = { "-p", "--project" }, description = "Project name")
-		String project = "hadoop";
-
 		@Parameter(names = { "-f", "--file" }, description = "Arff file with call sequences")
-		String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/calls/" + project
-				+ ".arff";
+		String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/calls/hadoop.arff";
 
 		@Parameter(names = { "-o", "--outFolder" }, description = "Output Folder")
-		String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/" + project
-				+ "/mapo/";
+		String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/hadoop/mapo/";
 
 		@Parameter(names = { "-s", "--support" }, description = "Minimum support threshold")
 		double minSupp = 0.1;
@@ -49,15 +46,9 @@ public class MAPO {
 		try {
 			jc.parse(args);
 
-			// Set params
-			final String project = params.project;
-			final String arffFile = params.arffFile;
-			final String outFolder = params.outFolder;
-			final double minSupp = params.minSupp;
-
 			// Mine project
-			System.out.println("Processing " + project + "...");
-			mineAPICallSequences(arffFile, outFolder, 0.4, minSupp);
+			System.out.println("Processing " + FilenameUtils.getBaseName(params.arffFile) + "...");
+			mineAPICallSequences(params.arffFile, params.outFolder, 0.4, params.minSupp);
 
 		} catch (final ParameterException e) {
 			System.out.println(e.getMessage());

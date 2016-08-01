@@ -11,7 +11,6 @@ import java.util.HashSet;
 import org.junit.Test;
 
 import apimining.pam.main.EMStep;
-import apimining.pam.main.SequenceMining;
 import apimining.pam.sequence.Sequence;
 import apimining.pam.transaction.TransactionList;
 
@@ -21,7 +20,7 @@ public class SupportCountingTest {
 	public void testSupportCounting() throws IOException {
 
 		final File input = getTestFile("TOY.txt"); // database
-		final TransactionList transactions = SequenceMining.readTransactions(input);
+		final TransactionList transactions = PAMCore.readTransactions(input);
 		final Sequence seq = new Sequence(7, 3);
 		final HashSet<Sequence> seqs = new HashSet<>();
 		seqs.add(seq);

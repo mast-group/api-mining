@@ -15,7 +15,7 @@ public class MinedSequenceLengths {
 				"restlet-framework-java", "cloud9", "hornetq", "spring-data-mongodb" };
 		final int topN = 100;
 
-		double avgSizeISM = 0;
+		double avgSizePAM = 0;
 		double avgSizeMAPO = 0;
 		double avgSizeUPMiner = 0;
 		int count = 0;
@@ -28,10 +28,9 @@ public class MinedSequenceLengths {
 			// Dataset calls
 			final List<List<String>> datasetCalls = ExampleCoverage.getDatasetAPICalls(projects[i]);
 
-			// ISM probability ranking
-			final LinkedHashSet<List<String>> ISMCallsProb = ExampleCoverage.getISMCalls(projects[i],
-					"ISM_seqs_prob.txt", 500);
-			avgSizeISM += getTopSequencesAverageSize(ISMCallsProb, topN);
+			// PAM
+			final LinkedHashSet<List<String>> PAMCalls = ExampleCoverage.getPAMCalls(projects[i], "PAM_seqs.txt", 500);
+			avgSizePAM += getTopSequencesAverageSize(PAMCalls, topN);
 
 			// MAPO
 			final LinkedHashSet<List<String>> MAPOCalls = ExampleCoverage.getClusteredCalls(projects[i], "mapo", 500,
@@ -43,14 +42,14 @@ public class MinedSequenceLengths {
 					500, datasetCalls);
 			avgSizeUPMiner += getTopSequencesAverageSize(UPMinerCalls, topN);
 
-			// System.out.println("ISM Avg. Size " + avgSizeISM);
+			// System.out.println("PAM Avg. Size " + avgSizePAM);
 			// System.out.println("MAPO Avg. Size " + avgSizeMAPO);
 			// System.out.println("UPMiner Avg. Size " + avgSizeUPMiner);
 
 			count++;
 		}
 
-		System.out.println("ISM Avg. Size " + avgSizeISM / count);
+		System.out.println("PAM Avg. Size " + avgSizePAM / count);
 		System.out.println("MAPO Avg. Size " + avgSizeMAPO / count);
 		System.out.println("UPMiner Avg. Size " + avgSizeUPMiner / count);
 

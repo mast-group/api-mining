@@ -19,8 +19,7 @@ import org.apache.commons.io.FilenameUtils;
 public class Logging {
 
 	/** Set up logging to console */
-	public static void setUpConsoleLogger(final Logger logger,
-			final Level logLevel) {
+	public static void setUpConsoleLogger(final Logger logger, final Level logLevel) {
 		LogManager.getLogManager().reset();
 		logger.setLevel(logLevel);
 		final Handler handler = setUpConsoleHandler();
@@ -28,8 +27,7 @@ public class Logging {
 	}
 
 	/** Set up logging to file */
-	public static void setUpFileLogger(final Logger logger,
-			final Level logLevel, final File logFile) {
+	public static void setUpFileLogger(final Logger logger, final Level logLevel, final File logFile) {
 		LogManager.getLogManager().reset();
 		logger.setLevel(logLevel);
 		final Handler handler = setUpFileHandler(logFile.getAbsolutePath());
@@ -37,8 +35,7 @@ public class Logging {
 	}
 
 	/** Set up logging to console and file */
-	public static void setUpConsoleAndFileLogger(final Logger logger,
-			final Level logLevel, final File logFile) {
+	public static void setUpConsoleAndFileLogger(final Logger logger, final Level logLevel, final File logFile) {
 		LogManager.getLogManager().reset();
 		logger.setLevel(logLevel);
 		final Handler chandler = setUpConsoleHandler();
@@ -48,24 +45,20 @@ public class Logging {
 	}
 
 	/** Set the log file name */
-	public static File getLogFileName(final String algorithm,
-			final boolean timeStampLog, final File logDir, final File dataset) {
+	public static File getLogFileName(final String algorithm, final boolean timeStampLog, final File logDir,
+			final String dataset) {
 		String timeStamp = "";
 		if (timeStampLog)
-			timeStamp = "-"
-					+ new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss")
-							.format(new Date());
-		return new File(logDir + File.separator + algorithm + "-"
-				+ FilenameUtils.getBaseName(dataset.getName()) + timeStamp
-				+ ".log");
+			timeStamp = "-" + new SimpleDateFormat("dd.MM.yyyy-HH:mm:ss").format(new Date());
+		return new File(
+				logDir + File.separator + algorithm + "-" + FilenameUtils.getBaseName(dataset) + timeStamp + ".log");
 	}
 
 	/** Set up console handler */
 	public static Handler setUpConsoleHandler() {
 		final ConsoleHandler handler = new ConsoleHandler() {
 			@Override
-			protected void setOutputStream(final OutputStream out)
-					throws SecurityException {
+			protected void setOutputStream(final OutputStream out) throws SecurityException {
 				super.setOutputStream(System.out);
 			}
 		};
