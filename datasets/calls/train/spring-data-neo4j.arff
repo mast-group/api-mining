@@ -1,0 +1,27 @@
+@relation spring-data-neo4j
+
+@attribute fqCaller string
+@attribute fqCalls string
+
+@data
+'com.oreilly.springdata.neo4j.AbstractIntegrationTest.setUp','org.springframework.data.neo4j.support.Neo4jTemplate.save org.springframework.data.neo4j.support.Neo4jTemplate.save org.springframework.data.neo4j.support.Neo4jTemplate.save org.springframework.data.neo4j.support.Neo4jTemplate.save org.springframework.data.neo4j.support.Neo4jTemplate.save org.springframework.data.neo4j.support.Neo4jTemplate.save org.springframework.data.neo4j.support.Neo4jTemplate.save org.springframework.data.neo4j.support.Neo4jTemplate.save'
+'agentspring.graphdb.DefaultFiltersImpl.getEntity','org.springframework.data.neo4j.support.Neo4jTemplate.createEntityFromStoredType'
+'com.springsource.s2gx.DefaultSessionLoader.loadSessionData','org.springframework.data.neo4j.template.Neo4jOperations.save'
+'com.nextmilestone.neo4j.repository.ManagedTransactionCartRepository.save','org.springframework.data.neo4j.support.Neo4jTemplate.save'
+'com.nextmilestone.neo4j.repository.ManagedTransactionProductRepository.save','org.springframework.data.neo4j.support.Neo4jTemplate.save'
+'com.nextmilestone.neo4j.repository.ManagedTransactionRelationshipRepository.contains','org.springframework.data.neo4j.support.Neo4jTemplate.getPersistentState org.springframework.data.neo4j.support.Neo4jTemplate.getPersistentState org.springframework.data.neo4j.support.Neo4jTemplate.createRelationshipBetween'
+'org.apache.camel.component.neo4j.Neo4jProducer.Neo4jProducer','org.springframework.data.neo4j.support.Neo4jTemplate.<init>'
+'org.apache.camel.component.neo4j.Neo4jProducer.createNode','org.springframework.data.neo4j.support.Neo4jTemplate.createNode org.springframework.data.neo4j.support.Neo4jTemplate.createNode'
+'org.apache.camel.component.neo4j.Neo4jProducer.createRelationship','org.springframework.data.neo4j.support.Neo4jTemplate.createRelationshipBetween org.springframework.data.neo4j.support.Neo4jTemplate.createRelationshipBetween'
+'org.apache.camel.component.neo4j.Neo4jProducer.removeNode','org.springframework.data.neo4j.support.Neo4jTemplate.getNode org.springframework.data.neo4j.support.Neo4jTemplate.delete org.springframework.data.neo4j.support.Neo4jTemplate.delete'
+'org.apache.camel.component.neo4j.Neo4jProducer.removeRelationship','org.springframework.data.neo4j.support.Neo4jTemplate.getRelationship org.springframework.data.neo4j.support.Neo4jTemplate.delete org.springframework.data.neo4j.support.Neo4jTemplate.delete org.springframework.data.neo4j.support.Neo4jTemplate.deleteRelationshipBetween'
+'agentspring.graphdb.PersistingBeanPostProcessor.postProcessAfterInitialization','org.springframework.data.neo4j.aspects.core.NodeBacked.persist'
+'org.springframework.data.test.snippets.SnippetNeo4jTemplateMethodsTest.documentTemplateMethods','org.springframework.data.neo4j.support.Neo4jTemplate.<init> org.springframework.data.neo4j.support.Neo4jTemplate.createNode org.springframework.data.neo4j.support.Neo4jTemplate.createNode org.springframework.data.neo4j.support.Neo4jTemplate.createRelationshipBetween org.springframework.data.neo4j.support.Neo4jTemplate.index org.springframework.data.neo4j.support.Neo4jTemplate.query org.springframework.data.neo4j.support.Neo4jTemplate.execute org.springframework.data.neo4j.support.Neo4jTemplate.lookup org.springframework.data.neo4j.support.Neo4jTemplate.lookup'
+'org.safaproject.safa.tagging.repository.TagRepositoryTest.clearDatabase','org.springframework.data.neo4j.support.node.Neo4jHelper.cleanDb'
+'org.safaproject.safa.tagging.repository.TagRepositoryTest.shouldAllowDirectTagTypeCreation','org.springframework.data.neo4j.support.Neo4jTemplate.count org.springframework.data.neo4j.support.Neo4jTemplate.save org.springframework.data.neo4j.support.Neo4jTemplate.count'
+'org.safaproject.safa.tagging.repository.TagRepositoryTest.shouldFilterTagsWithoutSelectedTags','org.springframework.data.neo4j.support.Neo4jTemplate.findAll'
+'org.safaproject.safa.tagging.repository.TagRepositoryTest.makeSomeTags','org.springframework.data.neo4j.support.Neo4jTemplate.save org.springframework.data.neo4j.support.Neo4jTemplate.save org.springframework.data.neo4j.support.Neo4jTemplate.save org.springframework.data.neo4j.support.Neo4jTemplate.save'
+'org.springdata.neo4j.todos.TodoTest.createAndReadTodo','org.springframework.data.neo4j.support.Neo4jTemplate.save org.springframework.data.neo4j.support.Neo4jTemplate.findOne'
+'org.springdata.neo4j.todos.TodoTest.todoKeepsGivenTags','org.springframework.data.neo4j.support.Neo4jTemplate.save'
+'org.springdata.neo4j.todos.TodoTest.findTodoWithTraversingDynamicQuery','org.springframework.data.neo4j.support.Neo4jTemplate.save'
+'org.springdata.neo4j.todos.TodoTest.findTodoWithAnnotatedQuery','org.springframework.data.neo4j.support.Neo4jTemplate.save'
