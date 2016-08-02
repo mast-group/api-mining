@@ -20,24 +20,6 @@ import apimining.java.ASTVisitors.WildcardImportVisitor;
  */
 public class WildcardNamespaceCollector {
 
-	// private static final String libFolder =
-	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/API/library_dataset/java_libraries/";
-	// private static final String namespaceFolder =
-	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/API/library_dataset/namespaces/";
-	//
-	// private static final String[] projFolders = new String[] {
-	// "androidLocation", "androidWifi", "elasticsearch",
-	// "hadoop", "hibernate", "jgit", "jsoup", "lucene", "neo4j", "netty",
-	// "opennlp", "rabbitmq", "rhino",
-	// "spatial4j", "twitter4j" };
-	// private static final String[] packageNames = new String[] {
-	// "android.location", "android.net.wifi",
-	// "org.elasticsearch", "org.apache.hadoop", "org.hibernate",
-	// "org.eclipse.jgit", "org.jsoup",
-	// "org.apache.lucene", "org.neo4j", "io.netty", "opennlp", "com.rabbitmq",
-	// "org.mozilla.javascript",
-	// "com.spatial4j", "twitter4j" };
-
 	private static final String libFolder = "/disk/data2/jfowkes/example_dataset/java_libraries/";
 	private static final String exampleFolder = "/disk/data2/jfowkes/example_dataset/java_libraries_examples/";
 	private static final String namespaceFolder = "/disk/data2/jfowkes/example_dataset/namespaces/";

@@ -18,9 +18,9 @@ import com.google.common.collect.LinkedListMultimap;
  */
 public class APICallExtractor {
 
+	private static final String libFolder = "/disk/data2/jfowkes/example_dataset/java_libraries/";
 	// private static final String libFolder =
-	// "/disk/data2/jfowkes/example_dataset/java_libraries/";
-	private static final String libFolder = "/disk/data2/jfowkes/example_dataset/test_train_split/train/";
+	// "/disk/data2/jfowkes/example_dataset/test_train_split/train/";
 	private static final String namespaceFolder = "/disk/data2/jfowkes/example_dataset/namespaces/";
 
 	private static final String[] projFolders = new String[] { "netty", "hadoop", "twitter4j", "mahout", "neo4j",
@@ -31,16 +31,14 @@ public class APICallExtractor {
 			"org.apache.camel", "org.jboss.weld", "org.jboss.resteasy", "com.webobjects", "org.apache.wicket",
 			"org.restlet", "edu.umd.cloud9", "org.hornetq", "org.springframework.data.mongodb" };
 
+	private static final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/calls/";
 	// private static final String outFolder =
-	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/calls/";
-	private static final String outFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/train/calls/";
+	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/train/calls/";
 
 	public static void main(final String[] args) throws IOException {
 
 		// For each java file in project
 		for (int i = 0; i < packageNames.length; i++) {
-			// if (!projFolders[i].contains("twitter4j"))
-			// continue;
 
 			System.out.println("===== Processing " + projFolders[i]);
 

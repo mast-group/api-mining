@@ -27,7 +27,7 @@ public class UPMiner {
 	/** Main function parameters */
 	public static class Parameters {
 
-		@Parameter(names = { "-f", "--file" }, description = "Arff file with call sequences")
+		@Parameter(names = { "-f", "--file" }, description = "ARFF file with call sequences")
 		String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/calls/hadoop.arff";
 
 		@Parameter(names = { "-o", "--outFolder" }, description = "Output Folder")

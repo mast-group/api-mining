@@ -40,12 +40,12 @@ import apimining.java.ASTVisitors;
 /** Check coverage of API call methods on provided examples */
 public class ExampleCoverage {
 
+	static final String baseFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/";
+	private static final String exampleFolder = "/disk/data2/jfowkes/example_dataset/java_libraries_examples/";
 	// static final String baseFolder =
-	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/";
+	// "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/train/";
 	// private static final String exampleFolder =
-	// "/disk/data2/jfowkes/example_dataset/java_libraries_examples/";
-	static final String baseFolder = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/train/";
-	private static final String exampleFolder = "/disk/data2/jfowkes/example_dataset/test_train_split/test/";
+	// "/disk/data2/jfowkes/example_dataset/test_train_split/test/";
 	private static final String namespaceFolder = "/disk/data2/jfowkes/example_dataset/namespaces/";
 
 	public static void main(final String[] args) throws IOException, ClassNotFoundException {

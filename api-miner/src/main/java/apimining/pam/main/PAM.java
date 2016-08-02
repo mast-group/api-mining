@@ -28,10 +28,10 @@ public class PAM extends PAMCore {
 	/** Main function parameters */
 	public static class Parameters {
 
-		@Parameter(names = { "-f", "--file" }, description = "Arff file with call sequences")
+		@Parameter(names = { "-f", "--file" }, description = "ARFF file with call sequences")
 		String arffFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/calls/hadoop.arff";
 
-		@Parameter(names = { "-o", "--outFile" }, description = "Output Folder")
+		@Parameter(names = { "-o", "--outFile" }, description = "Output File")
 		String outFile = "/afs/inf.ed.ac.uk/user/j/jfowkes/Code/Sequences/Datasets/API/examples/all/hadoop/PAM_seqs.txt";
 
 		@Parameter(names = { "-s", "--maxSteps" }, description = "Max structure steps")
@@ -49,7 +49,7 @@ public class PAM extends PAMCore {
 		@Parameter(names = { "-t", "--timestamp" }, description = "Timestamp Logfile", arity = 1)
 		boolean timestampLog = true;
 
-		@Parameter(names = { "-v", "--verbose" }, description = "Print to console instead of logfile")
+		@Parameter(names = { "-v", "--verbose" }, description = "Log to console instead of logfile")
 		boolean verbose = false;
 	}
 
