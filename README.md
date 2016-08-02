@@ -86,6 +86,7 @@ The ```@relation``` declaration names the dataset and the following two ```@attr
 
 The dataset is listed after the ```@data``` relation: each line contains a specific method (```fqCaller```) and its API call 
 sequence (```fqCalls```). Note that the ```fqCaller``` attribute can be empty for PAM and UPMiner, it is only required for MAPO (see below).
+
 Note that while this example uses Java, PAM is language agnostic and can use API call sequences from *any* language.
 
 #### Output Format
@@ -121,8 +122,8 @@ It takes folders of API client source files as input and generates API call sequ
 See the individual class javadocs in *apimining.java* for details of their use.
 
 
-MAPO and UPMiner Implementations
---------------------------------
+MAPO and UPMiner
+----------------
 
 For comparison purposes, we implemented the API miners [MAPO](https://www.cs.sfu.ca/~jpei/publications/Mapo-ecoop09.pdf) and [UPMiner](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/07/miningsuccincthighcoverageapiusagepatternsfromsourcecode.pdf) from stratch using the [Weka](http://www.cs.waikato.ac.nz/ml/weka/) hierarchical clusterer. These are provided in the 
 *apimining.mapo.MAPO* and *apimining.upminer.UPMiner* classes respectively. They have the following command line options:
@@ -131,7 +132,8 @@ For comparison purposes, we implemented the API miners [MAPO](https://www.cs.sfu
 * **-o**  &nbsp;  output folder
 * **-s**  &nbsp;  minimum support threshold
 
-See the individual class files for information on the Java interface. Note that these are not particularly fast implementations as Weka's hierarchical clusterer is rather slow and inefficient. Moreover, as both API miners are based on frequent pattern mining algorithms, they can suffer from pattern explosion (this is a known problem with frequent pattern mining algorithms).
+See the individual class files for information on the Java interface. Note that these are not particularly fast implementations as Weka's hierarchical clusterer is rather slow and inefficient. 
+Moreover, as both API miners are based on frequent pattern mining algorithms, they can suffer from pattern explosion (this is a known problem with frequent pattern mining).
 
 
 Datasets
