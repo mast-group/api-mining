@@ -30,6 +30,7 @@ import org.eclipse.jdt.core.dom.PostfixExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.TypeLiteral;
@@ -115,7 +116,17 @@ public class APICallVisitor extends JavaApproximateTypeInferencer {
 	public boolean visit(final MethodDeclaration node) {
 		methodStack.push(node);
 		final String name = node.getName().toString();
-		methodNames.put(node, currentPackage + scopeName + "." + name);
+		String prefix = "";
+		StringBuilder params = new StringBuilder();
+		params.append("(");
+		for (final Object nodeParams : node.parameters()) {
+			SingleVariableDeclaration paramDecl = (SingleVariableDeclaration) nodeParams;
+			params.append(prefix);
+			params.append(getNameOfType(paramDecl.getType()));
+			prefix = ",";
+		}
+		params.append(")");
+		methodNames.put(node, currentPackage + scopeName + "." + name + params);
 		return super.visit(node);
 	}
 
