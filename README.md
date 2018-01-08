@@ -139,7 +139,7 @@ Moreover, as both API miners are based on frequent pattern mining algorithms, th
 Datasets
 --------
 
-AAll datasets used in the paper are available in the ```datasets/``` subdirectory: 
+All datasets used in the paper are available in the ```datasets/``` subdirectory: 
 * ```datasets/calls/all``` contains API call sequences for each of the 17 Java libraries described in our [paper](http://arxiv.org/abs/1512.05558) (see Table 1)
 * ```datasets/calls/train``` contains the subset of API call sequences used as the 'training set' in the paper
  
